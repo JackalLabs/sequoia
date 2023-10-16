@@ -19,13 +19,24 @@ func InitCmd() *cobra.Command {
 				panic(err)
 			}
 
-			init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), "http://127.0.0.1:3333", "1000000000", "")
+			fmt.Println(wallet.AccAddress())
 
+			init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), "http://127.0.0.1:3333", "1000000000", "")
+			//init := banktypes.NewMsgSend(
+			//	sdk.MustAccAddressFromBech32(wallet.AccAddress()),
+			//	sdk.MustAccAddressFromBech32(wallet.AccAddress()),
+			//	sdk.NewCoins(sdk.NewCoin("ujkl", sdk.NewInt(1))),
+			//)
 			data := walletTypes.NewTransactionData(
 				init,
 			).WithGasAuto().WithFeeAuto()
 
-			res, err := wallet.BroadcastTxCommit(data)
+			builder, err := wallet.BuildTx(data)
+			if err != nil {
+				panic(err)
+			}
+
+			res, err := wallet.Client.BroadcastTxCommit(builder.GetTx())
 			if err != nil {
 				panic(err)
 			}

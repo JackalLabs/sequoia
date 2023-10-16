@@ -69,8 +69,8 @@ func (q *Queue) Listen() {
 			allMsgs[i] = process.msg
 		}
 
-		data := walletTypes.NewTransactionData(allMsgs[0],
-			allMsgs[1:]...,
+		data := walletTypes.NewTransactionData(
+			allMsgs...,
 		).WithGasAuto().WithFeeAuto()
 
 		res, err := q.wallet.BroadcastTxCommit(data)

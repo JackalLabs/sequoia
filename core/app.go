@@ -7,6 +7,7 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v2"
+	canine "github.com/jackalLabs/canine-chain/v3/app"
 	"sequoia/api"
 	"sequoia/queue"
 )
@@ -28,14 +29,14 @@ func CreateWallet() (*wallet.Wallet, error) {
 	cfg := sdk.GetConfig()
 	cfg.SetBech32PrefixForAccount(chainCfg.Bech32Prefix, fmt.Sprintf("%spub", chainCfg.Bech32Prefix))
 
-	encodingConfig := MakeEncodingConfig()
+	encodingCfg := canine.MakeEncodingConfig()
 
-	c, err := client.NewClient(&chainCfg, encodingConfig.Marshaler)
+	c, err := client.NewClient(&chainCfg, encodingCfg.Marshaler)
 	if err != nil {
 		panic(err)
 	}
 
-	w, err := wallet.NewWallet(&accountCfg, c, encodingConfig.TxConfig)
+	w, err := wallet.NewWallet(&accountCfg, c, encodingCfg.TxConfig)
 	if err != nil {
 		panic(err)
 	}
