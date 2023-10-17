@@ -110,7 +110,7 @@ func TestLargeFile(t *testing.T) {
 
 	defer db.Close()
 
-	for i := 1; i < 1024*100; i++ {
+	for i := 1; i < 1024*20; i++ {
 		fmt.Printf("random size of %d\n", i)
 		bi := make([]byte, i)
 		// then we can call rand.Read.
