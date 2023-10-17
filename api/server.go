@@ -2,7 +2,8 @@ package api
 
 import (
 	"fmt"
-	"github.com/dgraph-io/badger/v2"
+	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/gorilla/mux"
 	"net/http"
 	"sequoia/queue"
@@ -19,14 +20,20 @@ func NewAPI(port int64) *API {
 	}
 }
 
-func (a *API) Serve(db *badger.DB, q *queue.Queue, address string) {
+func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet) {
 	r := mux.NewRouter()
-	r.HandleFunc("/", HomeHandler())
-	r.HandleFunc("/upload", PostFileHandler(db, q, address))
+	r.HandleFunc("/", IndexHandler(wallet.AccAddress()))
+	r.HandleFunc("/upload", PostFileHandler(db, q, wallet.AccAddress()))
+	r.HandleFunc("/download/{fid}", DownloadFileHandler(db))
+
+	r.HandleFunc("/list", ListFilesHandler(db))
+	r.HandleFunc("/dump", DumpDBHandler(db))
+
+	r.HandleFunc("/version", VersionHandler(wallet))
 
 	srv := &http.Server{
 		Handler: r,
-		Addr:    fmt.Sprintf("127.0.0.1:%d", a.port),
+		Addr:    fmt.Sprintf("0.0.0.0:%d", a.port),
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,

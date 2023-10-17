@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"fmt"
 	"github.com/cosmos/cosmos-sdk/types"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
@@ -19,7 +20,6 @@ func NewQueue(w *wallet.Wallet) *Queue {
 		processed: time.Now(),
 		running:   false,
 	}
-	go q.Listen()
 	return q
 }
 
@@ -45,22 +45,22 @@ func (q *Queue) Stop() {
 
 func (q *Queue) Listen() {
 	q.running = true
-	for {
-		if !q.running { // stop when running is false
-			return
-		}
+	for q.running {
 		time.Sleep(time.Millisecond * 333)                         // pauses for one third of a second
 		if !q.processed.Add(time.Second * 10).Before(time.Now()) { // check every ten seconds
 			continue
 		}
 
+		lmsg := len(q.messages)
+
+		fmt.Printf("Queue: Posting %d messages to chain...\n", lmsg)
+
 		l := 20
-		if len(q.messages) < l {
-			l = len(q.messages)
+		if lmsg < l {
+			l = lmsg
 		}
 
-		toProcess := make([]*Message, l)
-		toProcess = q.messages[:l]
+		toProcess := q.messages[:l]
 		q.messages = q.messages[l:]
 
 		allMsgs := make([]types.Msg, len(toProcess))

@@ -24,3 +24,7 @@ type Message struct {
 func (m *Message) Error() error {
 	return m.err
 }
+
+func (m *Message) Log() string {
+	return m.res.RawLog
+}

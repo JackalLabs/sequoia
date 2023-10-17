@@ -3,7 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dgraph-io/badger/v2"
+	"github.com/dgraph-io/badger/v4"
+	"github.com/gorilla/mux"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"net/http"
 	"sequoia/api/types"
@@ -42,7 +43,7 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.Re
 			return
 		}
 
-		merkle, fid, cid, size, err := file_system.WriteFile(db, file, sender, address)
+		merkle, fid, cid, size, err := file_system.WriteFile(db, file, sender, address, "")
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),
@@ -94,6 +95,32 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.Re
 		}
 
 		err = json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+}
+
+func DownloadFileHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+
+		fid := vars["fid"]
+
+		file, err := file_system.GetFileDataByFID(db, fid)
+		if err != nil {
+			fmt.Println(err)
+			v := types.ErrorResponse{
+				Error: err.Error(),
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			err = json.NewEncoder(w).Encode(v)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		_, err = w.Write(file)
 		if err != nil {
 			fmt.Println(err)
 		}

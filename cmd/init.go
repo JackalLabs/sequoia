@@ -22,11 +22,7 @@ func InitCmd() *cobra.Command {
 			fmt.Println(wallet.AccAddress())
 
 			init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), "http://127.0.0.1:3333", "1000000000", "")
-			//init := banktypes.NewMsgSend(
-			//	sdk.MustAccAddressFromBech32(wallet.AccAddress()),
-			//	sdk.MustAccAddressFromBech32(wallet.AccAddress()),
-			//	sdk.NewCoins(sdk.NewCoin("ujkl", sdk.NewInt(1))),
-			//)
+
 			data := walletTypes.NewTransactionData(
 				init,
 			).WithGasAuto().WithFeeAuto()

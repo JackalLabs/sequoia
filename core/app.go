@@ -1,15 +1,22 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/desmos-labs/cosmos-go-wallet/client"
 	"github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v2"
+	"github.com/dgraph-io/badger/v4"
 	canine "github.com/jackalLabs/canine-chain/v3/app"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"os"
+	"os/signal"
 	"sequoia/api"
+	"sequoia/proofs"
 	"sequoia/queue"
+	"sequoia/strays"
+	"syscall"
 )
 
 func CreateWallet() (*wallet.Wallet, error) {
@@ -45,9 +52,11 @@ func CreateWallet() (*wallet.Wallet, error) {
 }
 
 type App struct {
-	db  *badger.DB
-	api *api.API
-	q   *queue.Queue
+	db           *badger.DB
+	api          *api.API
+	q            *queue.Queue
+	prover       *proofs.Prover
+	strayManager *strays.StrayManager
 }
 
 func NewApp() *App {
@@ -72,13 +81,40 @@ func (a *App) Start() {
 
 	myAddress := w.AccAddress()
 
-	fmt.Printf("Provider started as: %s", myAddress)
+	queryParams := &storageTypes.QueryProviderRequest{
+		Address: myAddress,
+	}
 
-	q := queue.NewQueue(w)
-	a.q = q
+	cl := storageTypes.NewQueryClient(w.Client.GRPCConn)
 
-	a.api.Serve(a.db, q, myAddress)
+	res, err := cl.Providers(context.Background(), queryParams)
+	if err != nil {
+		fmt.Println("Provider does not exist on network or is not connected.")
+		return
+	}
 
-	defer a.db.Close()
-	defer q.Stop()
+	myUrl := res.Providers.Ip
+
+	fmt.Printf("Provider started as: %s\n", myAddress)
+
+	a.q = queue.NewQueue(w)
+	a.prover = proofs.NewProver(w, a.db, a.q)
+
+	go a.api.Serve(a.db, a.q, w)
+	go a.prover.Start()
+	go a.q.Listen()
+
+	a.strayManager = strays.NewStrayManager(w, a.q, 30, 60, 1, res.Providers.AuthClaimers)
+
+	go a.strayManager.Start(a.db, myUrl)
+
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+	fmt.Println("Press ctrl+c to quit...")
+	<-done // Will block here until user hits ctrl+c
+
+	a.db.Close()
+	a.q.Stop()
+	a.prover.Stop()
+	a.strayManager.Stop()
 }

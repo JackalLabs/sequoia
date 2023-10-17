@@ -3,7 +3,11 @@ package file_system
 import "fmt"
 
 func chunkKey(cid string, index int) []byte {
-	return []byte(fmt.Sprintf("chunks/%s/%d", cid, index))
+	return []byte(fmt.Sprintf("chunks/%s/%010d", cid, index))
+}
+
+func majorChunkKey(cid string) []byte {
+	return []byte(fmt.Sprintf("chunks/%s/", cid))
 }
 
 func treeKey(cid string) []byte {
