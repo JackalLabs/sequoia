@@ -102,6 +102,8 @@ github.com/Shopify/goreferrer v0.0.0-20220729165902-8cddb4f5de06/go.mod h1:7erjK
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
+github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20231017193534-7de44d189e2a h1:7TBxGLnjrwT7JD1mLGPhkES/Dm2GJN0/wB6w1rR6we8=
+github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20231017193534-7de44d189e2a/go.mod h1:1Qv2CAWgjKx/h/yA3xP/3losGFRxxKbxFDjGIqwhvvc=
 github.com/TheMarstonConnell/go-merkletree v0.0.0-20230328183338-b5d590ab1aaf h1:K8hLTtjPxDCIjb/YNncNWHTWDpubfPFbXWGE8vAQC4g=
 github.com/TheMarstonConnell/go-merkletree v0.0.0-20230328183338-b5d590ab1aaf/go.mod h1:Dpt5BLOsKmHAA6gAs3lyo9EKaLq2glBsEoHj3RqfN+Q=
 github.com/VictoriaMetrics/fastcache v1.6.0/go.mod h1:0qHz5QP0GMX4pfmMA/zt5RgfNuXJrTP0zS7DqpHGGTw=

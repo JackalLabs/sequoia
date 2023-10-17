@@ -1,0 +1,19 @@
+name: Unit Test
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.0
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.2 # The Go version to download (if necessary) and use.
+      - name: Test
+        shell: bash
+        run: make test-unit

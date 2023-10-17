@@ -11,6 +11,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	github.com/wealdtech/go-merkletree v1.0.0
+	gopkg.in/yaml.v3 v3.0.1
 
 )
 
@@ -158,7 +159,6 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
@@ -175,7 +175,9 @@ replace (
 	github.com/cosmos/cosmos-sdk => github.com/JackalLabs/cosmos-sdk-new v0.45.17-0.20230525190516-b9142076b70c
 	//github.com/cosmos/cosmos-sdk => ../cosmos-sdk-new
 
-	github.com/desmos-labs/cosmos-go-wallet => ../cosmos-go-wallet
+	//github.com/desmos-labs/cosmos-go-wallet => ../cosmos-go-wallet
+	github.com/desmos-labs/cosmos-go-wallet => github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20231017193534-7de44d189e2a
+
 	//github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
