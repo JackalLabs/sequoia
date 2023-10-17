@@ -2,11 +2,11 @@ package api
 
 import (
 	"fmt"
+	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/gorilla/mux"
 	"net/http"
-	"sequoia/queue"
 	"time"
 )
 

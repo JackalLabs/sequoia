@@ -1,8 +1,8 @@
 package cmd
 
 import (
+	"github.com/JackalLabs/sequoia/core"
 	"github.com/spf13/cobra"
-	"sequoia/core"
 )
 
 func StartCmd() *cobra.Command {

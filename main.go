@@ -1,6 +1,6 @@
 package main
 
-import "sequoia/cmd"
+import "github.com/JackalLabs/sequoia/cmd"
 
 func main() {
 	root := cmd.RootCmd()

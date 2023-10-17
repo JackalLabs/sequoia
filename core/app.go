@@ -3,53 +3,19 @@ package core
 import (
 	"context"
 	"fmt"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/desmos-labs/cosmos-go-wallet/client"
-	"github.com/desmos-labs/cosmos-go-wallet/types"
+	"github.com/JackalLabs/sequoia/api"
+	"github.com/JackalLabs/sequoia/config"
+	"github.com/JackalLabs/sequoia/proofs"
+	"github.com/JackalLabs/sequoia/queue"
+	"github.com/JackalLabs/sequoia/strays"
+	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
-	canine "github.com/jackalLabs/canine-chain/v3/app"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"os"
 	"os/signal"
-	"sequoia/api"
-	"sequoia/proofs"
-	"sequoia/queue"
-	"sequoia/strays"
 	"syscall"
 )
-
-func CreateWallet() (*wallet.Wallet, error) {
-	chainCfg := types.ChainConfig{
-		Bech32Prefix:  "jkl",
-		RPCAddr:       "https://jackal-testnet-rpc.polkachu.com:443",
-		GRPCAddr:      "jackal-testnet-grpc.polkachu.com:17590",
-		GasPrice:      "0.02ujkl",
-		GasAdjustment: 1.5,
-	}
-	accountCfg := types.AccountConfig{
-		Mnemonic: "forward service profit benefit punch catch fan chief jealous steel harvest column spell rude warm home melody hat broccoli pulse say garlic you firm",
-		HDPath:   "m/44'/118'/0'/0/0",
-	}
-
-	// Set up the SDK config with the proper bech32 prefixes
-	cfg := sdk.GetConfig()
-	cfg.SetBech32PrefixForAccount(chainCfg.Bech32Prefix, fmt.Sprintf("%spub", chainCfg.Bech32Prefix))
-
-	encodingCfg := canine.MakeEncodingConfig()
-
-	c, err := client.NewClient(&chainCfg, encodingCfg.Marshaler)
-	if err != nil {
-		panic(err)
-	}
-
-	w, err := wallet.NewWallet(&accountCfg, c, encodingCfg.TxConfig)
-	if err != nil {
-		panic(err)
-	}
-
-	return w, err
-}
 
 type App struct {
 	db           *badger.DB
@@ -73,8 +39,36 @@ func NewApp() *App {
 	}
 }
 
+func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
+	init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), ip, fmt.Sprintf("%d", totalSpace), "")
+
+	data := walletTypes.NewTransactionData(
+		init,
+	).WithGasAuto().WithFeeAuto()
+
+	builder, err := wallet.BuildTx(data)
+	if err != nil {
+		return err
+	}
+
+	res, err := wallet.Client.BroadcastTxCommit(builder.GetTx())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(res.TxHash)
+
+	return nil
+}
+
 func (a *App) Start() {
-	w, err := CreateWallet()
+
+	cfg, err := config.Init()
+	if err != nil {
+		panic(err)
+	}
+
+	w, err := config.InitWallet()
 	if err != nil {
 		panic(err)
 	}
@@ -89,22 +83,25 @@ func (a *App) Start() {
 
 	res, err := cl.Providers(context.Background(), queryParams)
 	if err != nil {
-		fmt.Println("Provider does not exist on network or is not connected.")
-		return
+		fmt.Println("Provider does not exist on network or is not connected...")
+		err := initProviderOnChain(w, cfg.Ip, cfg.TotalSpace)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	myUrl := res.Providers.Ip
 
 	fmt.Printf("Provider started as: %s\n", myAddress)
 
-	a.q = queue.NewQueue(w)
-	a.prover = proofs.NewProver(w, a.db, a.q)
+	a.q = queue.NewQueue(w, cfg.QueueInterval)
+	a.prover = proofs.NewProver(w, a.db, a.q, cfg.ProofInterval)
 
 	go a.api.Serve(a.db, a.q, w)
 	go a.prover.Start()
 	go a.q.Listen()
 
-	a.strayManager = strays.NewStrayManager(w, a.q, 30, 60, 1, res.Providers.AuthClaimers)
+	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, res.Providers.AuthClaimers)
 
 	go a.strayManager.Start(a.db, myUrl)
 

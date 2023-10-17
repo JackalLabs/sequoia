@@ -1,9 +1,9 @@
 package proofs
 
 import (
+	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
-	"sequoia/queue"
 	"time"
 )
 
@@ -14,4 +14,5 @@ type Prover struct {
 	q         *queue.Queue
 	processed time.Time
 	locked    bool
+	interval  int64
 }

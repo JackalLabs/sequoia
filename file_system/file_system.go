@@ -5,11 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/JackalLabs/sequoia/utils"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
 	"io"
-	"sequoia/utils"
 )
 
 func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, cidOverride string) (merkle string, fid string, cid string, size int, err error) {

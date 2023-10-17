@@ -12,6 +12,7 @@ type Queue struct {
 	messages  []*Message
 	processed time.Time
 	running   bool
+	interval  int64
 }
 
 type Message struct {

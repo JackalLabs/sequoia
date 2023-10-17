@@ -3,9 +3,9 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"net/http"
-	"sequoia/api/types"
 )
 
 func IndexHandler(address string) func(http.ResponseWriter, *http.Request) {

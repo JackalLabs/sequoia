@@ -13,12 +13,13 @@ func (m *Message) Done() {
 	m.wg.Done()
 }
 
-func NewQueue(w *wallet.Wallet) *Queue {
+func NewQueue(w *wallet.Wallet, interval int64) *Queue {
 	q := &Queue{
 		wallet:    w,
 		messages:  make([]*Message, 0),
 		processed: time.Now(),
 		running:   false,
+		interval:  interval,
 	}
 	return q
 }
@@ -46,8 +47,8 @@ func (q *Queue) Stop() {
 func (q *Queue) Listen() {
 	q.running = true
 	for q.running {
-		time.Sleep(time.Millisecond * 333)                         // pauses for one third of a second
-		if !q.processed.Add(time.Second * 10).Before(time.Now()) { // check every ten seconds
+		time.Sleep(time.Millisecond * 333)                                                // pauses for one third of a second
+		if !q.processed.Add(time.Second * time.Duration(q.interval)).Before(time.Now()) { // check every ten seconds
 			continue
 		}
 

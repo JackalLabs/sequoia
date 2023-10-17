@@ -3,13 +3,13 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/JackalLabs/sequoia/api/types"
+	"github.com/JackalLabs/sequoia/file_system"
+	"github.com/JackalLabs/sequoia/queue"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/gorilla/mux"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"net/http"
-	"sequoia/api/types"
-	"sequoia/file_system"
-	"sequoia/queue"
 )
 
 const MaxFileSize = 32 << 30
@@ -109,20 +109,15 @@ func DownloadFileHandler(db *badger.DB) func(http.ResponseWriter, *http.Request)
 
 		file, err := file_system.GetFileDataByFID(db, fid)
 		if err != nil {
-			fmt.Println(err)
 			v := types.ErrorResponse{
 				Error: err.Error(),
 			}
 			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
-			if err != nil {
-				fmt.Println(err)
-			}
+			_ = json.NewEncoder(w).Encode(v)
+
 		}
 
-		_, err = w.Write(file)
-		if err != nil {
-			fmt.Println(err)
-		}
+		_, _ = w.Write(file)
+
 	}
 }

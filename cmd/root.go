@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/JackalLabs/sequoia/cmd/wallet"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -12,7 +13,7 @@ func RootCmd() *cobra.Command {
 		Short: "Sequoia is a fast and light-weight Jackal Storage Provider.",
 	}
 
-	r.AddCommand(StartCmd(), InitCmd())
+	r.AddCommand(StartCmd(), InitCmd(), wallet.WalletCmd())
 
 	return r
 }

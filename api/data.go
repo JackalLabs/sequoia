@@ -3,10 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/JackalLabs/sequoia/api/types"
+	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/dgraph-io/badger/v4"
 	"net/http"
-	"sequoia/api/types"
-	"sequoia/file_system"
 )
 
 func DumpDBHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {

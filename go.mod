@@ -1,4 +1,4 @@
-module sequoia
+module github.com/JackalLabs/sequoia
 
 go 1.21
 

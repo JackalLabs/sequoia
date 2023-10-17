@@ -5,14 +5,14 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/JackalLabs/sequoia/file_system"
+	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
 	"io"
-	"sequoia/file_system"
-	"sequoia/queue"
 	"strconv"
 	"time"
 )
@@ -125,8 +125,8 @@ func (p *Prover) Start() {
 			return
 		}
 
-		time.Sleep(time.Millisecond * 333)                         // pauses for one third of a second
-		if !p.processed.Add(time.Second * 10).Before(time.Now()) { // check every 2 minutes
+		time.Sleep(time.Millisecond * 333)                                                // pauses for one third of a second
+		if !p.processed.Add(time.Second * time.Duration(p.interval)).Before(time.Now()) { // check every 2 minutes
 			continue
 		}
 
@@ -169,13 +169,14 @@ func (p *Prover) Stop() {
 	p.running = false
 }
 
-func NewProver(wallet *wallet.Wallet, db *badger.DB, q *queue.Queue) *Prover {
+func NewProver(wallet *wallet.Wallet, db *badger.DB, q *queue.Queue, interval int64) *Prover {
 	p := Prover{
 		running:   false,
 		wallet:    wallet,
 		db:        db,
 		q:         q,
 		processed: time.Time{},
+		interval:  interval,
 	}
 
 	return &p

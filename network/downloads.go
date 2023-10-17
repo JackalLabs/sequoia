@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"io"
 	"net/http"
-	"sequoia/file_system"
 )
 
 func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, signee string, myUrl string) error {
@@ -32,7 +32,7 @@ func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, 
 	}
 
 	if len(arr) == 0 {
-		return fmt.Errorf("file not found on network")
+		return fmt.Errorf("%s not found on provider network", fid)
 	}
 
 	foundFile := false
