@@ -7,7 +7,7 @@ require (
 	github.com/desmos-labs/cosmos-go-wallet v0.7.2
 	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/gorilla/mux v1.8.0
-	github.com/jackalLabs/canine-chain/v3 v3.0.0
+	github.com/jackalLabs/canine-chain/v3 v3.0.1
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	github.com/wealdtech/go-merkletree v1.0.0
