@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/config"
+	"github.com/JackalLabs/sequoia/logger"
 	"github.com/JackalLabs/sequoia/proofs"
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/JackalLabs/sequoia/strays"
@@ -28,7 +29,25 @@ type App struct {
 }
 
 func NewApp() *App {
-	db, err := badger.Open(badger.DefaultOptions("data"))
+
+	cfg, err := config.Init()
+	if err != nil {
+		panic(err)
+	}
+
+	dataDir := os.ExpandEnv(cfg.DataDirectory)
+
+	err = os.MkdirAll(dataDir, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	options := badger.DefaultOptions(dataDir)
+
+	options.Logger = &logger.SequoiaLogger{}
+	options.BlockCacheSize = 256 << 25
+
+	db, err := badger.Open(options)
 	if err != nil {
 		panic(err)
 	}
@@ -111,11 +130,13 @@ func (a *App) Start() {
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	<-done // Will block here until user hits ctrl+c
 
+	fmt.Println("Shutting down safely...")
+
 	a.q.Stop()
 	a.prover.Stop()
 	a.strayManager.Stop()
 
-	time.Sleep(time.Second * 10) // give the program some time to shut down
+	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.db.Close()
 
 }

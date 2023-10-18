@@ -13,6 +13,7 @@ type Config struct {
 	ChainCfg        types.ChainConfig  `yaml:"chain_config"`
 	Ip              string             `yaml:"domain"`
 	TotalSpace      int64              `yaml:"total_bytes_offered"`
+	DataDirectory   string             `yaml:"data_directory"`
 }
 
 type StrayManagerConfig struct {
@@ -37,7 +38,8 @@ func DefaultConfig() *Config {
 			GasAdjustment: 1.5,
 			Bech32Prefix:  "jkl",
 		},
-		Ip:         "https://example.com",
-		TotalSpace: 1092616192, // 1 gib default
+		Ip:            "https://example.com",
+		TotalSpace:    1092616192, // 1 gib default
+		DataDirectory: "$HOME/.sequoia/data",
 	}
 }

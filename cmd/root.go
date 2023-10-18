@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/JackalLabs/sequoia/cmd/wallet"
+	"github.com/JackalLabs/sequoia/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -25,6 +26,12 @@ func RootCmd() *cobra.Command {
 }
 
 func Execute(rootCmd *cobra.Command) {
+
+	_, err := config.Init()
+	if err != nil {
+		panic(err)
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 
 		log.Error().Err(err)
