@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
+	"github.com/cosmos/go-bip39"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/rs/zerolog/log"
 	"os"
@@ -12,14 +13,24 @@ import (
 
 const SeedFileName = "provider_wallet.json"
 
-func generateWallet() *Seed {
+func generateWallet() (*Seed, error) {
+
+	entropySeed, err := bip39.NewEntropy(256)
+	if err != nil {
+		return nil, err
+	}
+
+	mnemonic, err := bip39.NewMnemonic(entropySeed)
+	if err != nil {
+		return nil, err
+	}
 
 	s := &Seed{
-		SeedPhrase:     "forward service profit benefit punch catch fan chief jealous steel harvest column spell rude warm home melody hat broccoli pulse say garlic you firm",
+		SeedPhrase:     mnemonic, //"forward service profit benefit punch catch fan chief jealous steel harvest column spell rude warm home melody hat broccoli pulse say garlic you firm",
 		DerivationPath: "m/44'/118'/0'/0/0",
 	}
 
-	return s
+	return s, nil
 }
 
 func ImportSeed(seedData []byte) (*Seed, error) {
@@ -41,7 +52,10 @@ func (s *Seed) Export() ([]byte, error) {
 
 func createWallet(directory string) error {
 
-	wallet := generateWallet()
+	wallet, err := generateWallet()
+	if err != nil {
+		return err
+	}
 
 	seedData, err := wallet.Export()
 	if err != nil {

@@ -19,7 +19,7 @@ func RootCmd() *cobra.Command {
 		Short: "Sequoia is a fast and light-weight Jackal Storage Provider.",
 	}
 
-	r.AddCommand(StartCmd(), InitCmd(), wallet.WalletCmd())
+	r.AddCommand(StartCmd(), wallet.WalletCmd())
 
 	return r
 }
