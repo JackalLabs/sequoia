@@ -8,6 +8,7 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
+	"strconv"
 	"time"
 )
 
@@ -27,7 +28,14 @@ func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string) {
 		signee := h.stray.Signee
 		fid := h.stray.Fid
 		cid := h.stray.Cid
-		err := network.DownloadFile(db, cid, fid, wallet, signee, myUrl)
+		size, err := strconv.ParseInt(h.stray.Filesize, 10, 64)
+		if err != nil {
+			log.Error().Err(err)
+			h.stray = nil
+			continue
+		}
+
+		err = network.DownloadFile(db, cid, fid, wallet, signee, size, myUrl)
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil

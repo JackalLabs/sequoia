@@ -14,7 +14,7 @@ import (
 	"net/http"
 )
 
-func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, signee string, myUrl string) error {
+func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, signee string, fileSize int64, myUrl string) error {
 	queryParams := &types.QueryFindFileRequest{
 		Fid: fid,
 	}
@@ -42,9 +42,12 @@ func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, 
 			continue
 		}
 
-		err := DownloadFileFromURL(db, url, cid, fid, signee, wallet.AccAddress())
+		size, err := DownloadFileFromURL(db, url, cid, fid, signee, wallet.AccAddress())
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Couldn't get %s from %s, trying again...", fid, url))
+			continue
+		}
+		if fileSize != int64(size) {
 			continue
 		}
 
@@ -60,12 +63,12 @@ func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, 
 	return nil
 }
 
-func DownloadFileFromURL(db *badger.DB, url string, cid string, fid string, signee string, address string) error {
+func DownloadFileFromURL(db *badger.DB, url string, cid string, fid string, signee string, address string) (int, error) {
 	log.Info().Msg(fmt.Sprintf("Downloading %s from %s...", fid, url))
 	cli := http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%s", url, fid), nil)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	req.Header = http.Header{
@@ -79,26 +82,26 @@ func DownloadFileFromURL(db *badger.DB, url string, cid string, fid string, sign
 
 	resp, err := cli.Do(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to find file on network")
+		return 0, fmt.Errorf("failed to find file on network")
 	}
 	defer resp.Body.Close()
 
 	buff := bytes.NewBuffer([]byte{})
 	_, err = io.Copy(buff, resp.Body)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	_, _, _, _, err = file_system.WriteFile(db, reader, signee, address, cid)
+	_, _, _, size, err := file_system.WriteFile(db, reader, signee, address, cid)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return size, nil
 }
