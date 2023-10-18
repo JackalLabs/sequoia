@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 )
 
@@ -45,7 +47,7 @@ func TestWriteFile(t *testing.T) {
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
 			k := item.Key()
-			fmt.Printf("key=%s\n", k)
+			log.Info().Msg(fmt.Sprintf("key=%s", k))
 		}
 		return nil
 	})
@@ -54,7 +56,7 @@ func TestWriteFile(t *testing.T) {
 	s, err := ListFiles(db)
 	require.NoError(t, err)
 
-	fmt.Println(s)
+	log.Info().Msg(strings.Join(s, ","))
 
 }
 
@@ -96,7 +98,7 @@ func TestFIDCID(t *testing.T) {
 
 	require.Equal(t, fileData, fileDataFromFid)
 
-	fmt.Println(s)
+	log.Info().Msg(strings.Join(s, ","))
 
 }
 
@@ -111,7 +113,6 @@ func TestLargeFile(t *testing.T) {
 	defer db.Close()
 
 	for i := 1; i < 1024*20; i++ {
-		fmt.Printf("random size of %d\n", i)
 		bi := make([]byte, i)
 		// then we can call rand.Read.
 		_, err = rand.Read(bi)
@@ -127,7 +128,7 @@ func TestLargeFile(t *testing.T) {
 		fileData, err := GetFileData(db, cid)
 		require.NoError(t, err)
 
-		require.Equal(t, fmt.Sprintf("%x\n", bi), fmt.Sprintf("%x\n", fileData))
+		require.Equal(t, bi, fileData)
 
 	}
 

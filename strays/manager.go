@@ -10,6 +10,7 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"github.com/rs/zerolog/log"
 	"math/rand"
 	"time"
 )
@@ -27,11 +28,11 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 	}
 
 	for i := 0; i < handCount; i++ {
-		fmt.Printf("Authorizing hand %d to transact on my behalf...\n", i)
+		log.Info().Msg(fmt.Sprintf("Authorizing hand %d to transact on my behalf...", i))
 
 		h, err := s.NewHand(q)
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 			continue
 		}
 
@@ -56,19 +57,19 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 
 		wadd, err := sdk.AccAddressFromBech32(w.AccAddress())
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 			continue
 		}
 
 		hadd, err := sdk.AccAddressFromBech32(h.Address())
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 			continue
 		}
 
 		grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, wadd, hadd)
 		if nerr != nil {
-			fmt.Println(nerr)
+			log.Error().Err(nerr)
 			continue
 		}
 
@@ -78,7 +79,7 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 		wg.Wait()
 
 		if m.Error() != nil {
-			fmt.Println(m.Error())
+			log.Error().Err(m.Error())
 		}
 	}
 
@@ -97,7 +98,7 @@ func (s *StrayManager) Start(db *badger.DB, myUrl string) {
 		if s.refreshed.Add(time.Second * s.refreshInterval).Before(time.Now()) {
 			err := s.RefreshList()
 			if err != nil {
-				fmt.Println("failed refresh")
+				log.Info().Msg("failed refresh")
 			}
 			s.refreshed = time.Now()
 		}
@@ -140,7 +141,7 @@ func (s *StrayManager) Stop() {
 
 func (s *StrayManager) RefreshList() error {
 
-	fmt.Println("Refreshing stray list...")
+	log.Info().Msg("Refreshing stray list...")
 
 	s.strays = make([]*types.Strays, 0)
 

@@ -2,9 +2,9 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+	"github.com/rs/zerolog/log"
 	"net/http"
 )
 
@@ -18,7 +18,7 @@ func IndexHandler(address string) func(http.ResponseWriter, *http.Request) {
 
 		err := json.NewEncoder(w).Encode(v)
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 			return
 		}
 	}
@@ -40,7 +40,7 @@ func VersionHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Reque
 
 		err = json.NewEncoder(w).Encode(v)
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 			return
 		}
 	}

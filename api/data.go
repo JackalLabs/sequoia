@@ -2,10 +2,10 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/rs/zerolog/log"
 	"net/http"
 )
 
@@ -20,14 +20,14 @@ func DumpDBHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				fmt.Println(err)
+				log.Error().Err(err)
 			}
 			return
 		}
 
 		err = json.NewEncoder(w).Encode(dump)
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 		}
 
 	}

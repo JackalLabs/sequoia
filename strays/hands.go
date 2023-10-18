@@ -1,13 +1,13 @@
 package strays
 
 import (
-	"fmt"
 	"github.com/JackalLabs/sequoia/network"
 	"github.com/JackalLabs/sequoia/queue"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"github.com/rs/zerolog/log"
 	"time"
 )
 
@@ -29,7 +29,7 @@ func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string) {
 		cid := h.stray.Cid
 		err := network.DownloadFile(db, cid, fid, wallet, signee, myUrl)
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 			h.stray = nil
 			continue
 		}
@@ -46,14 +46,14 @@ func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string) {
 
 		res, err := h.wallet.BroadcastTxCommit(data)
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 			h.stray = nil
 			continue
 		}
 
 		if res != nil {
 			if res.Code > 0 {
-				fmt.Println(res.RawLog)
+				log.Info().Msg(res.RawLog)
 			}
 		}
 

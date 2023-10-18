@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/JackalLabs/sequoia/utils"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
 	"io"
@@ -79,19 +80,19 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 
 		err = txn.Set(treeKey(cid), exportedTree)
 		if err != nil {
-			fmt.Printf("Cannot set tree %s | %e\n", cid, err)
+			log.Info().Msg(fmt.Sprintf("Cannot set tree %s | %e", cid, err))
 		}
 
 		for i, chunk := range chunks {
 			err := txn.Set(chunkKey(cid, i), chunk)
 			if err != nil {
-				fmt.Printf("Cannot set chunk %d | %e", i, err)
+				log.Info().Msg(fmt.Sprintf("Cannot set chunk %d | %e", i, err))
 			}
 		}
 
 		err = txn.Set(fileKey(cid), []byte(fid))
 		if err != nil {
-			fmt.Printf("Cannot set cid %s | %e\n", cid, err)
+			log.Info().Msg(fmt.Sprintf("Cannot set cid %s | %e", cid, err))
 		}
 
 		merkle = r
@@ -104,7 +105,7 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 }
 
 func DeleteFile(db *badger.DB, cid string) error {
-	fmt.Printf("Removing %s from disk...\n", cid)
+	log.Info().Msg(fmt.Sprintf("Removing %s from disk...", cid))
 	return db.Update(func(txn *badger.Txn) error {
 
 		err := txn.Delete(treeKey(cid))

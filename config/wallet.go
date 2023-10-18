@@ -5,6 +5,7 @@ import (
 	"fmt"
 	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+	"github.com/rs/zerolog/log"
 	"os"
 	"path"
 )
@@ -55,7 +56,7 @@ func createWallet(directory string) error {
 	filePath := path.Join(directory, SeedFileName)
 
 	if newWallet {
-		fmt.Printf("A new wallet was just created, please enter your seed phrase into %s to start!\n", filePath)
+		log.Info().Msg(fmt.Sprintf("A new wallet was just created, please enter your seed phrase into %s to start!", filePath))
 		os.Exit(0)
 	}
 

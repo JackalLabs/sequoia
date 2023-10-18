@@ -1,11 +1,17 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/JackalLabs/sequoia/cmd/wallet"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"os"
 )
+
+func init() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
+}
 
 func RootCmd() *cobra.Command {
 	r := &cobra.Command{
@@ -20,7 +26,8 @@ func RootCmd() *cobra.Command {
 
 func Execute(rootCmd *cobra.Command) {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+
+		log.Error().Err(err)
 		os.Exit(1)
 	}
 }

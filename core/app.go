@@ -12,9 +12,11 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"github.com/rs/zerolog/log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 type App struct {
@@ -56,7 +58,7 @@ func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) err
 		return err
 	}
 
-	fmt.Println(res.TxHash)
+	log.Info().Msg(res.TxHash)
 
 	return nil
 }
@@ -83,7 +85,7 @@ func (a *App) Start() {
 
 	res, err := cl.Providers(context.Background(), queryParams)
 	if err != nil {
-		fmt.Println("Provider does not exist on network or is not connected...")
+		log.Info().Msg("Provider does not exist on network or is not connected...")
 		err := initProviderOnChain(w, cfg.Ip, cfg.TotalSpace)
 		if err != nil {
 			panic(err)
@@ -92,7 +94,7 @@ func (a *App) Start() {
 
 	myUrl := res.Providers.Ip
 
-	fmt.Printf("Provider started as: %s\n", myAddress)
+	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
 	a.q = queue.NewQueue(w, cfg.QueueInterval)
 	a.prover = proofs.NewProver(w, a.db, a.q, cfg.ProofInterval)
@@ -107,11 +109,13 @@ func (a *App) Start() {
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
-	fmt.Println("Press ctrl+c to quit...")
 	<-done // Will block here until user hits ctrl+c
 
-	a.db.Close()
 	a.q.Stop()
 	a.prover.Stop()
 	a.strayManager.Stop()
+
+	time.Sleep(time.Second * 10) // give the program some time to shut down
+	a.db.Close()
+
 }

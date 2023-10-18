@@ -3,6 +3,7 @@ package wallet
 import (
 	"fmt"
 	"github.com/JackalLabs/sequoia/config"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +29,7 @@ func addressCmd() *cobra.Command {
 				panic(err)
 			}
 
-			fmt.Printf("Provider Address: %s\n", wallet.AccAddress())
+			log.Info().Msg(fmt.Sprintf("Provider Address: %s", wallet.AccAddress()))
 		},
 	}
 }

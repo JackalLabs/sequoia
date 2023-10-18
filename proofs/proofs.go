@@ -10,6 +10,7 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
 	"io"
@@ -138,7 +139,7 @@ func (p *Prover) Start() {
 
 		files, err := file_system.ListFiles(p.db)
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 		}
 
 		for _, cid := range files {
@@ -147,13 +148,13 @@ func (p *Prover) Start() {
 				if err.Error() == "rpc error: code = NotFound desc = not found" { // if the file is not found on the network, delete it
 					err := file_system.DeleteFile(p.db, cid)
 					if err != nil {
-						fmt.Println(err)
+						log.Error().Err(err)
 					}
 				}
 				if err.Error() == ErrNotOurs { // if the file is not ours, delete it
 					err := file_system.DeleteFile(p.db, cid)
 					if err != nil {
-						fmt.Println(err)
+						log.Error().Err(err)
 					}
 				}
 			}

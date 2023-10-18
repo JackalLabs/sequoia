@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/JackalLabs/sequoia/config"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +21,7 @@ func InitCmd() *cobra.Command {
 				panic(err)
 			}
 
-			fmt.Println(wallet.AccAddress())
+			log.Info().Msg(wallet.AccAddress())
 
 		},
 	}

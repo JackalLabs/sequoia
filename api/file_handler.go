@@ -9,6 +9,7 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/gorilla/mux"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"github.com/rs/zerolog/log"
 	"net/http"
 )
 
@@ -24,7 +25,7 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.Re
 			w.WriteHeader(http.StatusInternalServerError)
 			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				fmt.Println(err)
+				log.Error().Err(err)
 			}
 			return
 		}
@@ -38,7 +39,7 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.Re
 			w.WriteHeader(http.StatusInternalServerError)
 			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				fmt.Println(err)
+				log.Error().Err(err)
 			}
 			return
 		}
@@ -51,7 +52,7 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.Re
 			w.WriteHeader(http.StatusInternalServerError)
 			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				fmt.Println(err)
+				log.Error().Err(err)
 			}
 		}
 
@@ -70,7 +71,7 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.Re
 			w.WriteHeader(http.StatusInternalServerError)
 			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				fmt.Println(err)
+				log.Error().Err(err)
 			}
 		}
 
@@ -85,7 +86,7 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.Re
 			w.WriteHeader(http.StatusInternalServerError)
 			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				fmt.Println(err)
+				log.Error().Err(err)
 			}
 		}
 
@@ -96,7 +97,7 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.Re
 
 		err = json.NewEncoder(w).Encode(resp)
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err)
 		}
 	}
 }
