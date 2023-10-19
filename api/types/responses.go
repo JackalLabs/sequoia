@@ -18,3 +18,8 @@ type IndexResponse struct {
 	Status  string `json:"status"`
 	Address string `json:"address"`
 }
+
+type ListResponse struct {
+	Files []string `json:"files"`
+	Count int      `json:"count"`
+}

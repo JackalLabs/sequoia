@@ -25,7 +25,12 @@ func ListFilesHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		err = json.NewEncoder(w).Encode(files)
+		f := types.ListResponse{
+			Files: files,
+			Count: len(files),
+		}
+
+		err = json.NewEncoder(w).Encode(f)
 		if err != nil {
 			log.Error().Err(err)
 		}
