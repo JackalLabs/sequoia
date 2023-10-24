@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
 	"time"
 
 	"github.com/JackalLabs/sequoia/file_system"
@@ -40,50 +39,43 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (v
 	return
 }
 
-func (p *Prover) GenerateProof(cid string) ([]byte, []byte, error) {
-	queryParams := &types.QueryActiveDealRequest{
-		Cid: cid,
+func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHeight int64) ([]byte, []byte, error) {
+	queryParams := &types.QueryFileRequest{
+		Merkle: merkle,
+		Owner:  owner,
+		Start:  start,
 	}
 
 	cl := types.NewQueryClient(p.wallet.Client.GRPCConn)
 
-	res, err := cl.ActiveDeals(context.Background(), queryParams)
+	res, err := cl.File(context.Background(), queryParams)
 	if err != nil { // if the deal doesn't exist we check strays & contracts, then remove it
-		contractParams := &types.QueryContractRequest{
-			Cid: cid,
-		}
-		_, e := cl.Contracts(context.Background(), contractParams)
-		if e != nil { // if we can't find the contract, check strays, then remove it
-			strayParams := &types.QueryStrayRequest{
-				Cid: cid,
-			}
-			_, e := cl.Strays(context.Background(), strayParams)
-			if e != nil { // if we can't find the stray, remove it
-				return nil, nil, err
-			}
-
-			return nil, nil, fmt.Errorf(ErrNotReady)
-		}
-
-		return nil, nil, fmt.Errorf(ErrNotReady)
+		return nil, nil, err
 	}
 
-	if res.ActiveDeals.Provider != p.wallet.AccAddress() {
+	file := res.File
+
+	proofQuery := &types.QueryProofRequest{
+		ProviderAddress: p.wallet.AccAddress(),
+		Merkle:          merkle,
+		Owner:           owner,
+		Start:           start,
+	}
+
+	proofRes, err := cl.Proof(context.Background(), proofQuery)
+	if err != nil {
 		return nil, nil, fmt.Errorf(ErrNotOurs)
 	}
 
-	if res.ActiveDeals.Proofverified == "true" {
+	windowStart := blockHeight - (blockHeight % file.ProofInterval)
+
+	if proofRes.Proof.LastProven > windowStart { // already proven
 		return nil, nil, nil
 	}
 
-	blockToProveString := res.ActiveDeals.Blocktoprove
-	blockToProve, err := strconv.ParseInt(blockToProveString, 10, 64)
-	if err != nil {
-		return nil, nil, err
-	}
-	block := int(blockToProve)
+	block := int(proofRes.Proof.ChunkToProve)
 
-	tree, chunk, err := file_system.GetFileChunk(p.db, cid, block)
+	tree, chunk, err := file_system.GetFileTreeByChunk(p.db, merkle, owner, start, block)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -104,8 +96,8 @@ func (p *Prover) GenerateProof(cid string) ([]byte, []byte, error) {
 	return jproof, chunk, nil
 }
 
-func (p *Prover) PostProof(cid string) error {
-	proof, item, err := p.GenerateProof(cid)
+func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight int64) error {
+	proof, item, err := p.GenerateProof(merkle, owner, start, blockHeight)
 	if err != nil {
 		return err
 	}
@@ -114,7 +106,7 @@ func (p *Prover) PostProof(cid string) error {
 		return nil
 	}
 
-	msg := types.NewMsgPostproof(p.wallet.AccAddress(), fmt.Sprintf("%x", item), string(proof), cid)
+	msg := types.NewMsgPostProof(p.wallet.AccAddress(), merkle, owner, start, item, proof)
 
 	_, _ = p.q.Add(msg)
 
@@ -139,22 +131,32 @@ func (p *Prover) Start() {
 
 		p.locked = true
 
-		files, err := file_system.ListFiles(p.db)
+		merkles, owners, starts, err := file_system.ListFiles(p.db)
 		if err != nil {
 			log.Error().Err(err)
 		}
 
-		for _, cid := range files {
-			err := p.PostProof(cid)
+		abciInfo, err := p.wallet.Client.RPCClient.ABCIInfo(context.Background())
+		if err != nil {
+			log.Error().Err(err)
+			continue
+		}
+
+		height := abciInfo.Response.LastBlockHeight
+
+		for i, merkle := range merkles {
+			owner := owners[i]
+			start := starts[i]
+			err := p.PostProof(merkle, owner, start, height)
 			if err != nil {
 				if err.Error() == "rpc error: code = NotFound desc = not found" { // if the file is not found on the network, delete it
-					err := file_system.DeleteFile(p.db, cid)
+					err := file_system.DeleteFile(p.db, merkle, owner, start)
 					if err != nil {
 						log.Error().Err(err)
 					}
 				}
 				if err.Error() == ErrNotOurs { // if the file is not ours, delete it
-					err := file_system.DeleteFile(p.db, cid)
+					err := file_system.DeleteFile(p.db, merkle, owner, start)
 					if err != nil {
 						log.Error().Err(err)
 					}

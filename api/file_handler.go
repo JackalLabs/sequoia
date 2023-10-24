@@ -1,9 +1,14 @@
 package api
 
 import (
+	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+
+	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
@@ -16,84 +21,79 @@ import (
 
 const MaxFileSize = 32 << 30
 
-func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.ResponseWriter, *http.Request) {
+func handleErr(err error, w http.ResponseWriter) {
+	v := types.ErrorResponse{
+		Error: err.Error(),
+	}
+	w.WriteHeader(http.StatusInternalServerError)
+	err = json.NewEncoder(w).Encode(v)
+	if err != nil {
+		log.Error().Err(err)
+	}
+}
+
+func PostFileHandler(db *badger.DB, q *queue.Queue, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
 		if err != nil {
-			v := types.ErrorResponse{
-				Error: err.Error(),
-			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
-			if err != nil {
-				log.Error().Err(err)
-			}
+			handleErr(err, w)
 			return
 		}
 		sender := req.Form.Get("sender")
-
-		file, _, err := req.FormFile("file") // Retrieve the file from form data
+		merkleString := req.Form.Get("merkle")
+		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
-			v := types.ErrorResponse{
-				Error: err.Error(),
-			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
-			if err != nil {
-				log.Error().Err(err)
-			}
+			handleErr(err, w)
 			return
 		}
 
-		merkle, fid, cid, size, err := file_system.WriteFile(db, file, sender, address, "")
+		startBlockString := req.Form.Get("start")
+		startBlock, err := strconv.ParseInt(startBlockString, 10, 64)
 		if err != nil {
-			v := types.ErrorResponse{
-				Error: err.Error(),
-			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
-			if err != nil {
-				log.Error().Err(err)
-			}
+			handleErr(err, w)
+			return
 		}
 
-		msg := storageTypes.NewMsgPostContract(
-			address,
-			sender,
-			fmt.Sprintf("%d", size),
-			fid,
-			merkle,
-		)
-
-		if err := msg.ValidateBasic(); err != nil {
-			v := types.ErrorResponse{
-				Error: err.Error(),
-			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
-			if err != nil {
-				log.Error().Err(err)
-			}
+		file, _, err := req.FormFile("file") // Retrieve the file from form data
+		if err != nil {
+			handleErr(err, w)
+			return
 		}
 
-		m, wg := q.Add(msg)
+		cl := storageTypes.NewQueryClient(wl.Client.GRPCConn)
+		queryParams := storageTypes.QueryFileRequest{
+			Merkle: merkle,
+			Owner:  sender,
+			Start:  startBlock,
+		}
+		res, err := cl.File(context.Background(), &queryParams)
+		if err != nil {
+			handleErr(err, w)
+			return
+		}
 
-		wg.Wait() // wait for queue to process
+		f := res.File
 
-		if m.Error() != nil {
-			v := types.ErrorResponse{
-				Error: m.Error().Error(),
-			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
-			if err != nil {
-				log.Error().Err(err)
-			}
+		if hex.EncodeToString(f.Merkle) != merkleString {
+			handleErr(fmt.Errorf("cannot accept file that doesn't match the chain data %x != %x", f.Merkle, merkle), w)
+			return
+		}
+
+		size, err := file_system.WriteFile(db, file, merkle, sender, startBlock, wl.AccAddress(), chunkSize)
+		if err != nil {
+			handleErr(err, w)
+			return
+		}
+
+		if int64(size) != f.FileSize {
+			handleErr(fmt.Errorf("cannot accept file that doesn't match the chain data %d != %d", int64(size), f.FileSize), w)
+			return
 		}
 
 		resp := types.UploadResponse{
-			CID: cid,
-			FID: fid,
+			Merkle: merkle,
+			Owner:  sender,
+			Start:  startBlock,
 		}
 
 		err = json.NewEncoder(w).Encode(resp)
@@ -107,9 +107,18 @@ func DownloadFileHandler(db *badger.DB) func(http.ResponseWriter, *http.Request)
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 
-		fid := vars["fid"]
+		merkleString := vars["merkle"]
+		merkle, err := hex.DecodeString(merkleString)
+		if err != nil {
+			v := types.ErrorResponse{
+				Error: err.Error(),
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(v)
 
-		file, err := file_system.GetFileDataByFID(db, fid)
+		}
+
+		file, err := file_system.GetFileDataByMerkle(db, merkle)
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),

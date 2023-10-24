@@ -1,19 +1,40 @@
 package file_system
 
-import "fmt"
+import (
+	"encoding/hex"
+	"fmt"
+	"strconv"
+	"strings"
+)
 
-func chunkKey(cid string, index int) []byte {
-	return []byte(fmt.Sprintf("chunks/%s/%010d", cid, index))
+func chunkKey(merkle []byte, owner string, start int64, index int) []byte {
+	return []byte(fmt.Sprintf("chunks/%x/%s/%d/%010d", merkle, owner, start, index))
 }
 
-func majorChunkKey(cid string) []byte {
-	return []byte(fmt.Sprintf("chunks/%s/", cid))
+func majorChunkKey(merkle []byte, owner string, start int64) []byte {
+	return []byte(fmt.Sprintf("chunks/%x/%s/%d/", merkle, owner, start))
 }
 
-func treeKey(cid string) []byte {
-	return []byte(fmt.Sprintf("tree/%s", cid))
+func majorChunkMerkleKey(merkle []byte) []byte {
+	return []byte(fmt.Sprintf("chunks/%x", merkle))
 }
 
-func fileKey(cid string) []byte {
-	return []byte(fmt.Sprintf("files/%s", cid))
+func SplitMerkle(key []byte) (merkle []byte, owner string, start int64, err error) {
+	its := strings.Split(string(key), "/")
+	merkle, err = hex.DecodeString(its[0])
+	if err != nil {
+		return
+	}
+
+	start, err = strconv.ParseInt(its[2], 10, 64)
+	if err != nil {
+		return
+	}
+
+	owner = its[1]
+	return
+}
+
+func treeKey(merkle []byte, owner string, start int64) []byte {
+	return []byte(fmt.Sprintf("tree/%x/%s/%d", merkle, owner, start))
 }

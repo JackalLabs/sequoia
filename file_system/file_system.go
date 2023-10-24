@@ -1,13 +1,11 @@
 package file_system
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
 
-	"github.com/JackalLabs/sequoia/utils"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree"
@@ -64,49 +62,28 @@ func buildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 	return r, exportedTree, chunks, size, nil
 }
 
-func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, cidOverride string) (merkle string, fid string, cid string, size int, err error) {
-	var buf bytes.Buffer
-	tee := io.TeeReader(reader, &buf)
-	fid, err = utils.MakeFid(tee)
-	if err != nil {
-		return
-	}
-
-	cid, err = utils.MakeCid(signee, address, fid)
-	if err != nil {
-		return
-	}
-
-	if cidOverride != "" {
-		cid = cidOverride
-	}
-
+func WriteFile(db *badger.DB, reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64) (size int, err error) {
 	err = db.Update(func(txn *badger.Txn) error {
-		var chunkSize int64 = 1024
-
-		root, exportedTree, chunks, s, err := buildTree(&buf, chunkSize)
+		root, exportedTree, chunks, s, err := buildTree(reader, chunkSize)
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Cannot build tree | %e", err))
 			return err
 		}
 		size = s
-		merkle = hex.EncodeToString(root)
+		if hex.EncodeToString(merkle) != hex.EncodeToString(root) {
+			return fmt.Errorf("merkle does not match")
+		}
 
-		err = txn.Set(treeKey(cid), exportedTree)
+		err = txn.Set(treeKey(merkle, owner, start), exportedTree)
 		if err != nil {
-			log.Info().Msg(fmt.Sprintf("Cannot set tree %s | %e", cid, err))
+			log.Info().Msg(fmt.Sprintf("Cannot set tree %x | %e", merkle, err))
 		}
 
 		for i, chunk := range chunks {
-			err := txn.Set(chunkKey(cid, i), chunk)
+			err := txn.Set(chunkKey(merkle, owner, start, i), chunk)
 			if err != nil {
 				log.Info().Msg(fmt.Sprintf("Cannot set chunk %d | %e", i, err))
 			}
-		}
-
-		err = txn.Set(fileKey(cid), []byte(fid))
-		if err != nil {
-			log.Info().Msg(fmt.Sprintf("Cannot set cid %s | %e", cid, err))
 		}
 
 		return nil
@@ -115,20 +92,16 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 	return
 }
 
-func DeleteFile(db *badger.DB, cid string) error {
-	log.Info().Msg(fmt.Sprintf("Removing %s from disk...", cid))
+func DeleteFile(db *badger.DB, merkle []byte, owner string, start int64) error {
+	log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
 	return db.Update(func(txn *badger.Txn) error {
-		err := txn.Delete(treeKey(cid))
-		if err != nil {
-			return err
-		}
-		err = txn.Delete(fileKey(cid))
+		err := txn.Delete(treeKey(merkle, owner, start))
 		if err != nil {
 			return err
 		}
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
-		prefix := majorChunkKey(cid)
+		prefix := majorChunkKey(merkle, owner, start)
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			k := item.Key()
@@ -142,8 +115,10 @@ func DeleteFile(db *badger.DB, cid string) error {
 	})
 }
 
-func ListFiles(db *badger.DB) ([]string, error) {
-	files := make([]string, 0)
+func ListFiles(db *badger.DB) ([][]byte, []string, []int64, error) {
+	merkles := make([][]byte, 0)
+	owners := make([]string, 0)
+	starts := make([]int64, 0)
 
 	err := db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -153,7 +128,16 @@ func ListFiles(db *badger.DB) ([]string, error) {
 			item := it.Item()
 			k := item.Key()
 			err := item.Value(func(v []byte) error {
-				files = append(files, string(k[len(prefix):]))
+				newValue := k[len(prefix):]
+				merkle, owner, start, err := SplitMerkle(newValue)
+				if err != nil {
+					return err
+				}
+
+				merkles = append(merkles, merkle)
+				owners = append(owners, owner)
+				starts = append(starts, start)
+
 				return nil
 			})
 			if err != nil {
@@ -163,7 +147,7 @@ func ListFiles(db *badger.DB) ([]string, error) {
 		return nil
 	})
 
-	return files, err
+	return merkles, owners, starts, err
 }
 
 func Dump(db *badger.DB) (map[string]string, error) {
@@ -196,9 +180,9 @@ func Dump(db *badger.DB) (map[string]string, error) {
 	return files, err
 }
 
-func GetFileChunk(db *badger.DB, cid string, chunkToLoad int) (newTree *merkletree.MerkleTree, chunkOut []byte, err error) {
-	tree := treeKey(cid)
-	chunk := chunkKey(cid, chunkToLoad)
+func GetFileTreeByChunk(db *badger.DB, merkle []byte, owner string, start int64, chunkToLoad int) (newTree *merkletree.MerkleTree, chunkOut []byte, err error) {
+	tree := treeKey(merkle, owner, start)
+	chunk := chunkKey(merkle, owner, start, chunkToLoad)
 
 	err = db.View(func(txn *badger.Txn) error {
 		t, err := txn.Get(tree)
@@ -260,34 +244,65 @@ func GetCIDFromFID(txn *badger.Txn, fid string) (cid string, err error) {
 	return
 }
 
-func GetFileDataByFID(db *badger.DB, fid string) (file []byte, err error) {
-	err = db.View(func(txn *badger.Txn) error {
-		cid, err := GetCIDFromFID(txn, fid)
-		if err != nil {
-			return err
-		}
-
-		file, err = GetFileData(db, cid)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	return
-}
-
-func GetFileData(db *badger.DB, cid string) ([]byte, error) {
+func GetFileData(db *badger.DB, merkle []byte, owner string, start int64) ([]byte, error) {
 	fileData := make([]byte, 0)
 
 	err := db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
-		prefix := majorChunkKey(cid)
+		prefix := majorChunkKey(merkle, owner, start)
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 
 			err := item.Value(func(val []byte) error {
+				fileData = append(fileData, val...)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return fileData, err
+}
+
+func GetFileDataByMerkle(db *badger.DB, merkle []byte) ([]byte, error) {
+	fileData := make([]byte, 0)
+	o := ""
+	var s int64
+	err := db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		prefix := majorChunkMerkleKey(merkle)
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+
+			k := item.Key()[len("chunks/"):]
+
+			_, owner, start, err := SplitMerkle(k)
+			if err != nil {
+				return err
+			}
+
+			if len(o) == 0 {
+				o = owner
+			} else {
+				if owner != o {
+					return nil
+				}
+			}
+			if s == 0 {
+				s = start
+			} else {
+				if s != start {
+					return nil
+				}
+			}
+
+			err = item.Value(func(val []byte) error {
 				fileData = append(fileData, val...)
 				return nil
 			})

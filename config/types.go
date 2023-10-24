@@ -9,6 +9,7 @@ type Seed struct {
 type Config struct {
 	QueueInterval   int64              `yaml:"queue_interval"`
 	ProofInterval   int64              `yaml:"proof_interval"`
+	ChunkSize       int64              `yaml:"chunk_size"`
 	StrayManagerCfg StrayManagerConfig `yaml:"stray_manager"`
 	ChainCfg        types.ChainConfig  `yaml:"chain_config"`
 	Ip              string             `yaml:"domain"`
@@ -31,6 +32,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		QueueInterval: 10,
 		ProofInterval: 120,
+		ChunkSize:     10240,
 		StrayManagerCfg: StrayManagerConfig{
 			CheckInterval:   30,
 			RefreshInterval: 120,

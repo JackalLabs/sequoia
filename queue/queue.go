@@ -74,8 +74,8 @@ func (q *Queue) Listen() {
 
 			// nolint:all
 			switch k.(type) {
-			case storageTypes.MsgPostproof:
-				mpp := k.(storageTypes.MsgPostproof)
+			case storageTypes.MsgPostProof:
+				mpp := k.(storageTypes.MsgPostProof)
 				size += mpp.Size()
 			}
 

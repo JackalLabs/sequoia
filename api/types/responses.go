@@ -1,8 +1,9 @@
 package types
 
 type UploadResponse struct {
-	CID string `json:"cid"`
-	FID string `json:"fid"`
+	Merkle []byte `json:"merkle"`
+	Owner  string `json:"owner"`
+	Start  int64  `json:"start"`
 }
 
 type ErrorResponse struct {

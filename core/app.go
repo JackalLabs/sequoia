@@ -182,13 +182,13 @@ func (a *App) Start() {
 	a.q = queue.NewQueue(w, cfg.QueueInterval)
 	a.prover = proofs.NewProver(w, a.db, a.q, cfg.ProofInterval)
 
-	go a.api.Serve(a.db, a.q, w)
+	go a.api.Serve(a.db, a.q, w, cfg.ChunkSize)
 	go a.prover.Start()
 	go a.q.Listen()
 
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, res.Providers.AuthClaimers)
 
-	go a.strayManager.Start(a.db, myUrl)
+	go a.strayManager.Start(a.db, myUrl, cfg.ChunkSize)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)

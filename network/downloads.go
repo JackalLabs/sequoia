@@ -15,9 +15,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, signee string, fileSize int64, myUrl string) error {
+func DownloadFile(db *badger.DB, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64) error {
 	queryParams := &types.QueryFindFileRequest{
-		Fid: fid,
+		Merkle: merkle,
 	}
 
 	cl := types.NewQueryClient(wallet.Client.GRPCConn)
@@ -34,7 +34,7 @@ func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, 
 	}
 
 	if len(arr) == 0 {
-		return fmt.Errorf("%s not found on provider network", fid)
+		return fmt.Errorf("%x not found on provider network", merkle)
 	}
 
 	foundFile := false
@@ -43,9 +43,9 @@ func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, 
 			continue
 		}
 
-		size, err := DownloadFileFromURL(db, url, cid, fid, signee, wallet.AccAddress())
+		size, err := DownloadFileFromURL(db, url, merkle, owner, start, wallet.AccAddress(), chunkSize)
 		if err != nil {
-			log.Info().Msg(fmt.Sprintf("Couldn't get %s from %s, trying again...", fid, url))
+			log.Info().Msg(fmt.Sprintf("Couldn't get %x from %s, trying again...", merkle, url))
 			continue
 		}
 		if fileSize != int64(size) {
@@ -59,15 +59,15 @@ func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, 
 		return fmt.Errorf("failed to find file on network")
 	}
 
-	log.Debug().Msg(fmt.Sprintf("Done downloading %s", fid))
+	log.Debug().Msg(fmt.Sprintf("Done downloading %x", merkle))
 
 	return nil
 }
 
-func DownloadFileFromURL(db *badger.DB, url string, cid string, fid string, signee string, address string) (int, error) {
-	log.Info().Msg(fmt.Sprintf("Downloading %s from %s...", fid, url))
+func DownloadFileFromURL(db *badger.DB, url string, merkle []byte, owner string, start int64, address string, chunkSize int64) (int, error) {
+	log.Info().Msg(fmt.Sprintf("Downloading %x from %s...", merkle, url))
 	cli := http.Client{}
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%s", url, fid), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%x", url, merkle), nil)
 	if err != nil {
 		return 0, err
 	}
@@ -99,7 +99,7 @@ func DownloadFileFromURL(db *badger.DB, url string, cid string, fid string, sign
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	_, _, _, size, err := file_system.WriteFile(db, reader, signee, address, cid)
+	size, err := file_system.WriteFile(db, reader, merkle, owner, start, address, chunkSize)
 	if err != nil {
 		return 0, err
 	}
