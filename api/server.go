@@ -27,6 +27,8 @@ func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet) {
 	r.HandleFunc("/download/{fid}", DownloadFileHandler(db))
 
 	r.HandleFunc("/list", ListFilesHandler(db))
+	r.HandleFunc("/api/data/fids", LegacyListFilesHandler(db))
+
 	r.HandleFunc("/dump", DumpDBHandler(db))
 
 	r.HandleFunc("/version", VersionHandler(wallet))

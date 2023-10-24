@@ -14,12 +14,17 @@ type Config struct {
 	Ip              string             `yaml:"domain"`
 	TotalSpace      int64              `yaml:"total_bytes_offered"`
 	DataDirectory   string             `yaml:"data_directory"`
+	APICfg          APIConfig          `yaml:"api_config"`
 }
 
 type StrayManagerConfig struct {
 	CheckInterval   int64 `yaml:"check_interval"`
 	RefreshInterval int64 `yaml:"refresh_interval"`
 	HandCount       int   `yaml:"hands"`
+}
+
+type APIConfig struct {
+	Port int64 `yaml:"port"`
 }
 
 func DefaultConfig() *Config {
@@ -41,5 +46,8 @@ func DefaultConfig() *Config {
 		Ip:            "https://example.com",
 		TotalSpace:    1092616192, // 1 gib default
 		DataDirectory: "$HOME/.sequoia/data",
+		APICfg: APIConfig{
+			Port: 3333,
+		},
 	}
 }

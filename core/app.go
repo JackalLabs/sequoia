@@ -16,6 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 )
@@ -52,7 +53,7 @@ func NewApp() *App {
 		panic(err)
 	}
 
-	apiServer := api.NewAPI(3333)
+	apiServer := api.NewAPI(cfg.APICfg.Port)
 
 	return &App{
 		db:  db,
@@ -62,6 +63,50 @@ func NewApp() *App {
 
 func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
 	init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), ip, fmt.Sprintf("%d", totalSpace), "")
+
+	data := walletTypes.NewTransactionData(
+		init,
+	).WithGasAuto().WithFeeAuto()
+
+	builder, err := wallet.BuildTx(data)
+	if err != nil {
+		return err
+	}
+
+	res, err := wallet.Client.BroadcastTxCommit(builder.GetTx())
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msg(res.TxHash)
+
+	return nil
+}
+
+func updateSpace(wallet *wallet.Wallet, totalSpace int64) error {
+	init := storageTypes.NewMsgSetProviderTotalspace(wallet.AccAddress(), fmt.Sprintf("%d", totalSpace))
+
+	data := walletTypes.NewTransactionData(
+		init,
+	).WithGasAuto().WithFeeAuto()
+
+	builder, err := wallet.BuildTx(data)
+	if err != nil {
+		return err
+	}
+
+	res, err := wallet.Client.BroadcastTxCommit(builder.GetTx())
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msg(res.TxHash)
+
+	return nil
+}
+
+func updateIp(wallet *wallet.Wallet, ip string) error {
+	init := storageTypes.NewMsgSetProviderIP(wallet.AccAddress(), ip)
 
 	data := walletTypes.NewTransactionData(
 		init,
@@ -106,6 +151,24 @@ func (a *App) Start() {
 	if err != nil {
 		log.Info().Msg("Provider does not exist on network or is not connected...")
 		err := initProviderOnChain(w, cfg.Ip, cfg.TotalSpace)
+		if err != nil {
+			panic(err)
+		}
+	}
+	totalSpace, err := strconv.ParseInt(res.Providers.Totalspace, 10, 64)
+	if err != nil {
+		if err != nil {
+			panic(err)
+		}
+	}
+	if totalSpace != cfg.TotalSpace {
+		err := updateSpace(w, cfg.TotalSpace)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if res.Providers.Ip != cfg.Ip {
+		err := updateIp(w, cfg.Ip)
 		if err != nil {
 			panic(err)
 		}

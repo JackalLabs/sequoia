@@ -23,3 +23,12 @@ type ListResponse struct {
 	Files []string `json:"files"`
 	Count int      `json:"count"`
 }
+
+type LegacyAPIListValue struct {
+	CID string `json:"cid"`
+	FID string `json:"fid"`
+}
+
+type LegacyAPIListResponse struct {
+	Data []LegacyAPIListValue `json:"data"`
+}
