@@ -1,10 +1,11 @@
 package strays
 
 import (
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"math/rand"
 	"time"
+
+	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
 type Hand struct {

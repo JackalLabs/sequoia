@@ -3,6 +3,9 @@ package strays
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"time"
+
 	"github.com/JackalLabs/sequoia/queue"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -11,8 +14,6 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
-	"math/rand"
-	"time"
 )
 
 func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
@@ -140,7 +141,6 @@ func (s *StrayManager) Stop() {
 }
 
 func (s *StrayManager) RefreshList() error {
-
 	log.Info().Msg("Refreshing stray list...")
 
 	s.strays = make([]*types.Strays, 0)
@@ -176,5 +176,4 @@ func (s *StrayManager) RefreshList() error {
 	s.lastSize = res.Size()
 
 	return nil
-
 }

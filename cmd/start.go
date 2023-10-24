@@ -19,7 +19,6 @@ func StartCmd() *cobra.Command {
 			app := core.NewApp(home)
 
 			app.Start()
-
 		},
 	}
 }

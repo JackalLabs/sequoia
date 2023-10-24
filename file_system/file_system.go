@@ -5,12 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
+
 	"github.com/JackalLabs/sequoia/utils"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
-	"io"
 )
 
 func buildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, error) {
@@ -81,7 +82,6 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 	}
 
 	err = db.Update(func(txn *badger.Txn) error {
-
 		var chunkSize int64 = 1024
 
 		root, exportedTree, chunks, s, err := buildTree(&buf, chunkSize)
@@ -110,7 +110,6 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 		}
 
 		return nil
-
 	})
 
 	return
@@ -119,7 +118,6 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 func DeleteFile(db *badger.DB, cid string) error {
 	log.Info().Msg(fmt.Sprintf("Removing %s from disk...", cid))
 	return db.Update(func(txn *badger.Txn) error {
-
 		err := txn.Delete(treeKey(cid))
 		if err != nil {
 			return err
@@ -141,12 +139,10 @@ func DeleteFile(db *badger.DB, cid string) error {
 		}
 
 		return nil
-
 	})
 }
 
 func ListFiles(db *badger.DB) ([]string, error) {
-
 	files := make([]string, 0)
 
 	err := db.View(func(txn *badger.Txn) error {
@@ -165,14 +161,12 @@ func ListFiles(db *badger.DB) ([]string, error) {
 			}
 		}
 		return nil
-
 	})
 
 	return files, err
 }
 
 func Dump(db *badger.DB) (map[string]string, error) {
-
 	files := make(map[string]string)
 
 	err := db.View(func(txn *badger.Txn) error {
@@ -197,7 +191,6 @@ func Dump(db *badger.DB) (map[string]string, error) {
 			}
 		}
 		return nil
-
 	})
 
 	return files, err
@@ -237,7 +230,6 @@ func GetFileChunk(db *badger.DB, cid string, chunkToLoad int) (newTree *merkletr
 }
 
 func GetCIDFromFID(txn *badger.Txn, fid string) (cid string, err error) {
-
 	found := false
 
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -250,7 +242,6 @@ func GetCIDFromFID(txn *badger.Txn, fid string) (cid string, err error) {
 		item := it.Item()
 
 		_ = item.Value(func(val []byte) error {
-
 			if string(val) == fid {
 				cid = string(item.Key()[len("files/"):])
 
@@ -284,15 +275,12 @@ func GetFileDataByFID(db *badger.DB, fid string) (file []byte, err error) {
 	})
 
 	return
-
 }
 
 func GetFileData(db *badger.DB, cid string) ([]byte, error) {
-
 	fileData := make([]byte, 0)
 
 	err := db.View(func(txn *badger.Txn) error {
-
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 		prefix := majorChunkKey(cid)

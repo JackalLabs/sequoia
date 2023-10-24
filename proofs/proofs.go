@@ -5,6 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
+	"strconv"
+	"time"
+
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
@@ -13,13 +17,12 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
-	"io"
-	"strconv"
-	"time"
 )
 
-const ErrNotOurs = "not our deal"
-const ErrNotReady = "not ready yet"
+const (
+	ErrNotOurs  = "not our deal"
+	ErrNotReady = "not ready yet"
+)
 
 func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (valid bool, proof *merkletree.Proof, err error) {
 	h := sha256.New()
@@ -116,7 +119,6 @@ func (p *Prover) PostProof(cid string) error {
 	_, _ = p.q.Add(msg)
 
 	return nil
-
 }
 
 func (p *Prover) Start() {

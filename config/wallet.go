@@ -3,17 +3,17 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path"
+
 	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 	"github.com/cosmos/go-bip39"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"os"
-	"path"
 )
 
 const SeedFileName = "provider_wallet.json"
 
 func generateWallet() (*Seed, error) {
-
 	entropySeed, err := bip39.NewEntropy(256)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,6 @@ func generateWallet() (*Seed, error) {
 }
 
 func ImportSeed(seedData []byte) (*Seed, error) {
-
 	seed := Seed{}
 
 	err := json.Unmarshal(seedData, &seed)
@@ -42,7 +41,6 @@ func ImportSeed(seedData []byte) (*Seed, error) {
 	}
 
 	return &seed, nil
-
 }
 
 func (s *Seed) Export() ([]byte, error) {
@@ -50,7 +48,6 @@ func (s *Seed) Export() ([]byte, error) {
 }
 
 func createWallet(directory string) error {
-
 	wallet, err := generateWallet()
 	if err != nil {
 		return err
@@ -105,5 +102,4 @@ func InitWallet(home string) (*wallet.Wallet, error) {
 	}
 
 	return sequoiaWallet.CreateWallet(seed.SeedPhrase, seed.DerivationPath, config.ChainCfg)
-
 }

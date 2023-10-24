@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/JackalLabs/sequoia/queue"
@@ -10,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
-	"net/http"
 )
 
 const MaxFileSize = 32 << 30
@@ -119,6 +120,5 @@ func DownloadFileHandler(db *badger.DB) func(http.ResponseWriter, *http.Request)
 		}
 
 		_, _ = w.Write(file)
-
 	}
 }

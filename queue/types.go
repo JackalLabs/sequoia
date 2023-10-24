@@ -1,10 +1,11 @@
 package queue
 
 import (
-	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"sync"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 )
 
 type Queue struct {

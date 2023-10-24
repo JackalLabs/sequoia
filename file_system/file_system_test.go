@@ -5,15 +5,15 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
 )
 
 func TestWriteFile(t *testing.T) {
-
 	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
 	require.NoError(t, err)
 
@@ -57,11 +57,9 @@ func TestWriteFile(t *testing.T) {
 	require.NoError(t, err)
 
 	log.Info().Msg(strings.Join(s, ","))
-
 }
 
 func TestFIDCID(t *testing.T) {
-
 	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
 	require.NoError(t, err)
 
@@ -99,11 +97,9 @@ func TestFIDCID(t *testing.T) {
 	require.Equal(t, fileData, fileDataFromFid)
 
 	log.Info().Msg(strings.Join(s, ","))
-
 }
 
 func TestLargeFile(t *testing.T) {
-
 	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
 	require.NoError(t, err)
 
@@ -131,5 +127,4 @@ func TestLargeFile(t *testing.T) {
 		require.Equal(t, bi, fileData)
 
 	}
-
 }

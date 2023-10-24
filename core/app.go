@@ -3,6 +3,12 @@ package core
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
+	"time"
+
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/config"
 	"github.com/JackalLabs/sequoia/logger"
@@ -14,11 +20,6 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
-	"os"
-	"os/signal"
-	"strconv"
-	"syscall"
-	"time"
 )
 
 type App struct {
@@ -31,7 +32,6 @@ type App struct {
 }
 
 func NewApp(home string) *App {
-
 	cfg, err := config.Init(home)
 	if err != nil {
 		panic(err)
@@ -130,7 +130,6 @@ func updateIp(wallet *wallet.Wallet, ip string) error {
 }
 
 func (a *App) Start() {
-
 	cfg, err := config.Init(a.home)
 	if err != nil {
 		panic(err)
@@ -203,5 +202,4 @@ func (a *App) Start() {
 
 	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.db.Close()
-
 }

@@ -3,8 +3,9 @@ package utils
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"io"
+
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 )
 
 func MakeFid(reader io.Reader) (string, error) {

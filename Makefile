@@ -33,7 +33,11 @@ clean:
 ###############################################################################
 golangci_lint_cmd=golangci-lint
 
-lint:
+format-tools:
+	go install mvdan.cc/gofumpt@v0.5.0
+	gofumpt -l -w .
+
+lint: format-tools
 	@echo "--> Running linter"
 	$(golangci_lint_cmd) run --timeout=10m
 
@@ -41,7 +45,7 @@ lint-fix:
 	@echo "--> Running linter"
 	$(golangci_lint_cmd) run --fix --out-format=tab --issues-exit-code=0
 
-.PHONY: lint lint-fix
+.PHONY: lint lint-fix format-tools
 
 format:
 	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -name '*.pb.go' -not -path "./venv" | xargs gofmt -w -s

@@ -1,18 +1,18 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/cmd/wallet"
 	"github.com/JackalLabs/sequoia/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 }
 
 func InitCmd() *cobra.Command {
@@ -53,7 +53,6 @@ func RootCmd() *cobra.Command {
 }
 
 func Execute(rootCmd *cobra.Command) {
-
 	if err := rootCmd.Execute(); err != nil {
 
 		log.Error().Err(err)

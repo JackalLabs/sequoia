@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/desmos-labs/cosmos-go-wallet/client"
 	"github.com/desmos-labs/cosmos-go-wallet/types"
@@ -10,10 +11,9 @@ import (
 )
 
 func CreateWallet(seed string, derivation string, chainCfg types.ChainConfig) (*wallet.Wallet, error) {
-
 	accountCfg := types.AccountConfig{
-		Mnemonic: seed,       //forward service profit benefit punch catch fan chief jealous steel harvest column spell rude warm home melody hat broccoli pulse say garlic you firm
-		HDPath:   derivation, //m/44'/118'/0'/0/0
+		Mnemonic: seed,       // forward service profit benefit punch catch fan chief jealous steel harvest column spell rude warm home melody hat broccoli pulse say garlic you firm
+		HDPath:   derivation, // m/44'/118'/0'/0/0
 	}
 
 	// Set up the SDK config with the proper bech32 prefixes

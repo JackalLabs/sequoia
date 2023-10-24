@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
-	"io"
-	"net/http"
 )
 
 func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, signee string, fileSize int64, myUrl string) error {

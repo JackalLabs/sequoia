@@ -1,10 +1,11 @@
 package proofs
 
 import (
+	"time"
+
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
-	"time"
 )
 
 type Prover struct {

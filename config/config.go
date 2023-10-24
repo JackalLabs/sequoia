@@ -1,12 +1,12 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 func ReadConfig(data []byte) (*Config, error) {
-
 	config := Config{}
 
 	err := yaml.Unmarshal([]byte(data), &config)
@@ -18,7 +18,6 @@ func ReadConfig(data []byte) (*Config, error) {
 }
 
 func (c *Config) Export() ([]byte, error) {
-
 	sb := strings.Builder{}
 	sb.WriteString("######################\n")
 	sb.WriteString("### Sequoia Config ###\n")

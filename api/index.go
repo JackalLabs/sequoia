@@ -2,15 +2,15 @@ package api
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/rs/zerolog/log"
-	"net/http"
 )
 
 func IndexHandler(address string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-
 		v := types.IndexResponse{
 			Status:  "online",
 			Address: address,
@@ -26,7 +26,6 @@ func IndexHandler(address string) func(http.ResponseWriter, *http.Request) {
 
 func VersionHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-
 		chainId, err := wallet.Client.GetChainID()
 		if err != nil {
 			w.WriteHeader(500)

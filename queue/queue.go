@@ -2,13 +2,14 @@ package queue
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/cosmos/cosmos-sdk/types"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
-	"sync"
-	"time"
 )
 
 func (m *Message) Done() {
@@ -111,5 +112,4 @@ func (q *Queue) Listen() {
 
 		q.processed = time.Now()
 	}
-
 }

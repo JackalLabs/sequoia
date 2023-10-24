@@ -1,6 +1,9 @@
 package strays
 
 import (
+	"strconv"
+	"time"
+
 	"github.com/JackalLabs/sequoia/network"
 	"github.com/JackalLabs/sequoia/queue"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
@@ -8,8 +11,6 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
-	"strconv"
-	"time"
 )
 
 func (h *Hand) Stop() {
@@ -83,7 +84,6 @@ func (h *Hand) Take(stray *types.Strays) {
 }
 
 func (s *StrayManager) NewHand(q *queue.Queue) (*Hand, error) {
-
 	offset := byte(len(s.hands)) + 1
 
 	w, err := s.wallet.CloneWalletOffset(offset)
