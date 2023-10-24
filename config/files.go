@@ -6,8 +6,6 @@ import (
 	"path"
 )
 
-const DefaultHome = "$HOME/.sequoia"
-
 const ConfigFileName = "config.yaml"
 
 func createIfNotExists(directory string, fileName string, contents []byte) (bool, error) {
@@ -68,8 +66,8 @@ func ReadConfigFile(directory string) (*Config, error) {
 	return config, nil
 }
 
-func Init() (*Config, error) {
-	directory := os.ExpandEnv(DefaultHome)
+func Init(home string) (*Config, error) {
+	directory := os.ExpandEnv(home)
 
 	err := os.MkdirAll(directory, os.ModePerm)
 	if err != nil {

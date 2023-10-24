@@ -13,6 +13,56 @@ import (
 	"io"
 )
 
+func buildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, error) {
+	size := 0
+
+	data := make([][]byte, 0)
+	chunks := make([][]byte, 0)
+
+	index := 0
+
+	for {
+		b := make([]byte, chunkSize)
+		read, _ := buf.Read(b)
+
+		if read == 0 {
+			break
+		}
+
+		b = b[:read]
+
+		size += read
+
+		chunks = append(chunks, b)
+
+		hexedData := hex.EncodeToString(b)
+
+		hash := sha256.New()
+		hash.Write([]byte(fmt.Sprintf("%d%s", index, hexedData))) // appending the index and the data
+		hashName := hash.Sum(nil)
+
+		data = append(data, hashName)
+
+		index++
+	}
+
+	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+	if err != nil {
+		return nil, nil, nil, 0, err
+	}
+
+	r := tree.Root()
+
+	exportedTree, err := tree.Export()
+	if err != nil {
+		return nil, nil, nil, 0, err
+	}
+
+	tree = nil // for GC
+
+	return r, exportedTree, chunks, size, nil
+}
+
 func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, cidOverride string) (merkle string, fid string, cid string, size int, err error) {
 	var buf bytes.Buffer
 	tee := io.TeeReader(reader, &buf)
@@ -32,51 +82,15 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 
 	err = db.Update(func(txn *badger.Txn) error {
 
-		chunkSize := 1024
+		var chunkSize int64 = 1024
 
-		data := make([][]byte, 0)
-		chunks := make([][]byte, 0)
-
-		index := 0
-
-		for {
-			b := make([]byte, chunkSize)
-			read, _ := buf.Read(b)
-
-			if read == 0 {
-				break
-			}
-
-			b = b[:read]
-
-			size += read
-
-			chunks = append(chunks, b)
-
-			hexedData := hex.EncodeToString(b)
-
-			hash := sha256.New()
-			hash.Write([]byte(fmt.Sprintf("%d%s", index, hexedData))) // appending the index and the data
-			hashName := hash.Sum(nil)
-
-			data = append(data, hashName)
-
-			index++
-		}
-
-		tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+		root, exportedTree, chunks, s, err := buildTree(&buf, chunkSize)
 		if err != nil {
+			log.Info().Msg(fmt.Sprintf("Cannot build tree | %e", err))
 			return err
 		}
-
-		r := hex.EncodeToString(tree.Root())
-
-		exportedTree, err := tree.Export()
-		if err != nil {
-			return err
-		}
-
-		tree = nil // for GC
+		size = s
+		merkle = hex.EncodeToString(root)
 
 		err = txn.Set(treeKey(cid), exportedTree)
 		if err != nil {
@@ -94,8 +108,6 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Cannot set cid %s | %e", cid, err))
 		}
-
-		merkle = r
 
 		return nil
 

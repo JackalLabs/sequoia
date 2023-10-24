@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/cmd/wallet"
 	"github.com/JackalLabs/sequoia/config"
 	"github.com/rs/zerolog"
@@ -14,23 +15,44 @@ func init() {
 
 }
 
+func InitCmd() *cobra.Command {
+	r := &cobra.Command{
+		Use:   "init",
+		Short: "initializes sequoias config folder",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			home, err := cmd.Flags().GetString(types.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			_, err = config.Init(home)
+			if err != nil {
+				return err
+			}
+
+			log.Logger.Info().Msg("done!")
+
+			return nil
+		},
+	}
+
+	return r
+}
+
 func RootCmd() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "sequoia",
 		Short: "Sequoia is a fast and light-weight Jackal Storage Provider.",
 	}
 
-	r.AddCommand(StartCmd(), wallet.WalletCmd())
+	r.PersistentFlags().String(types.FlagHome, types.DefaultHome, "sets the home directory for sequoia")
+
+	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd())
 
 	return r
 }
 
 func Execute(rootCmd *cobra.Command) {
-
-	_, err := config.Init()
-	if err != nil {
-		panic(err)
-	}
 
 	if err := rootCmd.Execute(); err != nil {
 

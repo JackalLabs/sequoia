@@ -76,8 +76,8 @@ func createWallet(directory string) error {
 	return nil
 }
 
-func InitWallet() (*wallet.Wallet, error) {
-	directory := os.ExpandEnv(DefaultHome)
+func InitWallet(home string) (*wallet.Wallet, error) {
+	directory := os.ExpandEnv(home)
 
 	err := os.MkdirAll(directory, os.ModePerm)
 	if err != nil {

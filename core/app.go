@@ -27,11 +27,12 @@ type App struct {
 	q            *queue.Queue
 	prover       *proofs.Prover
 	strayManager *strays.StrayManager
+	home         string
 }
 
-func NewApp() *App {
+func NewApp(home string) *App {
 
-	cfg, err := config.Init()
+	cfg, err := config.Init(home)
 	if err != nil {
 		panic(err)
 	}
@@ -56,8 +57,9 @@ func NewApp() *App {
 	apiServer := api.NewAPI(cfg.APICfg.Port)
 
 	return &App{
-		db:  db,
-		api: apiServer,
+		db:   db,
+		api:  apiServer,
+		home: home,
 	}
 }
 
@@ -129,12 +131,12 @@ func updateIp(wallet *wallet.Wallet, ip string) error {
 
 func (a *App) Start() {
 
-	cfg, err := config.Init()
+	cfg, err := config.Init(a.home)
 	if err != nil {
 		panic(err)
 	}
 
-	w, err := config.InitWallet()
+	w, err := config.InitWallet(a.home)
 	if err != nil {
 		panic(err)
 	}

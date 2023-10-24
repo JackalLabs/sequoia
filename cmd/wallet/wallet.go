@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"fmt"
+	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/config"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -24,7 +25,17 @@ func addressCmd() *cobra.Command {
 		Short: "Check this providers address",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			wallet, err := config.InitWallet()
+			home, err := cmd.Flags().GetString(types.FlagHome)
+			if err != nil {
+				panic(err)
+			}
+
+			_, err = config.Init(home)
+			if err != nil {
+				panic(err)
+			}
+
+			wallet, err := config.InitWallet(home)
 			if err != nil {
 				panic(err)
 			}
