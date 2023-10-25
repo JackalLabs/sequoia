@@ -62,18 +62,30 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 		Start:           start,
 	}
 
+	var newProof types.FileProof
+
 	proofRes, err := cl.Proof(context.Background(), proofQuery)
 	if err != nil {
-		return nil, nil, fmt.Errorf(ErrNotOurs)
+		if len(file.Proofs) == int(file.MaxProofs) {
+			return nil, nil, fmt.Errorf(ErrNotOurs)
+		}
+		newProof.Owner = file.Owner
+		newProof.Merkle = file.Merkle
+		newProof.Start = file.Start
+		newProof.Prover = p.wallet.AccAddress()
+		newProof.ChunkToProve = 0
+		newProof.LastProven = 0
+	} else { // if the proof does exist we handle it
+		newProof = proofRes.Proof
 	}
 
 	windowStart := blockHeight - (blockHeight % file.ProofInterval)
 
-	if proofRes.Proof.LastProven > windowStart { // already proven
+	if newProof.LastProven > windowStart { // already proven
 		return nil, nil, nil
 	}
 
-	block := int(proofRes.Proof.ChunkToProve)
+	block := int(newProof.ChunkToProve)
 
 	tree, chunk, err := file_system.GetFileTreeByChunk(p.db, merkle, owner, start, block)
 	if err != nil {
@@ -128,6 +140,8 @@ func (p *Prover) Start() {
 		if p.locked {
 			continue
 		}
+
+		log.Debug().Msg("Starting proof cycle...")
 
 		p.locked = true
 

@@ -148,6 +148,8 @@ func (a *App) Start() {
 
 	cl := storageTypes.NewQueryClient(w.Client.GRPCConn)
 
+	claimers := make([]string, 0)
+
 	res, err := cl.Providers(context.Background(), queryParams)
 	if err != nil {
 		log.Info().Msg("Provider does not exist on network or is not connected...")
@@ -155,27 +157,30 @@ func (a *App) Start() {
 		if err != nil {
 			panic(err)
 		}
-	}
-	totalSpace, err := strconv.ParseInt(res.Providers.Totalspace, 10, 64)
-	if err != nil {
+	} else {
+		claimers = res.Providers.AuthClaimers
+
+		totalSpace, err := strconv.ParseInt(res.Providers.Totalspace, 10, 64)
 		if err != nil {
-			panic(err)
+			if err != nil {
+				panic(err)
+			}
 		}
-	}
-	if totalSpace != cfg.TotalSpace {
-		err := updateSpace(w, cfg.TotalSpace)
-		if err != nil {
-			panic(err)
+		if totalSpace != cfg.TotalSpace {
+			err := updateSpace(w, cfg.TotalSpace)
+			if err != nil {
+				panic(err)
+			}
 		}
-	}
-	if res.Providers.Ip != cfg.Ip {
-		err := updateIp(w, cfg.Ip)
-		if err != nil {
-			panic(err)
+		if res.Providers.Ip != cfg.Ip {
+			err := updateIp(w, cfg.Ip)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 
-	myUrl := res.Providers.Ip
+	myUrl := cfg.Ip
 
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
@@ -186,7 +191,7 @@ func (a *App) Start() {
 	go a.prover.Start()
 	go a.q.Listen()
 
-	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, res.Providers.AuthClaimers)
+	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 
 	go a.strayManager.Start(a.db, myUrl, cfg.ChunkSize)
 

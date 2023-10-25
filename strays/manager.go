@@ -99,6 +99,8 @@ func (s *StrayManager) Start(db *badger.DB, myUrl string, chunkSize int64) {
 		if s.refreshed.Add(time.Second * s.refreshInterval).Before(time.Now()) {
 			err := s.RefreshList()
 			if err != nil {
+				log.Error().Err(err)
+
 				log.Info().Msg("failed refresh")
 			}
 			s.refreshed = time.Now()

@@ -64,6 +64,7 @@ func buildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 
 func WriteFile(db *badger.DB, reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64) (size int, err error) {
 	err = db.Update(func(txn *badger.Txn) error {
+		log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
 		root, exportedTree, chunks, s, err := buildTree(reader, chunkSize)
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Cannot build tree | %e", err))
@@ -71,7 +72,7 @@ func WriteFile(db *badger.DB, reader io.Reader, merkle []byte, owner string, sta
 		}
 		size = s
 		if hex.EncodeToString(merkle) != hex.EncodeToString(root) {
-			return fmt.Errorf("merkle does not match")
+			return fmt.Errorf("merkle does not match %x != %x", merkle, root)
 		}
 
 		err = txn.Set(treeKey(merkle, owner, start), exportedTree)
@@ -123,7 +124,7 @@ func ListFiles(db *badger.DB) ([][]byte, []string, []int64, error) {
 	err := db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
-		prefix := []byte("files/")
+		prefix := []byte("tree/")
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			k := item.Key()

@@ -29,6 +29,10 @@ func InitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			_, err = config.InitWallet(home)
+			if err != nil {
+				return err
+			}
 
 			log.Logger.Info().Msg("done!")
 
