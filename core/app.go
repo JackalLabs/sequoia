@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cosmos/gogoproto/grpc"
+
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/config"
 	"github.com/JackalLabs/sequoia/logger"
@@ -129,6 +131,19 @@ func updateIp(wallet *wallet.Wallet, ip string) error {
 	return nil
 }
 
+func (a *App) GetStorageParams(client grpc.ClientConn) (storageTypes.Params, error) {
+	queryParams := &storageTypes.QueryParamsRequest{}
+
+	cl := storageTypes.NewQueryClient(client)
+
+	res, err := cl.Params(context.Background(), queryParams)
+	if err != nil {
+		return storageTypes.Params{}, err
+	}
+
+	return res.Params, nil
+}
+
 func (a *App) Start() {
 	cfg, err := config.Init(a.home)
 	if err != nil {
@@ -180,6 +195,11 @@ func (a *App) Start() {
 		}
 	}
 
+	params, err := a.GetStorageParams(w.Client.GRPCConn)
+	if err != nil {
+		panic(err)
+	}
+
 	myUrl := cfg.Ip
 
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
@@ -187,13 +207,13 @@ func (a *App) Start() {
 	a.q = queue.NewQueue(w, cfg.QueueInterval)
 	a.prover = proofs.NewProver(w, a.db, a.q, cfg.ProofInterval)
 
-	go a.api.Serve(a.db, a.q, w, cfg.ChunkSize)
+	go a.api.Serve(a.db, a.q, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.q.Listen()
 
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 
-	go a.strayManager.Start(a.db, myUrl, cfg.ChunkSize)
+	go a.strayManager.Start(a.db, myUrl, params.ChunkSize)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)

@@ -117,7 +117,6 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, wl *wallet.Wallet, chunkSize
 
 		err = json.NewEncoder(w).Encode(resp)
 		if err != nil {
-
 			log.Error().Err(fmt.Errorf("can't encode json : %w", err))
 		}
 	}
