@@ -13,12 +13,17 @@ import (
 
 type API struct {
 	port int64
+	srv  *http.Server
 }
 
 func NewAPI(port int64) *API {
 	return &API{
 		port: port,
 	}
+}
+
+func (a *API) Close() error {
+	return a.srv.Close()
 }
 
 func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet, chunkSize int64) {
@@ -34,7 +39,7 @@ func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet, chunkS
 
 	r.HandleFunc("/version", VersionHandler(wallet))
 
-	srv := &http.Server{
+	a.srv = &http.Server{
 		Handler: r,
 		Addr:    fmt.Sprintf("0.0.0.0:%d", a.port),
 		// Good practice: enforce timeouts for servers you create!
@@ -42,7 +47,7 @@ func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet, chunkS
 		ReadTimeout:  15 * time.Second,
 	}
 
-	err := srv.ListenAndServe()
+	err := a.srv.ListenAndServe()
 	if err != nil {
 		panic(err)
 	}

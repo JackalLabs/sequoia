@@ -206,21 +206,21 @@ func (a *App) Start() {
 
 	a.q = queue.NewQueue(w, cfg.QueueInterval)
 	a.prover = proofs.NewProver(w, a.db, a.q, cfg.ProofInterval)
+	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 
+	// Starting the 4 concurrent services
 	go a.api.Serve(a.db, a.q, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.q.Listen()
-
-	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
-
 	go a.strayManager.Start(a.db, myUrl, params.ChunkSize)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	<-done // Will block here until user hits ctrl+c
 
-	fmt.Println("Shutting down safely...")
+	fmt.Println("Shutting Sequoia down safely...")
 
+	_ = a.api.Close()
 	a.q.Stop()
 	a.prover.Stop()
 	a.strayManager.Stop()
