@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackalLabs/canine-chain/v3 v3.0.1
 	github.com/rs/zerolog v1.29.1
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
 	github.com/wealdtech/go-merkletree v1.0.0
 	gopkg.in/yaml.v3 v3.0.1
