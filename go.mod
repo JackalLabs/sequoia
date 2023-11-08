@@ -8,10 +8,9 @@ require (
 	github.com/cosmos/gogoproto v1.4.10
 	github.com/desmos-labs/cosmos-go-wallet v0.7.2
 	github.com/dgraph-io/badger/v4 v4.2.0
+	github.com/gorilla/mux v1.8.1
 	github.com/jackalLabs/canine-chain/v3 v3.0.2
 	github.com/json-iterator/go v1.1.12
-	github.com/dgraph-io/badger/v4 v4.2.0
-	github.com/gorilla/mux v1.8.1
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
