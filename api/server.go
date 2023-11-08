@@ -10,6 +10,9 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/gorilla/mux"
 )
+import jsoniter "github.com/json-iterator/go"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type API struct {
 	port int64

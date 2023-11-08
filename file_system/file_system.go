@@ -8,9 +8,12 @@ import (
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
-	"github.com/wealdtech/go-merkletree"
-	"github.com/wealdtech/go-merkletree/sha3"
+	"github.com/wealdtech/go-merkletree/v2"
+	"github.com/wealdtech/go-merkletree/v2/sha3"
 )
+import jsoniter "github.com/json-iterator/go"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func buildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, error) {
 	size := 0
@@ -45,52 +48,73 @@ func buildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 		index++
 	}
 
-	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+	tree, err := merkletree.NewTree(
+		merkletree.WithData(data),
+		merkletree.WithHashType(sha3.New512()),
+		merkletree.WithSalt(false),
+	)
 	if err != nil {
 		return nil, nil, nil, 0, err
 	}
 
 	r := tree.Root()
 
-	exportedTree, err := tree.Export()
+	exportedTree, err := json.Marshal(tree)
 	if err != nil {
 		return nil, nil, nil, 0, err
 	}
-
-	tree = nil // for GC
 
 	return r, exportedTree, chunks, size, nil
 }
 
 func WriteFile(db *badger.DB, reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64) (size int, err error) {
-	err = db.Update(func(txn *badger.Txn) error {
-		log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
-		root, exportedTree, chunks, s, err := buildTree(reader, chunkSize)
-		if err != nil {
-			log.Info().Msg(fmt.Sprintf("Cannot build tree | %e", err))
-			return err
-		}
-		size = s
-		if hex.EncodeToString(merkle) != hex.EncodeToString(root) {
-			return fmt.Errorf("merkle does not match %x != %x", merkle, root)
-		}
+	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
+	root, exportedTree, chunks, s, err := buildTree(reader, chunkSize)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("cannot build tree | %w", err))
+		return 0, err
+	}
+	size = s
+	if hex.EncodeToString(merkle) != hex.EncodeToString(root) {
+		return 0, fmt.Errorf("merkle does not match %x != %x", merkle, root)
+	}
 
+	err = db.Update(func(txn *badger.Txn) error {
 		err = txn.Set(treeKey(merkle, owner, start), exportedTree)
 		if err != nil {
-			log.Info().Msg(fmt.Sprintf("Cannot set tree %x | %e", merkle, err))
-		}
-
-		for i, chunk := range chunks {
-			err := txn.Set(chunkKey(merkle, owner, start, i), chunk)
-			if err != nil {
-				log.Info().Msg(fmt.Sprintf("Cannot set chunk %d | %e", i, err))
-			}
+			e := fmt.Errorf("cannot set tree %x | %w", merkle, err)
+			log.Error().Err(e)
+			return e
 		}
 
 		return nil
 	})
+	if err != nil {
+		return 0, err
+	}
 
-	return
+	i := 0
+	for len(chunks) > 0 {
+		chunk := chunks[0]
+		chunks = chunks[1:]
+
+		err = db.Update(func(txn *badger.Txn) error {
+			err := txn.Set(chunkKey(merkle, owner, start, i), chunk)
+			if err != nil {
+				e := fmt.Errorf("cannot set chunk %d | %w", i, err)
+				log.Error().Err(e)
+				return e
+			}
+			return nil
+		})
+		if err != nil {
+			return 0, err
+		}
+
+		i++
+	}
+
+	return size, nil
 }
 
 func DeleteFile(db *badger.DB, merkle []byte, owner string, start int64) error {
@@ -191,12 +215,15 @@ func GetFileTreeByChunk(db *badger.DB, merkle []byte, owner string, start int64,
 			return err
 		}
 		err = t.Value(func(val []byte) error {
-			newTree, err = merkletree.ImportMerkleTree(val, sha3.New512())
+			err := json.Unmarshal(val, newTree)
 			if err != nil {
 				return err
 			}
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 
 		c, err := txn.Get(chunk)
 		if err != nil {
@@ -207,6 +234,9 @@ func GetFileTreeByChunk(db *badger.DB, merkle []byte, owner string, start int64,
 			chunkOut = val
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 
 		return nil
 	})

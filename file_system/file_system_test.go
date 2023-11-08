@@ -1,15 +1,74 @@
 package file_system
 
+//nolint:all
 import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"math/rand"
+	"net/http"
 	"testing"
+
+	"github.com/JackalLabs/sequoia/logger"
+	"github.com/rs/zerolog"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 )
+
+import _ "net/http/pprof"
+
+var table = []struct {
+	input int
+}{
+	{input: 1024},                    // 1kib
+	{input: 1024 * 10},               // 10kib
+	{input: 1024 * 1024},             // 1mib
+	{input: 1024 * 1024 * 1024},      // 1gib
+	{input: 1024 * 1024 * 1024 * 10}, // 10gib
+}
+
+func BenchmarkFileWrites(b *testing.B) {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: ioutil.Discard})
+	log.Logger = log.With().Caller().Logger()
+
+	options := badger.DefaultOptions("/tmp/badger")
+	options.Logger = &logger.SequoiaLogger{}
+
+	db, err := badger.Open(options)
+	require.NoError(b, err)
+
+	err = db.DropAll()
+	require.NoError(b, err)
+
+	defer db.Close()
+
+	go func() {
+		_ = http.ListenAndServe("localhost:6060", nil)
+	}()
+
+	for _, v := range table {
+		b.Run(fmt.Sprintf("input_size_%d", v.input), func(b *testing.B) {
+			for i := 0; i < 1; i++ {
+				token := make([]byte, v.input) // 1 kb size
+				//nolint:all
+				rand.Read(token)
+
+				buf := bytes.NewBuffer(token)
+				buf2 := bytes.NewBuffer(token)
+
+				root, _, _, _, err := buildTree(buf2, 10240)
+				require.NoError(b, err)
+
+				_, err = WriteFile(db, buf, root, "file_owner", 0, "myself", 10240)
+				require.NoError(b, err)
+
+			}
+		})
+	}
+}
 
 func TestWriteFile(t *testing.T) {
 	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))

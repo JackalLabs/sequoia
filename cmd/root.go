@@ -13,6 +13,7 @@ import (
 
 func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Logger = log.With().Caller().Logger()
 }
 
 func InitCmd() *cobra.Command {

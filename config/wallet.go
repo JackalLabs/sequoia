@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -10,6 +9,9 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 )
+import jsoniter "github.com/json-iterator/go"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const SeedFileName = "provider_wallet.json"
 

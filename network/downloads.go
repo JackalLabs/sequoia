@@ -3,7 +3,6 @@ package network
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +13,9 @@ import (
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
+import jsoniter "github.com/json-iterator/go"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func DownloadFile(db *badger.DB, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64) error {
 	queryParams := &types.QueryFindFileRequest{

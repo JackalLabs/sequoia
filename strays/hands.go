@@ -1,7 +1,6 @@
 package strays
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/JackalLabs/sequoia/file_system"
@@ -15,6 +14,9 @@ import (
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
+import jsoniter "github.com/json-iterator/go"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func (h *Hand) Stop() {
 	h.running = false

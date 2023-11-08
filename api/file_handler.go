@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"

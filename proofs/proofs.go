@@ -3,7 +3,6 @@ package proofs
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"io"
 	"time"
@@ -14,9 +13,12 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
-	"github.com/wealdtech/go-merkletree"
-	"github.com/wealdtech/go-merkletree/sha3"
+	"github.com/wealdtech/go-merkletree/v2"
+	"github.com/wealdtech/go-merkletree/v2/sha3"
 )
+import jsoniter "github.com/json-iterator/go"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const (
 	ErrNotOurs  = "not our deal"
