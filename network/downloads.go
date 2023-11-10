@@ -18,7 +18,7 @@ import jsoniter "github.com/json-iterator/go"
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func DownloadFile(db *badger.DB, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64) error {
-	queryParams := &types.QueryFindFileRequest{
+	queryParams := &types.QueryFindFile{
 		Merkle: merkle,
 	}
 

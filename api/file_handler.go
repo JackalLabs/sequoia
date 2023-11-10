@@ -67,7 +67,7 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, wl *wallet.Wallet, chunkSize
 		}
 
 		cl := storageTypes.NewQueryClient(wl.Client.GRPCConn)
-		queryParams := storageTypes.QueryFileRequest{
+		queryParams := storageTypes.QueryFile{
 			Merkle: merkle,
 			Owner:  sender,
 			Start:  startBlock,

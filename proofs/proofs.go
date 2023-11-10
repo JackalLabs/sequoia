@@ -42,7 +42,7 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (v
 }
 
 func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHeight int64) ([]byte, []byte, error) {
-	queryParams := &types.QueryFileRequest{
+	queryParams := &types.QueryFile{
 		Merkle: merkle,
 		Owner:  owner,
 		Start:  start,
@@ -57,7 +57,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 	file := res.File
 
-	proofQuery := &types.QueryProofRequest{
+	proofQuery := &types.QueryProof{
 		ProviderAddress: p.wallet.AccAddress(),
 		Merkle:          merkle,
 		Owner:           owner,

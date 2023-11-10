@@ -159,7 +159,7 @@ func (s *StrayManager) RefreshList() error {
 		CountTotal: true,
 	}
 
-	queryParams := &types.QueryOpenFilesRequest{
+	queryParams := &types.QueryOpenFiles{
 		ProviderAddress: s.wallet.AccAddress(),
 		Pagination:      page,
 	}

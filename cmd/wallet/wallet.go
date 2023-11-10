@@ -5,7 +5,6 @@ import (
 
 	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/config"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +39,7 @@ func addressCmd() *cobra.Command {
 				panic(err)
 			}
 
-			log.Info().Msg(fmt.Sprintf("Provider Address: %s", wallet.AccAddress()))
+			fmt.Printf("Provider Address: %s\n", wallet.AccAddress())
 		},
 	}
 }

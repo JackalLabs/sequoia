@@ -66,7 +66,7 @@ func NewApp(home string) *App {
 }
 
 func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
-	init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), ip, fmt.Sprintf("%d", totalSpace), "")
+	init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), ip, totalSpace, "")
 
 	data := walletTypes.NewTransactionData(
 		init,
@@ -88,7 +88,7 @@ func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) err
 }
 
 func updateSpace(wallet *wallet.Wallet, totalSpace int64) error {
-	init := storageTypes.NewMsgSetProviderTotalspace(wallet.AccAddress(), fmt.Sprintf("%d", totalSpace))
+	init := storageTypes.NewMsgSetProviderTotalSpace(wallet.AccAddress(), totalSpace)
 
 	data := walletTypes.NewTransactionData(
 		init,
@@ -132,7 +132,7 @@ func updateIp(wallet *wallet.Wallet, ip string) error {
 }
 
 func (a *App) GetStorageParams(client grpc.ClientConn) (storageTypes.Params, error) {
-	queryParams := &storageTypes.QueryParamsRequest{}
+	queryParams := &storageTypes.QueryParams{}
 
 	cl := storageTypes.NewQueryClient(client)
 
@@ -157,7 +157,7 @@ func (a *App) Start() {
 
 	myAddress := w.AccAddress()
 
-	queryParams := &storageTypes.QueryProviderRequest{
+	queryParams := &storageTypes.QueryProvider{
 		Address: myAddress,
 	}
 
@@ -165,7 +165,7 @@ func (a *App) Start() {
 
 	claimers := make([]string, 0)
 
-	res, err := cl.Providers(context.Background(), queryParams)
+	res, err := cl.Provider(context.Background(), queryParams)
 	if err != nil {
 		log.Info().Msg("Provider does not exist on network or is not connected...")
 		err := initProviderOnChain(w, cfg.Ip, cfg.TotalSpace)
@@ -173,9 +173,9 @@ func (a *App) Start() {
 			panic(err)
 		}
 	} else {
-		claimers = res.Providers.AuthClaimers
+		claimers = res.Provider.AuthClaimers
 
-		totalSpace, err := strconv.ParseInt(res.Providers.Totalspace, 10, 64)
+		totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
 		if err != nil {
 			if err != nil {
 				panic(err)
@@ -187,7 +187,7 @@ func (a *App) Start() {
 				panic(err)
 			}
 		}
-		if res.Providers.Ip != cfg.Ip {
+		if res.Provider.Ip != cfg.Ip {
 			err := updateIp(w, cfg.Ip)
 			if err != nil {
 				panic(err)
