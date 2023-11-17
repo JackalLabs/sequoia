@@ -3,6 +3,7 @@ package proofs
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -25,23 +26,29 @@ const (
 	ErrNotReady = "not ready yet"
 )
 
-func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (valid bool, proof *merkletree.Proof, err error) {
+func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (bool, *merkletree.Proof, error) {
+	log.Debug().Msg(fmt.Sprintf("Generating Merkle proof for %d", index))
+
 	h := sha256.New()
-	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	_, err := io.WriteString(h, fmt.Sprintf("%d%x", index, item))
 	if err != nil {
-		return
+		return false, nil, err
 	}
 
-	proof, err = tree.GenerateProof(h.Sum(nil), 0)
+	proof, err := tree.GenerateProof(h.Sum(nil), 0)
 	if err != nil {
-		return
+		return false, nil, err
 	}
 
-	valid, err = merkletree.VerifyProofUsing(h.Sum(nil), false, proof, [][]byte{tree.Root()}, sha3.New512())
-	return
+	valid, err := merkletree.VerifyProofUsing(h.Sum(nil), false, proof, [][]byte{tree.Root()}, sha3.New512())
+	if err != nil {
+		return false, nil, err
+	}
+	return valid, proof, nil
 }
 
-func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHeight int64) ([]byte, []byte, error) {
+func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHeight int64, startedAt time.Time) ([]byte, []byte, error) {
+	log.Debug().Msg(fmt.Sprintf("Generating proof for %x", merkle))
 	queryParams := &types.QueryFile{
 		Merkle: merkle,
 		Owner:  owner,
@@ -51,7 +58,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 	cl := types.NewQueryClient(p.wallet.Client.GRPCConn)
 
 	res, err := cl.File(context.Background(), queryParams)
-	if err != nil { // if the deal doesn't exist we check strays & contracts, then remove it
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -59,47 +66,61 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 	proofQuery := &types.QueryProof{
 		ProviderAddress: p.wallet.AccAddress(),
-		Merkle:          merkle,
-		Owner:           owner,
-		Start:           start,
+		Merkle:          file.Merkle,
+		Owner:           file.Owner,
+		Start:           file.Start,
 	}
 
 	var newProof types.FileProof
+	log.Debug().Msg(fmt.Sprintf("Querying proof of %x", merkle))
 
 	proofRes, err := cl.Proof(context.Background(), proofQuery)
 	if err != nil {
 		if len(file.Proofs) == int(file.MaxProofs) {
-			return nil, nil, fmt.Errorf(ErrNotOurs)
+			return nil, nil, errors.New(ErrNotOurs)
 		}
-		newProof.Owner = file.Owner
-		newProof.Merkle = file.Merkle
-		newProof.Start = file.Start
-		newProof.Prover = p.wallet.AccAddress()
-		newProof.ChunkToProve = 0
-		newProof.LastProven = 0
+		newProof = types.FileProof{
+			Prover:       p.wallet.AccAddress(),
+			Merkle:       file.Merkle,
+			Owner:        file.Owner,
+			Start:        file.Start,
+			LastProven:   0,
+			ChunkToProve: 0,
+		}
 	} else { // if the proof does exist we handle it
 		newProof = proofRes.Proof
 	}
 
-	windowStart := blockHeight - (blockHeight % file.ProofInterval)
+	t := time.Since(startedAt)
 
-	if newProof.LastProven > windowStart { // already proven
+	proven := file.ProvenThisBlock(blockHeight+int64(t.Seconds()/6), newProof.LastProven)
+	if proven {
+		log.Info().Msg(fmt.Sprintf("%x was proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
+		log.Debug().Msg("File was already proven")
 		return nil, nil, nil
 	}
+	log.Info().Msg(fmt.Sprintf("%x was not yet proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
 
 	block := int(newProof.ChunkToProve)
 
+	log.Debug().Msg(fmt.Sprintf("Getting file tree by chunk for %x", merkle))
+
 	tree, chunk, err := file_system.GetFileTreeByChunk(p.db, merkle, owner, start, block)
 	if err != nil {
+		log.Error().Err(fmt.Errorf("failed to get filetree by chunk for %x %w", merkle, err))
 		return nil, nil, err
 	}
+
+	log.Debug().Msg(fmt.Sprintf("About to generate merkle proof for %x", merkle))
 
 	valid, proof, err := GenerateMerkleProof(tree, block, chunk)
 	if err != nil {
 		return nil, nil, err
 	}
 	if !valid {
-		return nil, nil, fmt.Errorf("tree not valid")
+		e := errors.New("tree not valid")
+		log.Error().Err(fmt.Errorf("tree not valid for %x %w", merkle, e))
+		return nil, nil, e
 	}
 
 	jproof, err := json.Marshal(*proof)
@@ -107,22 +128,36 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 		return nil, nil, err
 	}
 
+	log.Debug().Msg(fmt.Sprintf("Done making proof for %x", merkle))
+
 	return jproof, chunk, nil
 }
 
-func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight int64) error {
-	proof, item, err := p.GenerateProof(merkle, owner, start, blockHeight)
+func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight int64, startedAt time.Time) error {
+	proof, item, err := p.GenerateProof(merkle, owner, start, blockHeight, startedAt)
 	if err != nil {
 		return err
 	}
 
-	if proof == nil {
+	if proof == nil || item == nil {
+		log.Debug().Msg("generated proof was nil but no error was thrown")
 		return nil
 	}
 
+	log.Debug().Msg("Successfully generated proof")
+
 	msg := types.NewMsgPostProof(p.wallet.AccAddress(), merkle, owner, start, item, proof)
 
-	_, _ = p.q.Add(msg)
+	m, wg := p.q.Add(msg)
+
+	wg.Wait()
+
+	if m.Error() != nil {
+		log.Error().Err(m.Error())
+		return m.Error()
+	}
+
+	log.Debug().Msg(fmt.Sprintf("TX Hash: %s", m.Hash()))
 
 	return nil
 }
@@ -134,56 +169,54 @@ func (p *Prover) Start() {
 			return
 		}
 
-		time.Sleep(time.Millisecond * 333)                                                // pauses for one third of a second
-		if !p.processed.Add(time.Second * time.Duration(p.interval)).Before(time.Now()) { // check every 2 minutes
-			continue
-		}
-
-		if p.locked {
+		time.Sleep(time.Millisecond * 1000) // pauses for one third of a second
+		if !p.processed.Add(time.Second * time.Duration(p.interval)).Before(time.Now()) {
 			continue
 		}
 
 		log.Debug().Msg("Starting proof cycle...")
-
-		p.locked = true
-
-		merkles, owners, starts, err := file_system.ListFiles(p.db)
-		if err != nil {
-			log.Error().Err(err)
-		}
 
 		abciInfo, err := p.wallet.Client.RPCClient.ABCIInfo(context.Background())
 		if err != nil {
 			log.Error().Err(err)
 			continue
 		}
+		height := abciInfo.Response.LastBlockHeight + 1
 
-		height := abciInfo.Response.LastBlockHeight
+		t := time.Now()
 
-		for i, merkle := range merkles {
-			owner := owners[i]
-			start := starts[i]
-			err := p.PostProof(merkle, owner, start, height)
-			if err != nil {
-				if err.Error() == "rpc error: code = NotFound desc = not found" { // if the file is not found on the network, delete it
-					err := file_system.DeleteFile(p.db, merkle, owner, start)
-					if err != nil {
-						log.Error().Err(err)
-					}
-				}
-				if err.Error() == ErrNotOurs { // if the file is not ours, delete it
-					err := file_system.DeleteFile(p.db, merkle, owner, start)
-					if err != nil {
-						log.Error().Err(err)
-					}
-				}
-			}
+		err = file_system.ProcessFiles(p.db, func(merkle []byte, owner string, start int64) {
+			log.Debug().Msg(fmt.Sprintf("proving: %x", merkle))
+			go p.wrapPostProof(merkle, owner, start, height, t)
+		})
+		if err != nil {
+			log.Error().Err(err)
 		}
-
-		p.locked = false
 
 		p.processed = time.Now()
 	}
+}
+
+func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height int64, startedAt time.Time) {
+	filesProving.Inc()
+	defer filesProving.Dec()
+	err := p.PostProof(merkle, owner, start, height, startedAt)
+	if err != nil {
+		log.Warn().Err(err)
+		if err.Error() == "rpc error: code = NotFound desc = not found" { // if the file is not found on the network, delete it
+			err := file_system.DeleteFile(p.db, merkle, owner, start)
+			if err != nil {
+				log.Error().Err(err)
+			}
+		}
+		if err.Error() == ErrNotOurs { // if the file is not ours, delete it
+			err := file_system.DeleteFile(p.db, merkle, owner, start)
+			if err != nil {
+				log.Error().Err(err)
+			}
+		}
+	}
+
 }
 
 func (p *Prover) Stop() {

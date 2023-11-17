@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
+
+	"github.com/JackalLabs/sequoia/proofs"
 
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
-	"github.com/JackalLabs/sequoia/queue"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/gorilla/mux"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
@@ -32,7 +34,7 @@ func handleErr(err error, w http.ResponseWriter, code int) {
 	}
 }
 
-func PostFileHandler(db *badger.DB, q *queue.Queue, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
+func PostFileHandler(db *badger.DB, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
 		if err != nil {
@@ -118,6 +120,8 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, wl *wallet.Wallet, chunkSize
 		if err != nil {
 			log.Error().Err(fmt.Errorf("can't encode json : %w", err))
 		}
+
+		_ = prover.PostProof(merkle, sender, startBlock, startBlock, time.Now())
 	}
 }
 

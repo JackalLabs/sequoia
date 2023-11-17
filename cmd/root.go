@@ -15,6 +15,7 @@ import (
 func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	log.Logger = log.With().Caller().Logger()
+	log.Logger = log.Level(zerolog.InfoLevel)
 }
 
 func InitCmd() *cobra.Command {

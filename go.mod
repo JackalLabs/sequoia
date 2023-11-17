@@ -187,8 +187,8 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	//github.com/jackalLabs/canine-chain/v3 => ../canine-chain
-	github.com/jackalLabs/canine-chain/v3 => github.com/jackalLabs/canine-chain/v3 v3.0.2-0.20231110152021-8f211f3441f9 // using the master branch for now before v4 releases
+	github.com/jackalLabs/canine-chain/v3 => ../canine-chain
+	//github.com/jackalLabs/canine-chain/v3 => github.com/jackalLabs/canine-chain/v3 v3.0.2-0.20231110184902-1fd0bb86bf9d // using the master branch for now before v4 releases
 
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27
 

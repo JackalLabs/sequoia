@@ -14,6 +14,5 @@ type Prover struct {
 	db        *badger.DB
 	q         *queue.Queue
 	processed time.Time
-	locked    bool
 	interval  int64
 }

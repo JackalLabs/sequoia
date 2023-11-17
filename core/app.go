@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/JackalLabs/sequoia/monitoring"
+
 	"github.com/cosmos/gogoproto/grpc"
 
 	"github.com/JackalLabs/sequoia/api"
@@ -31,6 +33,7 @@ type App struct {
 	prover       *proofs.Prover
 	strayManager *strays.StrayManager
 	home         string
+	monitor      *monitoring.Monitor
 }
 
 func NewApp(home string) *App {
@@ -205,14 +208,17 @@ func (a *App) Start() {
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
 	a.q = queue.NewQueue(w, cfg.QueueInterval)
+	go a.q.Listen()
+
 	a.prover = proofs.NewProver(w, a.db, a.q, cfg.ProofInterval)
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
+	a.monitor = monitoring.NewMonitor(w)
 
 	// Starting the 4 concurrent services
-	go a.api.Serve(a.db, a.q, w, params.ChunkSize)
+	go a.api.Serve(a.db, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
-	go a.q.Listen()
 	go a.strayManager.Start(a.db, myUrl, params.ChunkSize)
+	go a.monitor.Start()
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
@@ -224,6 +230,7 @@ func (a *App) Start() {
 	a.q.Stop()
 	a.prover.Stop()
 	a.strayManager.Stop()
+	a.monitor.Stop()
 
 	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.db.Close()

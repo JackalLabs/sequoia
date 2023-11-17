@@ -30,3 +30,7 @@ func (m *Message) Error() error {
 func (m *Message) Log() string {
 	return m.res.RawLog
 }
+
+func (m *Message) Hash() string {
+	return m.res.TxHash
+}

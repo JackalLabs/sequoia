@@ -1,11 +1,16 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/JackalLabs/sequoia/queue"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/JackalLabs/sequoia/proofs"
+	"github.com/rs/zerolog/log"
+
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/gorilla/mux"
@@ -29,10 +34,10 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet, chunkSize int64) {
+func (a *API) Serve(db *badger.DB, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) {
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexHandler(wallet.AccAddress()))
-	r.HandleFunc("/upload", PostFileHandler(db, q, wallet, chunkSize))
+	r.HandleFunc("/upload", PostFileHandler(db, p, wallet, chunkSize))
 	r.HandleFunc("/download/{fid}", DownloadFileHandler(db))
 
 	r.HandleFunc("/list", ListFilesHandler(db))
@@ -42,6 +47,8 @@ func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet, chunkS
 
 	r.HandleFunc("/version", VersionHandler(wallet))
 
+	r.Handle("/metrics", promhttp.Handler())
+
 	a.srv = &http.Server{
 		Handler: r,
 		Addr:    fmt.Sprintf("0.0.0.0:%d", a.port),
@@ -50,8 +57,11 @@ func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet, chunkS
 		ReadTimeout:  15 * time.Second,
 	}
 
+	log.Logger.Info().Msg(fmt.Sprintf("Sequoia API now listening on %s", a.srv.Addr))
 	err := a.srv.ListenAndServe()
 	if err != nil {
-		panic(err)
+		if !errors.Is(err, http.ErrServerClosed) {
+			panic(err)
+		}
 	}
 }

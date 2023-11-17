@@ -8,7 +8,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
 
@@ -28,6 +27,8 @@ func NewQueue(w *wallet.Wallet, interval int64) *Queue {
 }
 
 func (q *Queue) Add(msg types.Msg) (*Message, *sync.WaitGroup) {
+	queueSize.Inc()
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -63,32 +64,21 @@ func (q *Queue) Listen() {
 
 		log.Info().Msg(fmt.Sprintf("Queue: %d messages waiting to be put on-chain...", lmsg))
 
-		maxSize := 1024 * 1024 // 1mb
+		// maxSize := 1024 * 1024 // 1mb
+		maxSize := 45
 
 		total := len(q.messages)
 
-		var size int
-		for s, message := range q.messages {
-
-			var k interface{} = message
-
-			// nolint:all
-			switch k.(type) {
-			case storageTypes.MsgPostProof:
-				mpp := k.(storageTypes.MsgPostProof)
-				size += mpp.Size()
-			}
-
-			if size > maxSize {
-				total = s
-			}
-
+		if total > maxSize {
+			total = maxSize
 		}
 
 		log.Info().Msg(fmt.Sprintf("Queue: Posting %d messages to chain...", total))
 
 		toProcess := q.messages[:total]
 		q.messages = q.messages[total:]
+
+		queueSize.Sub(float64(total))
 
 		allMsgs := make([]types.Msg, len(toProcess))
 
@@ -104,6 +94,7 @@ func (q *Queue) Listen() {
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Failed to post from queue: %s", err.Error()))
 		}
+
 		for _, process := range toProcess {
 			process.err = err
 			process.res = res

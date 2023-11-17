@@ -37,10 +37,8 @@ func buildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 
 		chunks = append(chunks, b)
 
-		hexedData := hex.EncodeToString(b)
-
 		hash := sha256.New()
-		hash.Write([]byte(fmt.Sprintf("%d%s", index, hexedData))) // appending the index and the data
+		hash.Write([]byte(fmt.Sprintf("%d%x", index, b))) // appending the index and the data
 		hashName := hash.Sum(nil)
 
 		data = append(data, hashName)
@@ -114,11 +112,14 @@ func WriteFile(db *badger.DB, reader io.Reader, merkle []byte, owner string, sta
 		i++
 	}
 
+	fileCount.Inc()
+
 	return size, nil
 }
 
 func DeleteFile(db *badger.DB, merkle []byte, owner string, start int64) error {
 	log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
+	fileCount.Dec()
 	return db.Update(func(txn *badger.Txn) error {
 		err := txn.Delete(treeKey(merkle, owner, start))
 		if err != nil {
@@ -175,6 +176,35 @@ func ListFiles(db *badger.DB) ([][]byte, []string, []int64, error) {
 	return merkles, owners, starts, err
 }
 
+func ProcessFiles(db *badger.DB, f func(merkle []byte, owner string, start int64)) error {
+	err := db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		prefix := []byte("tree/")
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			k := item.Key()
+			err := item.Value(func(v []byte) error {
+				newValue := k[len(prefix):]
+				merkle, owner, start, err := SplitMerkle(newValue)
+				if err != nil {
+					return err
+				}
+
+				f(merkle, owner, start)
+
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return err
+}
+
 func Dump(db *badger.DB) (map[string]string, error) {
 	files := make(map[string]string)
 
@@ -205,17 +235,20 @@ func Dump(db *badger.DB) (map[string]string, error) {
 	return files, err
 }
 
-func GetFileTreeByChunk(db *badger.DB, merkle []byte, owner string, start int64, chunkToLoad int) (newTree *merkletree.MerkleTree, chunkOut []byte, err error) {
+func GetFileTreeByChunk(db *badger.DB, merkle []byte, owner string, start int64, chunkToLoad int) (*merkletree.MerkleTree, []byte, error) {
 	tree := treeKey(merkle, owner, start)
 	chunk := chunkKey(merkle, owner, start, chunkToLoad)
 
-	err = db.View(func(txn *badger.Txn) error {
+	var chunkOut []byte
+	var newTree merkletree.MerkleTree
+
+	err := db.View(func(txn *badger.Txn) error {
 		t, err := txn.Get(tree)
 		if err != nil {
 			return err
 		}
 		err = t.Value(func(val []byte) error {
-			err := json.Unmarshal(val, newTree)
+			err := json.Unmarshal(val, &newTree)
 			if err != nil {
 				return err
 			}
@@ -230,18 +263,18 @@ func GetFileTreeByChunk(db *badger.DB, merkle []byte, owner string, start int64,
 			return err
 		}
 
-		err = c.Value(func(val []byte) error {
+		_ = c.Value(func(val []byte) error { // doesn't need checked
 			chunkOut = val
 			return nil
 		})
-		if err != nil {
-			return err
-		}
 
 		return nil
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return
+	return &newTree, chunkOut, nil
 }
 
 func GetCIDFromFID(txn *badger.Txn, fid string) (cid string, err error) {
