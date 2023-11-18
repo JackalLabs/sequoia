@@ -6,12 +6,13 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/JackalLabs/sequoia/file_system"
+
 	"github.com/JackalLabs/sequoia/queue"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
@@ -87,11 +88,11 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 	return s
 }
 
-func (s *StrayManager) Start(db *badger.DB, myUrl string, chunkSize int64) {
+func (s *StrayManager) Start(f *file_system.FileSystem, myUrl string, chunkSize int64) {
 	s.running = true
 
 	for _, hand := range s.hands {
-		go hand.Start(db, s.wallet, myUrl, chunkSize)
+		go hand.Start(f, s.wallet, myUrl, chunkSize)
 	}
 
 	for s.running {

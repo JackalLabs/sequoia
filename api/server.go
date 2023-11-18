@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/JackalLabs/sequoia/file_system"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/JackalLabs/sequoia/proofs"
 	"github.com/rs/zerolog/log"
 
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/gorilla/mux"
 )
 import jsoniter "github.com/json-iterator/go"
@@ -34,16 +35,16 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(db *badger.DB, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) {
+func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) {
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexHandler(wallet.AccAddress()))
-	r.HandleFunc("/upload", PostFileHandler(db, p, wallet, chunkSize))
-	r.HandleFunc("/download/{fid}", DownloadFileHandler(db))
+	r.HandleFunc("/upload", PostFileHandler(f, p, wallet, chunkSize))
+	r.HandleFunc("/download/{fid}", DownloadFileHandler(f))
 
-	r.HandleFunc("/list", ListFilesHandler(db))
-	r.HandleFunc("/api/data/fids", LegacyListFilesHandler(db))
+	r.HandleFunc("/list", ListFilesHandler(f))
+	r.HandleFunc("/api/data/fids", LegacyListFilesHandler(f))
 
-	r.HandleFunc("/dump", DumpDBHandler(db))
+	r.HandleFunc("/dump", DumpDBHandler(f))
 
 	r.HandleFunc("/version", VersionHandler(wallet))
 

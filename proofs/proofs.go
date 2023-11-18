@@ -3,15 +3,16 @@ package proofs
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/JackalLabs/sequoia/file_system"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	canine "github.com/jackalLabs/canine-chain/v3/app"
+
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree/v2"
@@ -30,7 +31,7 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (b
 	log.Debug().Msg(fmt.Sprintf("Generating Merkle proof for %d", index))
 
 	h := sha256.New()
-	_, err := io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	_, err := h.Write([]byte(fmt.Sprintf("%d%x", index, item)))
 	if err != nil {
 		return false, nil, err
 	}
@@ -47,65 +48,11 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (b
 	return valid, proof, nil
 }
 
-func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHeight int64, startedAt time.Time) ([]byte, []byte, error) {
-	log.Debug().Msg(fmt.Sprintf("Generating proof for %x", merkle))
-	queryParams := &types.QueryFile{
-		Merkle: merkle,
-		Owner:  owner,
-		Start:  start,
-	}
-
-	cl := types.NewQueryClient(p.wallet.Client.GRPCConn)
-
-	res, err := cl.File(context.Background(), queryParams)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	file := res.File
-
-	proofQuery := &types.QueryProof{
-		ProviderAddress: p.wallet.AccAddress(),
-		Merkle:          file.Merkle,
-		Owner:           file.Owner,
-		Start:           file.Start,
-	}
-
-	var newProof types.FileProof
-	log.Debug().Msg(fmt.Sprintf("Querying proof of %x", merkle))
-
-	proofRes, err := cl.Proof(context.Background(), proofQuery)
-	if err != nil {
-		if len(file.Proofs) == int(file.MaxProofs) {
-			return nil, nil, errors.New(ErrNotOurs)
-		}
-		newProof = types.FileProof{
-			Prover:       p.wallet.AccAddress(),
-			Merkle:       file.Merkle,
-			Owner:        file.Owner,
-			Start:        file.Start,
-			LastProven:   0,
-			ChunkToProve: 0,
-		}
-	} else { // if the proof does exist we handle it
-		newProof = proofRes.Proof
-	}
-
-	t := time.Since(startedAt)
-
-	proven := file.ProvenThisBlock(blockHeight+int64(t.Seconds()/6), newProof.LastProven)
-	if proven {
-		log.Info().Msg(fmt.Sprintf("%x was proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
-		log.Debug().Msg("File was already proven")
-		return nil, nil, nil
-	}
-	log.Info().Msg(fmt.Sprintf("%x was not yet proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
-
-	block := int(newProof.ChunkToProve)
-
-	log.Debug().Msg(fmt.Sprintf("Getting file tree by chunk for %x", merkle))
-
-	tree, chunk, err := file_system.GetFileTreeByChunk(p.db, merkle, owner, start, block)
+// GenProof generates a proof from an arbitrary file on the file system
+//
+// returns proof, item and error
+func GenProof(io FileSystem, merkle []byte, owner string, start int64, block int) ([]byte, []byte, error) {
+	tree, chunk, err := io.GetFileTreeByChunk(merkle, owner, start, block)
 	if err != nil {
 		log.Error().Err(fmt.Errorf("failed to get filetree by chunk for %x %w", merkle, err))
 		return nil, nil, err
@@ -133,8 +80,75 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 	return jproof, chunk, nil
 }
 
+func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHeight int64, startedAt time.Time) ([]byte, []byte, int64, error) {
+	log.Debug().Msg(fmt.Sprintf("Generating proof for %x", merkle))
+	queryParams := &types.QueryFile{
+		Merkle: merkle,
+		Owner:  owner,
+		Start:  start,
+	}
+
+	cl := types.NewQueryClient(p.wallet.Client.GRPCConn)
+
+	res, err := cl.File(context.Background(), queryParams)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	file := res.File
+
+	proofQuery := &types.QueryProof{
+		ProviderAddress: p.wallet.AccAddress(),
+		Merkle:          file.Merkle,
+		Owner:           file.Owner,
+		Start:           file.Start,
+	}
+
+	newProof := types.FileProof{ // defining a new proof model
+		Prover:       p.wallet.AccAddress(),
+		Merkle:       file.Merkle,
+		Owner:        file.Owner,
+		Start:        file.Start,
+		LastProven:   0,
+		ChunkToProve: 0,
+	}
+
+	if file.ContainsProver(p.wallet.AccAddress()) {
+		// file is ours
+		proofRes, err := cl.Proof(context.Background(), proofQuery)
+		if err == nil {
+			newProof = proofRes.Proof // found the proof, we're good to go
+		}
+	} else {
+		// file is not ours, we need to figure out what to do with it
+		if len(file.Proofs) == int(file.MaxProofs) {
+			return nil, nil, 0, errors.New(ErrNotOurs) // there is no more room on this file anyway, ignore it
+		}
+	}
+
+	log.Debug().Msg(fmt.Sprintf("Querying proof of %x", merkle))
+
+	t := time.Since(startedAt)
+
+	proven := file.ProvenThisBlock(blockHeight+int64(t.Seconds()/5.0), newProof.LastProven)
+	if proven {
+		log.Info().Msg(fmt.Sprintf("%x was proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
+		log.Debug().Msg("File was already proven")
+		return nil, nil, 0, nil
+	}
+	log.Info().Msg(fmt.Sprintf("%x was not yet proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
+
+	block := int(newProof.ChunkToProve)
+
+	log.Debug().Msg(fmt.Sprintf("Getting file tree by chunk for %x", merkle))
+
+	proof, item, err := GenProof(p.io, merkle, owner, start, block)
+
+	return proof, item, newProof.ChunkToProve, err
+}
+
 func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight int64, startedAt time.Time) error {
-	proof, item, err := p.GenerateProof(merkle, owner, start, blockHeight, startedAt)
+	proof, item, index, err := p.GenerateProof(merkle, owner, start, blockHeight, startedAt)
 	if err != nil {
 		return err
 	}
@@ -146,7 +160,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 
 	log.Debug().Msg("Successfully generated proof")
 
-	msg := types.NewMsgPostProof(p.wallet.AccAddress(), merkle, owner, start, item, proof)
+	msg := types.NewMsgPostProof(p.wallet.AccAddress(), merkle, owner, start, item, proof, index)
 
 	m, wg := p.q.Add(msg)
 
@@ -156,6 +170,34 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 		log.Error().Err(m.Error())
 		return m.Error()
 	}
+
+	var postRes types.MsgPostProofResponse
+	data, err := hex.DecodeString(m.Res().Data)
+	if err != nil {
+		return nil
+	}
+
+	encodingCfg := canine.MakeEncodingConfig()
+	var txMsgData sdk.TxMsgData
+	err = encodingCfg.Marshaler.Unmarshal(data, &txMsgData)
+	if err != nil {
+		return nil
+	}
+
+	if len(txMsgData.Data) == 0 {
+		return nil
+	}
+
+	err = postRes.Unmarshal(txMsgData.Data[m.Index()].Data)
+	if err != nil {
+		return nil
+	}
+
+	if !postRes.Success {
+		log.Error().Msg(postRes.ErrorMessage)
+	}
+
+	log.Info().Msg(fmt.Sprintf("%x was successfully proven", merkle))
 
 	log.Debug().Msg(fmt.Sprintf("TX Hash: %s", m.Hash()))
 
@@ -181,12 +223,13 @@ func (p *Prover) Start() {
 			log.Error().Err(err)
 			continue
 		}
-		height := abciInfo.Response.LastBlockHeight + 1
+		height := abciInfo.Response.LastBlockHeight + 10
 
 		t := time.Now()
 
-		err = file_system.ProcessFiles(p.db, func(merkle []byte, owner string, start int64) {
+		err = p.io.ProcessFiles(func(merkle []byte, owner string, start int64) {
 			log.Debug().Msg(fmt.Sprintf("proving: %x", merkle))
+			filesProving.Inc()
 			go p.wrapPostProof(merkle, owner, start, height, t)
 		})
 		if err != nil {
@@ -198,39 +241,37 @@ func (p *Prover) Start() {
 }
 
 func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height int64, startedAt time.Time) {
-	filesProving.Inc()
 	defer filesProving.Dec()
 	err := p.PostProof(merkle, owner, start, height, startedAt)
 	if err != nil {
 		log.Warn().Err(err)
 		if err.Error() == "rpc error: code = NotFound desc = not found" { // if the file is not found on the network, delete it
-			err := file_system.DeleteFile(p.db, merkle, owner, start)
+			err := p.io.DeleteFile(merkle, owner, start)
 			if err != nil {
 				log.Error().Err(err)
 			}
 		}
 		if err.Error() == ErrNotOurs { // if the file is not ours, delete it
-			err := file_system.DeleteFile(p.db, merkle, owner, start)
+			err := p.io.DeleteFile(merkle, owner, start)
 			if err != nil {
 				log.Error().Err(err)
 			}
 		}
 	}
-
 }
 
 func (p *Prover) Stop() {
 	p.running = false
 }
 
-func NewProver(wallet *wallet.Wallet, db *badger.DB, q *queue.Queue, interval int64) *Prover {
+func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval int64) *Prover {
 	p := Prover{
 		running:   false,
 		wallet:    wallet,
-		db:        db,
 		q:         q,
 		processed: time.Time{},
 		interval:  interval,
+		io:        io,
 	}
 
 	return &p

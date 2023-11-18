@@ -9,7 +9,6 @@ import (
 
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
@@ -17,7 +16,7 @@ import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-func DownloadFile(db *badger.DB, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64) error {
+func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64) error {
 	queryParams := &types.QueryFindFile{
 		Merkle: merkle,
 	}
@@ -45,7 +44,7 @@ func DownloadFile(db *badger.DB, merkle []byte, owner string, start int64, walle
 			continue
 		}
 
-		size, err := DownloadFileFromURL(db, url, merkle, owner, start, wallet.AccAddress(), chunkSize)
+		size, err := DownloadFileFromURL(f, url, merkle, owner, start, wallet.AccAddress(), chunkSize)
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Couldn't get %x from %s, trying again...", merkle, url))
 			continue
@@ -66,7 +65,7 @@ func DownloadFile(db *badger.DB, merkle []byte, owner string, start int64, walle
 	return nil
 }
 
-func DownloadFileFromURL(db *badger.DB, url string, merkle []byte, owner string, start int64, address string, chunkSize int64) (int, error) {
+func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, owner string, start int64, address string, chunkSize int64) (int, error) {
 	log.Info().Msg(fmt.Sprintf("Downloading %x from %s...", merkle, url))
 	cli := http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%x", url, merkle), nil)
@@ -101,7 +100,7 @@ func DownloadFileFromURL(db *badger.DB, url string, merkle []byte, owner string,
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	size, err := file_system.WriteFile(db, reader, merkle, owner, start, address, chunkSize)
+	size, err := f.WriteFile(reader, merkle, owner, start, address, chunkSize)
 	if err != nil {
 		return 0, err
 	}

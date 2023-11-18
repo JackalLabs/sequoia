@@ -10,7 +10,6 @@ import (
 	"github.com/JackalLabs/sequoia/queue"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
@@ -22,7 +21,7 @@ func (h *Hand) Stop() {
 	h.running = false
 }
 
-func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string, chunkSize int64) {
+func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, myUrl string, chunkSize int64) {
 	h.running = true
 	for h.running {
 
@@ -35,14 +34,14 @@ func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string, chunkSi
 		merkle := h.stray.Merkle
 		start := h.stray.Start
 
-		err := network.DownloadFile(db, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize)
+		err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize)
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil
 			continue
 		}
 
-		tree, chunk, err := file_system.GetFileTreeByChunk(db, merkle, signee, start, 0)
+		tree, chunk, err := f.GetFileTreeByChunk(merkle, signee, start, 0)
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil

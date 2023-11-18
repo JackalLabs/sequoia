@@ -27,8 +27,6 @@ func NewQueue(w *wallet.Wallet, interval int64) *Queue {
 }
 
 func (q *Queue) Add(msg types.Msg) (*Message, *sync.WaitGroup) {
-	queueSize.Inc()
-
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -68,6 +66,7 @@ func (q *Queue) Listen() {
 		maxSize := 45
 
 		total := len(q.messages)
+		queueSize.Set(float64(total))
 
 		if total > maxSize {
 			total = maxSize
@@ -77,8 +76,6 @@ func (q *Queue) Listen() {
 
 		toProcess := q.messages[:total]
 		q.messages = q.messages[total:]
-
-		queueSize.Sub(float64(total))
 
 		allMsgs := make([]types.Msg, len(toProcess))
 
@@ -95,9 +92,10 @@ func (q *Queue) Listen() {
 			log.Info().Msg(fmt.Sprintf("Failed to post from queue: %s", err.Error()))
 		}
 
-		for _, process := range toProcess {
+		for i, process := range toProcess {
 			process.err = err
 			process.res = res
+			process.msgIndex = i
 			process.Done()
 		}
 

@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/JackalLabs/sequoia/file_system"
+
 	"github.com/JackalLabs/sequoia/monitoring"
 
 	"github.com/cosmos/gogoproto/grpc"
@@ -27,13 +29,13 @@ import (
 )
 
 type App struct {
-	db           *badger.DB
 	api          *api.API
 	q            *queue.Queue
 	prover       *proofs.Prover
 	strayManager *strays.StrayManager
 	home         string
 	monitor      *monitoring.Monitor
+	fileSystem   *file_system.FileSystem
 }
 
 func NewApp(home string) *App {
@@ -61,10 +63,12 @@ func NewApp(home string) *App {
 
 	apiServer := api.NewAPI(cfg.APICfg.Port)
 
+	f := file_system.NewFileSystem(db)
+
 	return &App{
-		db:   db,
-		api:  apiServer,
-		home: home,
+		fileSystem: f,
+		api:        apiServer,
+		home:       home,
 	}
 }
 
@@ -210,14 +214,14 @@ func (a *App) Start() {
 	a.q = queue.NewQueue(w, cfg.QueueInterval)
 	go a.q.Listen()
 
-	a.prover = proofs.NewProver(w, a.db, a.q, cfg.ProofInterval)
+	a.prover = proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval)
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 	a.monitor = monitoring.NewMonitor(w)
 
 	// Starting the 4 concurrent services
-	go a.api.Serve(a.db, a.prover, w, params.ChunkSize)
+	go a.api.Serve(a.fileSystem, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
-	go a.strayManager.Start(a.db, myUrl, params.ChunkSize)
+	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
 
 	done := make(chan os.Signal, 1)
@@ -233,5 +237,5 @@ func (a *App) Start() {
 	a.monitor.Stop()
 
 	time.Sleep(time.Second * 30) // give the program some time to shut down
-	a.db.Close()
+	a.fileSystem.Close()
 }

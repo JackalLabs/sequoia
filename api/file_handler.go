@@ -14,7 +14,6 @@ import (
 
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/gorilla/mux"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
@@ -34,7 +33,7 @@ func handleErr(err error, w http.ResponseWriter, code int) {
 	}
 }
 
-func PostFileHandler(db *badger.DB, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
+func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
 		if err != nil {
@@ -99,7 +98,7 @@ func PostFileHandler(db *badger.DB, prover *proofs.Prover, wl *wallet.Wallet, ch
 			}
 		}
 
-		size, err := file_system.WriteFile(db, file, merkle, sender, startBlock, wl.AccAddress(), chunkSize)
+		size, err := fio.WriteFile(file, merkle, sender, startBlock, wl.AccAddress(), chunkSize)
 		if err != nil {
 			handleErr(fmt.Errorf("failed to write file to disk: %w", err), w, http.StatusInternalServerError)
 			return
@@ -125,7 +124,7 @@ func PostFileHandler(db *badger.DB, prover *proofs.Prover, wl *wallet.Wallet, ch
 	}
 }
 
-func DownloadFileHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {
+func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 
@@ -140,7 +139,7 @@ func DownloadFileHandler(db *badger.DB) func(http.ResponseWriter, *http.Request)
 
 		}
 
-		file, err := file_system.GetFileDataByMerkle(db, merkle)
+		file, err := f.GetFileDataByMerkle(merkle)
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),
