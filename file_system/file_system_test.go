@@ -131,7 +131,7 @@ func TestWriteAndProveFiles(t *testing.T) {
 	require.NoError(t, err)
 	f := NewFileSystem(db)
 
-	size := 1024 * 1024 * 100
+	size := 1024 * 1024 * 10
 	var chunkSize int64 = 1024
 
 	token := make([]byte, size)    // 1 kb size
@@ -153,20 +153,6 @@ func TestWriteAndProveFiles(t *testing.T) {
 	var start int64 = 0
 
 	_, err = f.WriteFile(b2, root, owner, start, "myself", chunkSize)
-	require.NoError(t, err)
-
-	err = db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchValues = false
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			log.Info().Msg(fmt.Sprintf("key=%s", k))
-		}
-		return nil
-	})
 	require.NoError(t, err)
 
 	ms, _, _, err := f.ListFiles()
