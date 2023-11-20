@@ -126,76 +126,75 @@ func TestWriteAndProveFiles(t *testing.T) {
 	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
 	require.NoError(t, err)
 	defer db.Close()
-	for _, v := range table {
 
-		err = db.DropAll()
-		require.NoError(t, err)
-		f := NewFileSystem(db)
+	err = db.DropAll()
+	require.NoError(t, err)
+	f := NewFileSystem(db)
 
-		size := v.input
-		var chunkSize int64 = 1024
+	size := 1024 * 1024 * 100
+	var chunkSize int64 = 1024
 
-		token := make([]byte, size)    // 1 kb size
-		newToken := make([]byte, size) // 1 kb size
+	token := make([]byte, size)    // 1 kb size
+	newToken := make([]byte, size) // 1 kb size
 
-		//nolint:all
-		rand.Read(token)
-		copy(newToken, token)
+	//nolint:all
+	rand.Read(token)
+	copy(newToken, token)
 
-		require.Equal(t, token, newToken)
+	require.Equal(t, token, newToken)
 
-		b := bytes.NewBuffer(token)
-		b2 := bytes.NewBuffer(newToken)
+	b := bytes.NewBuffer(token)
+	b2 := bytes.NewBuffer(newToken)
 
-		root, _, _, _, err := BuildTree(b, chunkSize)
-		require.NoError(t, err)
+	root, _, _, _, err := BuildTree(b, chunkSize)
+	require.NoError(t, err)
 
-		owner := "file_owner"
-		var start int64 = 0
+	owner := "file_owner"
+	var start int64 = 0
 
-		_, err = f.WriteFile(b2, root, owner, start, "myself", chunkSize)
-		require.NoError(t, err)
+	_, err = f.WriteFile(b2, root, owner, start, "myself", chunkSize)
+	require.NoError(t, err)
 
-		err = db.View(func(txn *badger.Txn) error {
-			opts := badger.DefaultIteratorOptions
-			opts.PrefetchValues = false
-			it := txn.NewIterator(opts)
-			defer it.Close()
-			for it.Rewind(); it.Valid(); it.Next() {
-				item := it.Item()
-				k := item.Key()
-				log.Info().Msg(fmt.Sprintf("key=%s", k))
-			}
-			return nil
-		})
-		require.NoError(t, err)
-
-		ms, _, _, err := f.ListFiles()
-		require.NoError(t, err)
-
-		require.Equal(t, 1, len(ms))
-
-		totalBlocks := size / int(chunkSize)
-		for i := 0; i < totalBlocks; i++ {
-
-			p, c, err := proofs.GenProof(f, root, owner, start, i)
-			require.NoError(t, err)
-
-			h := sha256.New()
-			_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, c))
-			require.NoError(t, err)
-
-			hashName := h.Sum(nil)
-
-			var proof merkletree.Proof // unmarshal proof
-			err = json.Unmarshal(p, &proof)
-			require.NoError(t, err)
-
-			verified, err := merkletree.VerifyProofUsing(hashName, false, &proof, [][]byte{root}, sha3.New512())
-			require.NoError(t, err)
-
-			require.Equal(t, true, verified)
-
+	err = db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			k := item.Key()
+			log.Info().Msg(fmt.Sprintf("key=%s", k))
 		}
+		return nil
+	})
+	require.NoError(t, err)
+
+	ms, _, _, err := f.ListFiles()
+	require.NoError(t, err)
+
+	require.Equal(t, 1, len(ms))
+
+	totalBlocks := size / int(chunkSize)
+	for i := 0; i < totalBlocks; i++ {
+
+		p, c, err := proofs.GenProof(f, root, owner, start, i)
+		require.NoError(t, err)
+
+		h := sha256.New()
+		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, c))
+		require.NoError(t, err)
+
+		hashName := h.Sum(nil)
+
+		var proof merkletree.Proof // unmarshal proof
+		err = json.Unmarshal(p, &proof)
+		require.NoError(t, err)
+
+		verified, err := merkletree.VerifyProofUsing(hashName, false, &proof, [][]byte{root}, sha3.New512())
+		require.NoError(t, err)
+
+		require.Equal(t, true, verified)
+
 	}
+
 }
