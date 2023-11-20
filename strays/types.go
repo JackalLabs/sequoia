@@ -11,12 +11,12 @@ import (
 type Hand struct {
 	wallet  *wallet.Wallet
 	offset  byte
-	stray   *types.Strays
+	stray   *types.UnifiedFile
 	running bool
 }
 
 type StrayManager struct {
-	strays          []*types.Strays
+	strays          []*types.UnifiedFile
 	wallet          *wallet.Wallet
 	lastSize        int
 	rand            *rand.Rand

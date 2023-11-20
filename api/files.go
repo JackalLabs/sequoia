@@ -1,18 +1,17 @@
 package api
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
 )
 
-func ListFilesHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {
+func ListFilesHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		files, err := file_system.ListFiles(db)
+		merkles, _, _, err := f.ListFiles()
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),
@@ -25,9 +24,14 @@ func ListFilesHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
+		mm := make([]string, len(merkles))
+		for i, merkle := range merkles {
+			mm[i] = fmt.Sprintf("%x", merkle)
+		}
+
 		f := types.ListResponse{
-			Files: files,
-			Count: len(files),
+			Files: mm,
+			Count: len(mm),
 		}
 
 		err = json.NewEncoder(w).Encode(f)
@@ -37,9 +41,9 @@ func ListFilesHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func LegacyListFilesHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {
+func LegacyListFilesHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		files, err := file_system.ListFiles(db)
+		merkles, owners, _, err := f.ListFiles()
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),
@@ -52,12 +56,12 @@ func LegacyListFilesHandler(db *badger.DB) func(http.ResponseWriter, *http.Reque
 			return
 		}
 
-		cids := make([]types.LegacyAPIListValue, len(files))
+		cids := make([]types.LegacyAPIListValue, len(merkles))
 
-		for i, file := range files {
+		for i, m := range merkles {
 			cids[i] = types.LegacyAPIListValue{
-				CID: file,
-				FID: "",
+				CID: fmt.Sprintf("%x", m),
+				FID: owners[i],
 			}
 		}
 

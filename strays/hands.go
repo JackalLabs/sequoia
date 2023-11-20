@@ -1,23 +1,27 @@
 package strays
 
 import (
-	"strconv"
 	"time"
+
+	"github.com/JackalLabs/sequoia/file_system"
+	"github.com/JackalLabs/sequoia/proofs"
 
 	"github.com/JackalLabs/sequoia/network"
 	"github.com/JackalLabs/sequoia/queue"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
+import jsoniter "github.com/json-iterator/go"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func (h *Hand) Stop() {
 	h.running = false
 }
 
-func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string) {
+func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, myUrl string, chunkSize int64) {
 	h.running = true
 	for h.running {
 
@@ -26,27 +30,45 @@ func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string) {
 			continue
 		}
 
-		signee := h.stray.Signee
-		fid := h.stray.Fid
-		cid := h.stray.Cid
-		size, err := strconv.ParseInt(h.stray.Filesize, 10, 64)
+		signee := h.stray.Owner
+		merkle := h.stray.Merkle
+		start := h.stray.Start
+
+		err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize)
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil
 			continue
 		}
 
-		err = network.DownloadFile(db, cid, fid, wallet, signee, size, myUrl)
+		tree, chunk, err := f.GetFileTreeByChunk(merkle, signee, start, 0)
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil
 			continue
 		}
 
-		msg := &types.MsgClaimStray{
-			Creator:    h.Address(),
-			Cid:        cid,
-			ForAddress: wallet.AccAddress(),
+		_, proof, err := proofs.GenerateMerkleProof(tree, 0, chunk)
+		if err != nil {
+			log.Error().Err(err)
+			h.stray = nil
+			continue
+		}
+
+		jproof, err := json.Marshal(*proof)
+		if err != nil {
+			log.Error().Err(err)
+			h.stray = nil
+			continue
+		}
+
+		msg := &types.MsgPostProof{
+			Creator:  h.Address(),
+			Item:     chunk,
+			HashList: jproof,
+			Merkle:   merkle,
+			Owner:    signee,
+			Start:    start,
 		}
 
 		data := walletTypes.NewTransactionData(
@@ -79,7 +101,7 @@ func (h *Hand) Busy() bool {
 	return h.stray != nil
 }
 
-func (h *Hand) Take(stray *types.Strays) {
+func (h *Hand) Take(stray *types.UnifiedFile) {
 	h.stray = stray
 }
 

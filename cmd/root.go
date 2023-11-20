@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/JackalLabs/sequoia/cmd/types"
@@ -13,6 +14,8 @@ import (
 
 func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Logger = log.With().Caller().Logger()
+	log.Logger = log.Level(zerolog.InfoLevel)
 }
 
 func InitCmd() *cobra.Command {
@@ -29,8 +32,12 @@ func InitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			_, err = config.InitWallet(home)
+			if err != nil {
+				return err
+			}
 
-			log.Logger.Info().Msg("done!")
+			fmt.Println("done!")
 
 			return nil
 		},

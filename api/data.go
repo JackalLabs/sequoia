@@ -1,18 +1,16 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
 )
 
-func DumpDBHandler(db *badger.DB) func(http.ResponseWriter, *http.Request) {
+func DumpDBHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		dump, err := file_system.Dump(db)
+		dump, err := f.Dump()
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -10,6 +9,9 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 )
+import jsoniter "github.com/json-iterator/go"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const SeedFileName = "provider_wallet.json"
 
@@ -66,7 +68,7 @@ func createWallet(directory string) error {
 	filePath := path.Join(directory, SeedFileName)
 
 	if newWallet {
-		fmt.Printf("A new wallet was just created with a random seed phrase, if you wish to use an existing seed phrase, edit %s", filePath)
+		fmt.Printf("A new wallet was just created with a random seed phrase, if you wish to use an existing seed phrase, edit %s\n", filePath)
 		os.Exit(0)
 	}
 

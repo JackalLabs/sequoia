@@ -6,12 +6,13 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/JackalLabs/sequoia/file_system"
+
 	"github.com/JackalLabs/sequoia/queue"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
@@ -87,11 +88,11 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 	return s
 }
 
-func (s *StrayManager) Start(db *badger.DB, myUrl string) {
+func (s *StrayManager) Start(f *file_system.FileSystem, myUrl string, chunkSize int64) {
 	s.running = true
 
 	for _, hand := range s.hands {
-		go hand.Start(db, s.wallet, myUrl)
+		go hand.Start(f, s.wallet, myUrl, chunkSize)
 	}
 
 	for s.running {
@@ -99,6 +100,8 @@ func (s *StrayManager) Start(db *badger.DB, myUrl string) {
 		if s.refreshed.Add(time.Second * s.refreshInterval).Before(time.Now()) {
 			err := s.RefreshList()
 			if err != nil {
+				log.Error().Err(err)
+
 				log.Info().Msg("failed refresh")
 			}
 			s.refreshed = time.Now()
@@ -121,7 +124,7 @@ func (s *StrayManager) Start(db *badger.DB, myUrl string) {
 	}
 }
 
-func (s *StrayManager) Pop() *types.Strays {
+func (s *StrayManager) Pop() *types.UnifiedFile {
 	if len(s.strays) == 0 {
 		return nil
 	}
@@ -143,7 +146,7 @@ func (s *StrayManager) Stop() {
 func (s *StrayManager) RefreshList() error {
 	log.Info().Msg("Refreshing stray list...")
 
-	s.strays = make([]*types.Strays, 0)
+	s.strays = make([]*types.UnifiedFile, 0)
 
 	var val uint64
 	if s.lastSize > 300 {
@@ -157,18 +160,19 @@ func (s *StrayManager) RefreshList() error {
 		CountTotal: true,
 	}
 
-	queryParams := &types.QueryAllStraysRequest{
-		Pagination: page,
+	queryParams := &types.QueryOpenFiles{
+		ProviderAddress: s.wallet.AccAddress(),
+		Pagination:      page,
 	}
 
 	cl := types.NewQueryClient(s.wallet.Client.GRPCConn)
 
-	res, err := cl.StraysAll(context.Background(), queryParams)
+	res, err := cl.OpenFiles(context.Background(), queryParams)
 	if err != nil {
 		return err
 	}
 
-	for _, stray := range res.Strays {
+	for _, stray := range res.Files {
 		newStray := stray
 		s.strays = append(s.strays, &newStray)
 	}
