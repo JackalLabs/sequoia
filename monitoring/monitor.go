@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
@@ -34,6 +35,18 @@ func (m *Monitor) updateHeight() {
 	blockHeight.Set(float64(height))
 }
 
+func (m *Monitor) updateBalance() {
+	cl := bankTypes.NewQueryClient(m.wallet.Client.GRPCConn)
+	provRes, err := cl.Balance(context.Background(), &bankTypes.QueryBalanceRequest{Address: m.wallet.AccAddress(), Denom: "ujkl"})
+	if err != nil {
+		return
+	}
+
+	amt := provRes.Balance.Amount
+
+	tokenBalance.Set(float64(amt.QuoRaw(1_000_000).Int64()))
+}
+
 func (m *Monitor) Start() {
 	m.running = true
 
@@ -41,6 +54,7 @@ func (m *Monitor) Start() {
 		time.Sleep(time.Second * 5)
 		m.updateBurns()
 		m.updateHeight()
+		m.updateBalance()
 	}
 }
 

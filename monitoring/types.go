@@ -21,6 +21,11 @@ var catchingUp = promauto.NewSummary(prometheus.SummaryOpts{
 	Help: "If the node is catching up",
 })
 
+var tokenBalance = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "sequoia_balance",
+	Help: "Provider token balance",
+})
+
 var _ = catchingUp
 
 type Monitor struct {

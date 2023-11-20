@@ -228,8 +228,12 @@ func (p *Prover) Start() {
 		t := time.Now()
 
 		err = p.io.ProcessFiles(func(merkle []byte, owner string, start int64) {
+			for p.Full() {
+				time.Sleep(time.Second)
+			}
 			log.Debug().Msg(fmt.Sprintf("proving: %x", merkle))
 			filesProving.Inc()
+			p.Inc()
 			go p.wrapPostProof(merkle, owner, start, height, t)
 		})
 		if err != nil {
@@ -242,6 +246,7 @@ func (p *Prover) Start() {
 
 func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height int64, startedAt time.Time) {
 	defer filesProving.Dec()
+	defer p.Dec()
 	err := p.PostProof(merkle, owner, start, height, startedAt)
 	if err != nil {
 		log.Warn().Err(err)
@@ -264,7 +269,7 @@ func (p *Prover) Stop() {
 	p.running = false
 }
 
-func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval int64) *Prover {
+func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval int64, threads int64) *Prover {
 	p := Prover{
 		running:   false,
 		wallet:    wallet,
@@ -272,6 +277,7 @@ func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval in
 		processed: time.Time{},
 		interval:  interval,
 		io:        io,
+		threads:   threads,
 	}
 
 	return &p

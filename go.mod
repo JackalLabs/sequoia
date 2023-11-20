@@ -11,6 +11,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackalLabs/canine-chain/v3 v3.0.2
 	github.com/json-iterator/go v1.1.12
+	github.com/prometheus/client_golang v1.16.0
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
@@ -120,7 +121,6 @@ require (
 	github.com/petermattis/goid v0.0.0-20230317030725-371a4b8eda08 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
@@ -187,8 +187,8 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/jackalLabs/canine-chain/v3 => ../canine-chain
-	//github.com/jackalLabs/canine-chain/v3 => github.com/jackalLabs/canine-chain/v3 v3.0.2-0.20231110184902-1fd0bb86bf9d // using the master branch for now before v4 releases
+	//github.com/jackalLabs/canine-chain/v3 => ../canine-chain
+	github.com/jackalLabs/canine-chain/v3 => github.com/jackalLabs/canine-chain/v3 v3.0.2-0.20231120052238-6b1aa68fa906 // using the master branch for now before v4 releases
 
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27
 

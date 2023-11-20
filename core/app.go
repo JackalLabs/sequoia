@@ -214,7 +214,7 @@ func (a *App) Start() {
 	a.q = queue.NewQueue(w, cfg.QueueInterval)
 	go a.q.Listen()
 
-	a.prover = proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval)
+	a.prover = proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads)
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 	a.monitor = monitoring.NewMonitor(w)
 

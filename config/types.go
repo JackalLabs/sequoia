@@ -15,6 +15,7 @@ type Config struct {
 	TotalSpace      int64              `yaml:"total_bytes_offered"`
 	DataDirectory   string             `yaml:"data_directory"`
 	APICfg          APIConfig          `yaml:"api_config"`
+	ProofThreads    int64              `yaml:"proof_threads"`
 }
 
 type StrayManagerConfig struct {
@@ -49,5 +50,6 @@ func DefaultConfig() *Config {
 		APICfg: APIConfig{
 			Port: 3333,
 		},
+		ProofThreads: 1000,
 	}
 }
