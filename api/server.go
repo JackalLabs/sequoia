@@ -39,7 +39,8 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexHandler(wallet.AccAddress()))
 	r.HandleFunc("/upload", PostFileHandler(f, p, wallet, chunkSize))
-	r.HandleFunc("/download/{fid}", DownloadFileHandler(f))
+	r.HandleFunc("/download/{fid}", DownloadFileHandler(f, wallet))
+	r.HandleFunc("/has/{fid}", HasFileHandler(f))
 
 	r.HandleFunc("/list", ListFilesHandler(f))
 	r.HandleFunc("/api/data/fids", LegacyListFilesHandler(f))

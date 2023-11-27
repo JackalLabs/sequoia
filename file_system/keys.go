@@ -15,6 +15,7 @@ func majorChunkKey(merkle []byte, owner string, start int64) []byte {
 	return []byte(fmt.Sprintf("chunks/%x/%s/%d/", merkle, owner, start))
 }
 
+// majorChunkMerkleKey returns a byte array of `chunks/{merkle}`
 func majorChunkMerkleKey(merkle []byte) []byte {
 	return []byte(fmt.Sprintf("chunks/%x", merkle))
 }

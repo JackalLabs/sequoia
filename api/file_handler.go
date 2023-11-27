@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -124,7 +125,73 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 	}
 }
 
-func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
+func ForwardDownload(merkle []byte, wallet *wallet.Wallet, w http.ResponseWriter) {
+	cl := storageTypes.NewQueryClient(wallet.Client.GRPCConn)
+	fReq := storageTypes.QueryFindFile{Merkle: merkle}
+
+	fileRes, err := cl.FindFile(context.Background(), &fReq)
+	if err != nil {
+		v := types.ErrorResponse{
+			Error: err.Error(),
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(v)
+		return
+	}
+
+	ips := fileRes.ProviderIps
+	var ipStrings []string
+	err = json.Unmarshal([]byte(ips), ipStrings)
+	if err != nil {
+		v := types.ErrorResponse{
+			Error: err.Error(),
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(v)
+		return
+	}
+
+	for _, ipString := range ipStrings {
+		u, err := url.Parse(ipString)
+		if err != nil {
+			continue
+		}
+
+		merkleString := hex.EncodeToString(merkle)
+
+		hasU := u.JoinPath("has", merkleString)
+
+		hcl := http.DefaultClient
+
+		r, err := http.NewRequest("GET", hasU.String(), nil)
+		if err != nil {
+			continue
+		}
+
+		hRes, err := hcl.Do(r)
+		if err != nil {
+			continue
+		}
+
+		if hRes.StatusCode != 200 {
+			continue
+		}
+
+		mU := u.JoinPath("download", merkleString)
+		http.Redirect(w, r, mU.String(), http.StatusFound)
+		return
+	}
+
+	v := types.ErrorResponse{
+		Error: "cannot find file on network",
+	}
+	w.WriteHeader(http.StatusInternalServerError)
+	_ = json.NewEncoder(w).Encode(v)
+	return
+
+}
+
+func DownloadFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 
@@ -136,19 +203,51 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			}
 			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(v)
-
+			return
 		}
 
 		file, err := f.GetFileDataByMerkle(merkle)
+		if err != nil {
+			ForwardDownload(merkle, wallet, w)
+			return
+		}
+
+		_, _ = w.Write(file)
+	}
+}
+
+func HasFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+
+		merkleString := vars["merkle"]
+		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),
 			}
 			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(v)
+			return
 
 		}
 
-		_, _ = w.Write(file)
+		found, err := f.HasFile(merkle)
+		if err != nil {
+			v := types.ErrorResponse{
+				Error: err.Error(),
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(v)
+			return
+		}
+
+		if found {
+			w.WriteHeader(200)
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+
 	}
 }
