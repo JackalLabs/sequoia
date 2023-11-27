@@ -187,8 +187,6 @@ func ForwardDownload(merkle []byte, wallet *wallet.Wallet, w http.ResponseWriter
 	}
 	w.WriteHeader(http.StatusInternalServerError)
 	_ = json.NewEncoder(w).Encode(v)
-	return
-
 }
 
 func DownloadFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet) func(http.ResponseWriter, *http.Request) {
@@ -248,6 +246,5 @@ func HasFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http.R
 		}
 
 		w.WriteHeader(http.StatusNotFound)
-
 	}
 }
