@@ -355,3 +355,19 @@ func (f *FileSystem) GetFileDataByMerkle(merkle []byte) ([]byte, error) {
 
 	return fileData, err
 }
+
+func (f *FileSystem) HasFile(merkle []byte) (found bool, err error) {
+	found = false
+	err = f.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		prefix := majorChunkMerkleKey(merkle)
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			found = true
+			return nil
+		}
+
+		return nil
+	})
+	return found, err
+}

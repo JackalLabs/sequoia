@@ -182,5 +182,4 @@ func TestWriteAndProveFiles(t *testing.T) {
 		require.Equal(t, true, verified)
 
 	}
-
 }
