@@ -29,6 +29,10 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 		refreshInterval: time.Duration(refreshInterval),
 	}
 
+	if refreshInterval == 0 {
+		return s
+	}
+
 	for i := 0; i < handCount; i++ {
 		log.Info().Msg(fmt.Sprintf("Authorizing hand %d to transact on my behalf...", i))
 
@@ -89,7 +93,7 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 }
 
 func (s *StrayManager) Start(f *file_system.FileSystem, myUrl string, chunkSize int64) {
-	s.running = true
+	s.running = s.refreshInterval > 0
 
 	for _, hand := range s.hands {
 		go hand.Start(f, s.wallet, myUrl, chunkSize)
