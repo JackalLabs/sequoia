@@ -2,7 +2,7 @@
 
 # Sequoia
 
-Sequoia is a light-weight, fast, and complete implementation of a [Jackal Protocol](https://github.com/JackalLabs/canine-chain) Storage Provider.
+Sequoia is a light-weight, fast, and complete implementation of a [Jackal Protocol](https://github.com/JackalLabs/canine-chain) Storage Provider made for SSD-based storage.
 
 ## Installation
 
