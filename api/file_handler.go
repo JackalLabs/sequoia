@@ -16,7 +16,7 @@ import (
 
 const MaxFileSize = 32 << 30
 
-func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.ResponseWriter, *http.Request) {
+func PostFileHandler(db *badger.DB, q *queue.Queue, address string, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
 		if err != nil {
@@ -45,7 +45,7 @@ func PostFileHandler(db *badger.DB, q *queue.Queue, address string) func(http.Re
 			return
 		}
 
-		merkle, fid, cid, size, err := file_system.WriteFile(db, file, sender, address, "")
+		merkle, fid, cid, size, err := file_system.WriteFile(db, file, sender, address, "", chunkSize)
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),

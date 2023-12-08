@@ -21,10 +21,10 @@ func NewAPI(port int64) *API {
 	}
 }
 
-func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet) {
+func (a *API) Serve(db *badger.DB, q *queue.Queue, wallet *wallet.Wallet, chunkSize int64) {
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexHandler(wallet.AccAddress()))
-	r.HandleFunc("/upload", PostFileHandler(db, q, wallet.AccAddress()))
+	r.HandleFunc("/upload", PostFileHandler(db, q, wallet.AccAddress(), chunkSize))
 	r.HandleFunc("/download/{fid}", DownloadFileHandler(db))
 
 	r.HandleFunc("/list", ListFilesHandler(db))

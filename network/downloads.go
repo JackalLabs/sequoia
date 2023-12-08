@@ -15,7 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, signee string, fileSize int64, myUrl string) error {
+func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, signee string, fileSize int64, myUrl string, chunkSize int64) error {
 	queryParams := &types.QueryFindFileRequest{
 		Fid: fid,
 	}
@@ -43,7 +43,7 @@ func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, 
 			continue
 		}
 
-		size, err := DownloadFileFromURL(db, url, cid, fid, signee, wallet.AccAddress())
+		size, err := DownloadFileFromURL(db, url, cid, fid, signee, wallet.AccAddress(), chunkSize)
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Couldn't get %s from %s, trying again...", fid, url))
 			continue
@@ -64,7 +64,7 @@ func DownloadFile(db *badger.DB, cid string, fid string, wallet *wallet.Wallet, 
 	return nil
 }
 
-func DownloadFileFromURL(db *badger.DB, url string, cid string, fid string, signee string, address string) (int, error) {
+func DownloadFileFromURL(db *badger.DB, url string, cid string, fid string, signee string, address string, chunkSize int64) (int, error) {
 	log.Info().Msg(fmt.Sprintf("Downloading %s from %s...", fid, url))
 	cli := http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%s", url, fid), nil)
@@ -99,7 +99,7 @@ func DownloadFileFromURL(db *badger.DB, url string, cid string, fid string, sign
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	_, _, _, size, err := file_system.WriteFile(db, reader, signee, address, cid)
+	_, _, _, size, err := file_system.WriteFile(db, reader, signee, address, cid, chunkSize)
 	if err != nil {
 		return 0, err
 	}

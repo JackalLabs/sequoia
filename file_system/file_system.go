@@ -64,7 +64,7 @@ func buildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 	return r, exportedTree, chunks, size, nil
 }
 
-func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, cidOverride string) (merkle string, fid string, cid string, size int, err error) {
+func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, cidOverride string, chunkSize int64) (merkle string, fid string, cid string, size int, err error) {
 	var buf bytes.Buffer
 	tee := io.TeeReader(reader, &buf)
 	fid, err = utils.MakeFid(tee)
@@ -82,8 +82,6 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 	}
 
 	err = db.Update(func(txn *badger.Txn) error {
-		var chunkSize int64 = 1024
-
 		root, exportedTree, chunks, s, err := buildTree(&buf, chunkSize)
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Cannot build tree | %e", err))

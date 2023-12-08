@@ -17,7 +17,7 @@ func (h *Hand) Stop() {
 	h.running = false
 }
 
-func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string) {
+func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string, chunkSize int64) {
 	h.running = true
 	for h.running {
 
@@ -36,7 +36,7 @@ func (h *Hand) Start(db *badger.DB, wallet *wallet.Wallet, myUrl string) {
 			continue
 		}
 
-		err = network.DownloadFile(db, cid, fid, wallet, signee, size, myUrl)
+		err = network.DownloadFile(db, cid, fid, wallet, signee, size, myUrl, chunkSize)
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil

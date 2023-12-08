@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/JackalLabs/sequoia/cmd/types"
@@ -30,7 +31,12 @@ func InitCmd() *cobra.Command {
 				return err
 			}
 
-			log.Logger.Info().Msg("done!")
+			_, err = config.InitWallet(home)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("done!")
 
 			return nil
 		},

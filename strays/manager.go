@@ -87,11 +87,11 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 	return s
 }
 
-func (s *StrayManager) Start(db *badger.DB, myUrl string) {
+func (s *StrayManager) Start(db *badger.DB, myUrl string, chunkSize int64) {
 	s.running = true
 
 	for _, hand := range s.hands {
-		go hand.Start(db, s.wallet, myUrl)
+		go hand.Start(db, s.wallet, myUrl, chunkSize)
 	}
 
 	for s.running {

@@ -29,7 +29,7 @@ func TestWriteFile(t *testing.T) {
 
 	merkle := "1688dc719d1a41ff567fd54e66953f5c518044f6fed6ce814ba777b7dead4ab7d1c193448dc1c04eac05e6708dfd7a8999e9afdf6ba5c525ab7fb9c7f1e2bd4c"
 
-	fileMerkle, fid, _, size, err := WriteFile(db, buf, "jkl123", "myself", "")
+	fileMerkle, fid, _, size, err := WriteFile(db, buf, "jkl123", "myself", "", 1024)
 	require.NoError(t, err)
 
 	require.Equal(t, len(data), size)
@@ -75,7 +75,7 @@ func TestFIDCID(t *testing.T) {
 
 	merkle := "1688dc719d1a41ff567fd54e66953f5c518044f6fed6ce814ba777b7dead4ab7d1c193448dc1c04eac05e6708dfd7a8999e9afdf6ba5c525ab7fb9c7f1e2bd4c"
 
-	fileMerkle, fid, _, size, err := WriteFile(db, buf, "jkl123", "myself", "")
+	fileMerkle, fid, _, size, err := WriteFile(db, buf, "jkl123", "myself", "", 1024)
 	require.NoError(t, err)
 
 	require.Equal(t, len(data), size)
@@ -116,7 +116,7 @@ func TestLargeFile(t *testing.T) {
 
 		buf := bytes.NewBuffer(bi)
 
-		_, _, cid, size, err := WriteFile(db, buf, "jkl123", "myself", "")
+		_, _, cid, size, err := WriteFile(db, buf, "jkl123", "myself", "", 1024)
 		require.NoError(t, err)
 
 		require.Equal(t, len(bi), size)
