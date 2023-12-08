@@ -80,13 +80,12 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 	if cidOverride != "" {
 		cid = cidOverride
 	}
-
+	root, exportedTree, chunks, s, err := buildTree(&buf, chunkSize)
+	if err != nil {
+		log.Warn().Msg(fmt.Sprintf("Cannot build tree | %e", err))
+		return
+	}
 	err = db.Update(func(txn *badger.Txn) error {
-		root, exportedTree, chunks, s, err := buildTree(&buf, chunkSize)
-		if err != nil {
-			log.Info().Msg(fmt.Sprintf("Cannot build tree | %e", err))
-			return err
-		}
 		size = s
 		merkle = hex.EncodeToString(root)
 
@@ -94,14 +93,6 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Cannot set tree %s | %e", cid, err))
 		}
-
-		for i, chunk := range chunks {
-			err := txn.Set(chunkKey(cid, i), chunk)
-			if err != nil {
-				log.Info().Msg(fmt.Sprintf("Cannot set chunk %d | %e", i, err))
-			}
-		}
-
 		err = txn.Set(fileKey(cid), []byte(fid))
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Cannot set cid %s | %e", cid, err))
@@ -109,6 +100,19 @@ func WriteFile(db *badger.DB, reader io.Reader, signee string, address string, c
 
 		return nil
 	})
+
+	for i, chunk := range chunks {
+		err = db.Update(func(txn *badger.Txn) error {
+			err := txn.Set(chunkKey(cid, i), chunk)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			log.Warn().Msg(fmt.Sprintf("Cannot set chunk %d | %e", i, err))
+		}
+	}
 
 	return
 }
