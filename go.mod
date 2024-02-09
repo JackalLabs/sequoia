@@ -12,7 +12,7 @@ require (
 	github.com/jackalLabs/canine-chain/v3 v3.0.2
 	github.com/json-iterator/go v1.1.12
 	github.com/prometheus/client_golang v1.18.0
-	github.com/rs/zerolog v1.31.0
+	github.com/rs/zerolog v1.32.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
 	github.com/wealdtech/go-merkletree/v2 v2.5.1
