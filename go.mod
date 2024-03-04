@@ -10,6 +10,7 @@ require (
 	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/gorilla/mux v1.8.1
 	github.com/hsanjuan/ipfs-lite v1.8.2
+	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ds-badger2 v0.0.0-00010101000000-000000000000
 	github.com/jackalLabs/canine-chain/v3 v3.0.2
 	github.com/json-iterator/go v1.1.12
@@ -128,7 +129,6 @@ require (
 	github.com/ipfs/boxo v0.17.0 // indirect
 	github.com/ipfs/go-bitfield v1.1.0 // indirect
 	github.com/ipfs/go-block-format v0.2.0 // indirect
-	github.com/ipfs/go-cid v0.4.1 // indirect
 	github.com/ipfs/go-cidutil v0.1.0 // indirect
 	github.com/ipfs/go-datastore v0.6.0 // indirect
 	github.com/ipfs/go-ipfs-delay v0.0.1 // indirect
@@ -289,9 +289,9 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/hsanjuan/ipfs-lite => ../ipfs-lite
+	github.com/hsanjuan/ipfs-lite => github.com/TheMarstonConnell/ipfs-lite v0.0.0-20240304191454-94283a9ad1c9
 
-	github.com/ipfs/go-ds-badger2 => ../go-ds-badger2
+	github.com/ipfs/go-ds-badger2 => github.com/TheMarstonConnell/go-ds-badger2 v0.0.0-20240304191516-af5ee03005fc
 
 	//github.com/jackalLabs/canine-chain/v3 => ../canine-chain
 	github.com/jackalLabs/canine-chain/v3 => github.com/jackalLabs/canine-chain/v3 v3.0.2-0.20240212161902-b493692f8664 // using the master branch for now before v4 releases
