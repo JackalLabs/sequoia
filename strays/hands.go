@@ -41,7 +41,7 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, myUrl str
 			continue
 		}
 
-		tree, chunk, err := f.GetFileTreeByChunk(merkle, signee, start, 0)
+		tree, chunk, err := f.GetFileTreeByChunk(merkle, signee, start, 0, int(chunkSize))
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil

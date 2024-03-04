@@ -1,13 +1,24 @@
 package file_system
 
-import "github.com/dgraph-io/badger/v4"
+import (
+	"context"
+
+	ipfs2 "github.com/JackalLabs/sequoia/ipfs"
+	"github.com/dgraph-io/badger/v4"
+	ipfslite "github.com/hsanjuan/ipfs-lite"
+)
 
 type FileSystem struct {
-	db *badger.DB
+	db   *badger.DB
+	ipfs *ipfslite.Peer
 }
 
-func NewFileSystem(db *badger.DB) *FileSystem {
-	return &FileSystem{db: db}
+func NewFileSystem(ctx context.Context, db *badger.DB, ipfsPort int) *FileSystem {
+	ipfs, err := ipfs2.MakeIPFS(ctx, db, ipfsPort)
+	if err != nil {
+		panic(err)
+	}
+	return &FileSystem{db: db, ipfs: ipfs}
 }
 
 func (f *FileSystem) Close() {

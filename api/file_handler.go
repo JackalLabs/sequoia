@@ -75,7 +75,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 		}
 		res, err := cl.File(context.Background(), &queryParams)
 		if err != nil {
-			handleErr(fmt.Errorf("failed to find file on chain: %w", err), w, http.StatusInternalServerError)
+			handleErr(fmt.Errorf("failed to find file on chain with merkle: %x, owner: %s, start: %d | %w", merkle, sender, startBlock, err), w, http.StatusInternalServerError)
 			return
 		}
 
@@ -98,7 +98,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			}
 		}
 
-		size, err := fio.WriteFile(file, merkle, sender, startBlock, wl.AccAddress(), chunkSize)
+		size, c, err := fio.WriteFile(file, merkle, sender, startBlock, wl.AccAddress(), chunkSize)
 		if err != nil {
 			handleErr(fmt.Errorf("failed to write file to disk: %w", err), w, http.StatusInternalServerError)
 			return
@@ -113,6 +113,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			Merkle: merkle,
 			Owner:  sender,
 			Start:  startBlock,
+			CID:    c,
 		}
 
 		err = json.NewEncoder(w).Encode(resp)
@@ -139,7 +140,7 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 
 		}
 
-		file, err := f.GetFileDataByMerkle(merkle)
+		file, err := f.GetFileData(merkle)
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),

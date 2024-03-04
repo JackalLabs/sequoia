@@ -51,11 +51,11 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (b
 // GenProof generates a proof from an arbitrary file on the file system
 //
 // returns proof, item and error
-func GenProof(io FileSystem, merkle []byte, owner string, start int64, block int) ([]byte, []byte, error) {
-	tree, chunk, err := io.GetFileTreeByChunk(merkle, owner, start, block)
+func GenProof(io FileSystem, merkle []byte, owner string, start int64, block int, chunkSize int) ([]byte, []byte, error) {
+	tree, chunk, err := io.GetFileTreeByChunk(merkle, owner, start, block, chunkSize)
 	if err != nil {
 		log.Error().Err(fmt.Errorf("failed to get filetree by chunk for %x %w", merkle, err))
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("cannot get chunk %w", err)
 	}
 
 	log.Debug().Msg(fmt.Sprintf("About to generate merkle proof for %x", merkle))
@@ -72,7 +72,7 @@ func GenProof(io FileSystem, merkle []byte, owner string, start int64, block int
 
 	jproof, err := json.Marshal(*proof)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to marshal proof %w", err)
 	}
 
 	log.Debug().Msg(fmt.Sprintf("Done making proof for %x", merkle))
@@ -142,7 +142,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 	log.Debug().Msg(fmt.Sprintf("Getting file tree by chunk for %x", merkle))
 
-	proof, item, err := GenProof(p.io, merkle, owner, start, block)
+	proof, item, err := GenProof(p.io, merkle, owner, start, block, p.chunkSize)
 
 	return proof, item, newProof.ChunkToProve, err
 }
@@ -269,7 +269,7 @@ func (p *Prover) Stop() {
 	p.running = false
 }
 
-func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval int64, threads int64) *Prover {
+func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval int64, threads int64, chunkSize int) *Prover {
 	p := Prover{
 		running:   false,
 		wallet:    wallet,
@@ -278,6 +278,7 @@ func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval in
 		interval:  interval,
 		io:        io,
 		threads:   threads,
+		chunkSize: chunkSize,
 	}
 
 	return &p

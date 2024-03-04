@@ -44,6 +44,8 @@ func NewApp(home string) *App {
 		panic(err)
 	}
 
+	ctx := context.Background()
+
 	dataDir := os.ExpandEnv(cfg.DataDirectory)
 
 	err = os.MkdirAll(dataDir, os.ModePerm)
@@ -63,7 +65,7 @@ func NewApp(home string) *App {
 
 	apiServer := api.NewAPI(cfg.APICfg.Port)
 
-	f := file_system.NewFileSystem(db)
+	f := file_system.NewFileSystem(ctx, db, 4005)
 
 	return &App{
 		fileSystem: f,
@@ -214,7 +216,7 @@ func (a *App) Start() {
 	a.q = queue.NewQueue(w, cfg.QueueInterval)
 	go a.q.Listen()
 
-	a.prover = proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads)
+	a.prover = proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 	a.monitor = monitoring.NewMonitor(w)
 
