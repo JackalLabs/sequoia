@@ -18,12 +18,13 @@ type Prover struct {
 	io             FileSystem
 	threads        int64
 	currentThreads int64
+	chunkSize      int
 }
 
 type FileSystem interface {
 	DeleteFile([]byte, string, int64) error
 	ProcessFiles(func([]byte, string, int64)) error
-	GetFileTreeByChunk([]byte, string, int64, int) (*merkletree.MerkleTree, []byte, error)
+	GetFileTreeByChunk([]byte, string, int64, int, int) (*merkletree.MerkleTree, []byte, error)
 }
 
 func (p *Prover) Inc() {

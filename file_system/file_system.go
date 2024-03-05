@@ -1,11 +1,15 @@
 package file_system
 
 import (
+	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
@@ -66,16 +70,27 @@ func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 	return r, exportedTree, chunks, size, nil
 }
 
-func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64) (size int, err error) {
+func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64) (size int, cid string, err error) {
 	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
 	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize)
 	if err != nil {
 		log.Error().Err(fmt.Errorf("cannot build tree | %w", err))
-		return 0, err
+		return 0, "", err
 	}
 	size = s
 	if hex.EncodeToString(merkle) != hex.EncodeToString(root) {
-		return 0, fmt.Errorf("merkle does not match %x != %x", merkle, root)
+		return 0, "", fmt.Errorf("merkle does not match %x != %x", merkle, root)
+	}
+
+	b := make([]byte, 0)
+	for _, chunk := range chunks {
+		b = append(b, chunk...)
+	}
+	buf := bytes.NewBuffer(b)
+
+	n, err := f.ipfs.AddFile(context.Background(), buf, nil)
+	if err != nil {
+		return 0, "", err
 	}
 
 	err = f.db.Update(func(txn *badger.Txn) error {
@@ -86,61 +101,58 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 			return e
 		}
 
+		err = txn.Set([]byte(fmt.Sprintf("cid/%x", merkle)), []byte(n.Cid().String()))
+
 		return nil
 	})
 	if err != nil {
-		return 0, err
-	}
-
-	k := len(chunks)
-	for len(chunks) > 0 {
-
-		i := k - len(chunks)
-
-		chunk := chunks[0]
-		chunks = chunks[1:]
-
-		err = f.db.Update(func(txn *badger.Txn) error {
-			err := txn.Set(chunkKey(merkle, owner, start, i), chunk)
-			if err != nil {
-				e := fmt.Errorf("cannot set chunk %d | %w", i, err)
-				log.Error().Err(e)
-				return e
-			}
-			return nil
-		})
-		if err != nil {
-			return 0, err
-		}
-
+		return 0, "", err
 	}
 
 	fileCount.Inc()
-	return size, nil
+	return size, n.Cid().String(), nil
 }
 
 func (f *FileSystem) DeleteFile(merkle []byte, owner string, start int64) error {
 	log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
 	fileCount.Dec()
-	return f.db.Update(func(txn *badger.Txn) error {
+	err := f.db.Update(func(txn *badger.Txn) error {
 		err := txn.Delete(treeKey(merkle, owner, start))
 		if err != nil {
 			return err
 		}
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-		prefix := majorChunkKey(merkle, owner, start)
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			err := txn.Delete(k)
-			if err != nil {
-				return err
-			}
-		}
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	fcid := ""
+	_ = f.db.View(func(txn *badger.Txn) error {
+		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
+		if err != nil {
+			return err
+		}
+
+		_ = b.Value(func(val []byte) error {
+			fcid = string(val)
+			return nil
+		})
+		return nil
+	})
+
+	c, err := cid.Decode(fcid)
+	if err != nil {
+		return err
+	}
+
+	err = f.ipfs.Remove(context.Background(), c)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (f *FileSystem) ListFiles() ([][]byte, []string, []int64, error) {
@@ -237,11 +249,9 @@ func (f *FileSystem) Dump() (map[string]string, error) {
 	return files, err
 }
 
-func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64, chunkToLoad int) (*merkletree.MerkleTree, []byte, error) {
+func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64, chunkToLoad int, chunkSize int) (*merkletree.MerkleTree, []byte, error) {
 	tree := treeKey(merkle, owner, start)
-	chunk := chunkKey(merkle, owner, start, chunkToLoad)
 
-	var chunkOut []byte
 	var newTree merkletree.MerkleTree
 
 	err := f.db.View(func(txn *badger.Txn) error {
@@ -260,20 +270,37 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 			return err
 		}
 
-		c, err := txn.Get(chunk)
+		return nil
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot get tree %w", err)
+	}
+
+	fcid := ""
+	err = f.db.View(func(txn *badger.Txn) error {
+		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
 		if err != nil {
 			return err
 		}
 
-		_ = c.Value(func(val []byte) error { // doesn't need checked
-			chunkOut = val
+		_ = b.Value(func(val []byte) error {
+			fcid = string(val)
 			return nil
 		})
-
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to match cid to merkle %w", err)
+	}
+
+	c, err := cid.Decode(fcid)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to decode cid: %s | %w", fcid, err)
+	}
+
+	chunkOut, err := f.ipfs.GetFileChunk(context.Background(), c, chunkToLoad, chunkSize)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get chunk from unixfs %w", err)
 	}
 
 	if chunkOut == nil {
@@ -283,75 +310,35 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 	return &newTree, chunkOut, nil
 }
 
-func (f *FileSystem) GetFileData(merkle []byte, owner string, start int64) ([]byte, error) {
-	fileData := make([]byte, 0)
-
-	err := f.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-		prefix := majorChunkKey(merkle, owner, start)
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			item := it.Item()
-
-			err := item.Value(func(val []byte) error {
-				fileData = append(fileData, val...)
-				return nil
-			})
-			if err != nil {
-				return err
-			}
+func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
+	fcid := ""
+	_ = f.db.View(func(txn *badger.Txn) error {
+		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
+		if err != nil {
+			return err
 		}
 
+		_ = b.Value(func(val []byte) error {
+			fcid = string(val)
+			return nil
+		})
 		return nil
 	})
 
-	return fileData, err
-}
+	c, err := cid.Decode(fcid)
+	if err != nil {
+		return nil, err
+	}
 
-func (f *FileSystem) GetFileDataByMerkle(merkle []byte) ([]byte, error) {
-	fileData := make([]byte, 0)
-	o := ""
-	var s int64
-	err := f.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-		prefix := majorChunkMerkleKey(merkle)
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			item := it.Item()
-
-			k := item.Key()[len("chunks/"):]
-
-			_, owner, start, err := SplitMerkle(k)
-			if err != nil {
-				return err
-			}
-
-			if len(o) == 0 {
-				o = owner
-			} else {
-				if owner != o {
-					return nil
-				}
-			}
-			if s == 0 {
-				s = start
-			} else {
-				if s != start {
-					return nil
-				}
-			}
-
-			err = item.Value(func(val []byte) error {
-				fileData = append(fileData, val...)
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
+	rsc, err := f.ipfs.GetFile(context.Background(), c)
+	if err != nil {
+		return nil, err
+	}
+	defer rsc.Close()
+	fileData, err := io.ReadAll(rsc)
+	if err != nil {
+		return nil, err
+	}
 
 	return fileData, err
 }

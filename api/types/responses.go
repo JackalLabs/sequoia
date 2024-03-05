@@ -4,6 +4,7 @@ type UploadResponse struct {
 	Merkle []byte `json:"merkle"`
 	Owner  string `json:"owner"`
 	Start  int64  `json:"start"`
+	CID    string `json:"cid"`
 }
 
 type ErrorResponse struct {

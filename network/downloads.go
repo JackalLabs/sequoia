@@ -12,9 +12,6 @@ import (
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
-import jsoniter "github.com/json-iterator/go"
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64) error {
 	queryParams := &types.QueryFindFile{
@@ -28,11 +25,7 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 		return err
 	}
 
-	var arr []string // Create an array of IPs from the request.
-	err = json.Unmarshal([]byte(res.ProviderIps), &arr)
-	if err != nil {
-		return err
-	}
+	arr := res.ProviderIps
 
 	if len(arr) == 0 {
 		return fmt.Errorf("%x not found on provider network", merkle)
@@ -100,7 +93,7 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	size, err := f.WriteFile(reader, merkle, owner, start, address, chunkSize)
+	size, _, err := f.WriteFile(reader, merkle, owner, start, address, chunkSize)
 	if err != nil {
 		return 0, err
 	}
