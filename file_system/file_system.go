@@ -312,7 +312,7 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 
 func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 	fcid := ""
-	_ = f.db.View(func(txn *badger.Txn) error {
+	err := f.db.View(func(txn *badger.Txn) error {
 		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
 		if err != nil {
 			return err
@@ -324,15 +324,18 @@ func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 		})
 		return nil
 	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot get cid mapping from disk: %w", err)
+	}
 
 	c, err := cid.Decode(fcid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot decode cid '%s': %w", fcid, err)
 	}
 
 	rsc, err := f.ipfs.GetFile(context.Background(), c)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot get file for cid '%s': %w", c.String(), err)
 	}
 	defer rsc.Close()
 	fileData, err := io.ReadAll(rsc)
