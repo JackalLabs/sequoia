@@ -150,6 +150,7 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 
 		}
 
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(file)))
 		_, _ = w.Write(file)
 	}
 }
