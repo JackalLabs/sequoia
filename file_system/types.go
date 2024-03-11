@@ -2,6 +2,7 @@ package file_system
 
 import (
 	"context"
+	"github.com/ipfs/go-cid"
 
 	ipfs2 "github.com/JackalLabs/sequoia/ipfs"
 	"github.com/dgraph-io/badger/v4"
@@ -23,4 +24,17 @@ func NewFileSystem(ctx context.Context, db *badger.DB, ipfsPort int) *FileSystem
 
 func (f *FileSystem) Close() {
 	f.db.Close()
+}
+
+func (f *FileSystem) GetIPFS(cidString string) ([]byte, error) {
+	c, err := cid.Parse(cidString)
+	if err != nil {
+		return nil, err
+	}
+	n, err := f.ipfs.Get(context.Background(), c)
+	if err != nil {
+		return nil, err
+	}
+
+	n.RawData()
 }
