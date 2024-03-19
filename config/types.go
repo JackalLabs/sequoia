@@ -25,7 +25,8 @@ type StrayManagerConfig struct {
 }
 
 type APIConfig struct {
-	Port int64 `yaml:"port"`
+	Port     int64 `yaml:"port"`
+	IPFSPort int   `yaml:"ipfs_port"`
 }
 
 func DefaultConfig() *Config {
@@ -48,7 +49,8 @@ func DefaultConfig() *Config {
 		TotalSpace:    1092616192, // 1 gib default
 		DataDirectory: "$HOME/.sequoia/data",
 		APICfg: APIConfig{
-			Port: 3333,
+			Port:     3333,
+			IPFSPort: 4005,
 		},
 		ProofThreads: 1000,
 	}

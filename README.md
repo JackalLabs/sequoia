@@ -29,4 +29,4 @@ Once the wallet is funded, running `sequoia start` again will start the provider
 
 ### Earning Rewards
 
-In order for your provider to run correctly, you will need to set up a domain for your provider pointed at the port your provider is running on and set that up in the `config.yaml`. You will also need to make sure you have port `4001` open on TCP and UDP for IPFS support, or you could be penalized by the reporting system.
+In order for your provider to run correctly, you will need to set up a domain for your provider pointed at the port your provider is running on and set that up in the `config.yaml`. You will also need to make sure you have port `4005` (or whatever you specified in the config) open on TCP and UDP for IPFS support, or you could be penalized by the reporting system.
