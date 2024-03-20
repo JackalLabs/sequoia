@@ -65,7 +65,7 @@ func NewApp(home string) *App {
 
 	apiServer := api.NewAPI(cfg.APICfg.Port)
 
-	f := file_system.NewFileSystem(ctx, db, 4005)
+	f := file_system.NewFileSystem(ctx, db, cfg.APICfg.IPFSPort)
 
 	return &App{
 		fileSystem: f,
