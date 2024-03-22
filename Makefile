@@ -40,7 +40,7 @@ clean:
 golangci_lint_cmd=golangci-lint
 
 format-tools:
-	go install mvdan.cc/gofumpt@v0.5.0
+	go install mvdan.cc/gofumpt@v0.6.0
 	gofumpt -l -w .
 
 lint: format-tools
