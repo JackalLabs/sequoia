@@ -15,7 +15,7 @@ require (
 	github.com/jackalLabs/canine-chain/v3 v3.0.2
 	github.com/json-iterator/go v1.1.12
 	github.com/libp2p/go-libp2p v0.32.2
-	github.com/multiformats/go-multiaddr v0.12.2
+	github.com/multiformats/go-multiaddr v0.12.3
 	github.com/prometheus/client_golang v1.18.0
 	github.com/rs/zerolog v1.32.0
 	github.com/spf13/cobra v1.8.0
