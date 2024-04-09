@@ -15,8 +15,9 @@ import (
 
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/gorilla/mux"
+
+	jsoniter "github.com/json-iterator/go"
 )
-import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -49,6 +50,8 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	r.HandleFunc("/version", VersionHandler(wallet))
 
 	r.Handle("/metrics", promhttp.Handler())
+
+	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir("./static/")))
 
 	a.srv = &http.Server{
 		Handler: r,
