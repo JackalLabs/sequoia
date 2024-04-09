@@ -1,8 +1,10 @@
 package api
 
 import (
+	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"time"
 
@@ -20,6 +22,9 @@ import (
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
+//go:embed static
+var assets embed.FS
 
 type API struct {
 	port int64
@@ -51,7 +56,9 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 
 	r.Handle("/metrics", promhttp.Handler())
 
-	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir("./static/")))
+	html, _ := fs.Sub(assets, "static")
+	fs := http.FileServer(http.FS(html))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 
 	a.srv = &http.Server{
 		Handler: r,
