@@ -56,6 +56,8 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 
 	r.Handle("/metrics", promhttp.Handler())
 
+	r.HandleFunc("/withdraw", WithdrawHandler(wallet)).Methods("POST")
+
 	html, _ := fs.Sub(assets, "static")
 	fs := http.FileServer(http.FS(html))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
@@ -68,7 +70,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 		ReadTimeout:  15 * time.Second,
 	}
 
-	log.Logger.Info().Msg(fmt.Sprintf("Sequoia API now listening on %s", a.srv.Addr))
+	log.Logger.Info().Msg(fmt.Sprintf("Sequoia API now listening on %s...", a.srv.Addr))
 	err := a.srv.ListenAndServe()
 	if err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
