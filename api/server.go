@@ -56,7 +56,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 
 	r.Handle("/metrics", promhttp.Handler())
 
-	r.HandleFunc("/withdraw", WithdrawHandler(wallet)).Methods("POST")
+	r.HandleFunc("/withdraw", WithdrawHandler(wallet, p)).Methods("POST")
 
 	html, _ := fs.Sub(assets, "static")
 	fs := http.FileServer(http.FS(html))

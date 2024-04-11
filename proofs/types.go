@@ -38,3 +38,7 @@ func (p *Prover) Dec() {
 func (p *Prover) Full() bool {
 	return p.threads <= p.currentThreads
 }
+
+func (p *Prover) GetQueue() *queue.Queue {
+	return p.q
+}
