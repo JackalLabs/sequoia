@@ -12,10 +12,34 @@ $(document).ready(function () {
 		}
 	};
 
+	const withdrawRequest = async () => {
+		let input = getFormData();
+		console.log(input);
+		const data = new URLSearchParams();
+		data.append = ("to_address", input.to_address);
+		data.append = ("amount", input.amount);
+
+		fetch(`${URL}/withdraw/`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			body: data,
+		})
+			.then((res) => res.json())
+			.then((data) => console.log(data))
+			.catch((error) => console.error(error));
+	};
+
 	const statusBar = document.createElement("p");
 
+	const getFormData = () => {
+		const form = document.querySelector("form");
+		return (data = Object.fromEntries(new FormData(form).entries()));
+	};
 	$("#withdraw-btn").click(function () {
-		console.log("withdraw click");
+		console.log("withdraw click...");
+		withdrawRequest();
 	});
 
 	getStatus();
