@@ -8,6 +8,18 @@
 		<link rel="stylesheet" href="./style.css" />
 		<link rel="icon" href="./favicon.ico" type="image/x-icon" />
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+		<script
+			src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datasource-prometheus@2/dist/chartjs-plugin-datasource-prometheus.umd.min.js"
+			crossorigin="anonymous"
+		></script>
 		<script src="index.js"></script>
 	</head>
 	<body>
@@ -24,12 +36,14 @@
 			<button id="withdraw-btn">Withdraw</button>
 		</div>
 
-		<div>
+		<div id="stats">
 			<h2>Stats</h2>
 		</div>
+		<canvas id="myChart" style="width: 100%; max-width: 700px"></canvas>
 
 		<div>
 			<h2>Network</h2>
 		</div>
 	</body>
+	<script src="chart-stats.js"></script>
 </html>
