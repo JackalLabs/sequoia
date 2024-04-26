@@ -1,20 +1,41 @@
-const ctx = document.querySelector("#myChart").getContext("2d");
-var myChart = new Chart(ctx, {
+const ctx1 = document.querySelector("#myChart").getContext("2d");
+var myChart = new Chart(ctx1, {
 	type: "line",
 	plugins: [ChartDatasourcePrometheusPlugin],
 	options: {
 		plugins: {
 			"datasource-prometheus": {
 				prometheus: {
-					endpoint: "https://prometheus.demo.do.prometheus.io",
-					baseURL: "/api/v1", // default value
+					endpoint: "http://localhost:9092",
 				},
-				query: "sum by (job) (go_gc_duration_seconds)",
+				query:
+					"sequoia_current_proofs_processing or sequoia_file_count offset 10m",
 				timeRange: {
 					type: "relative",
+					// from 24 hours ago to now
+					start: -24 * 60 * 60 * 1000,
+					end: 0,
+				},
+			},
+		},
+	},
+});
 
-					// from 12 hours ago to now
-					start: -12 * 60 * 60 * 1000,
+const ctx2 = document.querySelector("#networkChart").getContext("2d");
+var networkChart = new Chart(ctx2, {
+	type: "line",
+	plugins: [ChartDatasourcePrometheusPlugin],
+	options: {
+		plugins: {
+			"datasource-prometheus": {
+				prometheus: {
+					endpoint: "http://localhost:9092",
+				},
+				query: "sequoia_block_height",
+				timeRange: {
+					type: "relative",
+					// from 2 hours ago to now
+					start: -2 * 60 * 60 * 1000,
 					end: 0,
 				},
 			},
