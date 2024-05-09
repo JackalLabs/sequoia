@@ -12,7 +12,7 @@ require (
 	github.com/hsanjuan/ipfs-lite v1.8.2
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ds-badger2 v0.0.0-00010101000000-000000000000
-	github.com/jackalLabs/canine-chain/v3 v3.0.2
+	github.com/jackalLabs/canine-chain/v3 v3.2.2
 	github.com/json-iterator/go v1.1.12
 	github.com/libp2p/go-libp2p v0.32.2
 	github.com/multiformats/go-multiaddr v0.12.2
@@ -20,7 +20,7 @@ require (
 	github.com/rs/zerolog v1.32.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
-	github.com/wealdtech/go-merkletree/v2 v2.5.1
+	github.com/wealdtech/go-merkletree/v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -33,7 +33,7 @@ require (
 	github.com/99designs/keyring v1.2.1 // indirect
 	github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d // indirect
 	github.com/CosmWasm/wasmd v0.32.0 // indirect
-	github.com/CosmWasm/wasmvm v1.2.3 // indirect
+	github.com/CosmWasm/wasmvm v1.2.6 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/Jorropo/jsync v1.0.1 // indirect
 	github.com/Workiva/go-datastructures v1.0.53 // indirect
@@ -52,7 +52,7 @@ require (
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/coinbase/rosetta-sdk-go v0.7.9 // indirect
 	github.com/cometbft/cometbft-db v0.7.0 // indirect
-	github.com/confio/ics23/go v0.9.0 // indirect
+	github.com/confio/ics23/go v0.9.1 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
@@ -60,7 +60,7 @@ require (
 	github.com/cosmos/cosmos-proto v1.0.0-beta.3 // indirect
 	github.com/cosmos/gorocksdb v1.2.0 // indirect
 	github.com/cosmos/iavl v0.19.5 // indirect
-	github.com/cosmos/ibc-go/v4 v4.4.2 // indirect
+	github.com/cosmos/ibc-go/v4 v4.6.0 // indirect
 	github.com/cosmos/interchain-accounts v0.2.6 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.12.4 // indirect
 	github.com/crackcomm/go-gitignore v0.0.0-20231225121904-e25f5bc08668 // indirect
@@ -123,6 +123,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hdevalence/ed25519consensus v0.1.0 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
+	github.com/iden3/go-iden3-crypto v0.0.16 // indirect
 	github.com/improbable-eng/grpc-web v0.15.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
@@ -243,14 +244,14 @@ require (
 	go.uber.org/mock v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.20.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
-	golang.org/x/term v0.16.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/term v0.20.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.16.1 // indirect
 	gonum.org/v1/gonum v0.14.0 // indirect
 	google.golang.org/genproto v0.0.0-20240102182953-50ed04b92917 // indirect
@@ -293,9 +294,10 @@ replace (
 
 	github.com/ipfs/go-ds-badger2 => github.com/TheMarstonConnell/go-ds-badger2 v0.0.0-20240304191516-af5ee03005fc
 
-	//github.com/jackalLabs/canine-chain/v3 => ../canine-chain
-	github.com/jackalLabs/canine-chain/v3 => github.com/jackalLabs/canine-chain/v3 v3.0.2-0.20240212161902-b493692f8664 // using the master branch for now before v4 releases
+	github.com/jackalLabs/canine-chain/v3 => ../canine-chain
 
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27
+	//github.com/jackalLabs/canine-chain/v3 => github.com/jackalLabs/canine-chain/v3 v3.0.2-0.20240212161902-b493692f8664 // using the master branch for now before v4 releases
+	github.com/wealdtech/go-merkletree => github.com/TheMarstonConnell/go-merkletree v0.0.0-20230124030923-93fb10e701d7
 
 )

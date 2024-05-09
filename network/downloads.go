@@ -20,7 +20,7 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 
 	cl := types.NewQueryClient(wallet.Client.GRPCConn)
 
-	res, err := cl.FindFile(context.Background(), queryParams)
+	res, err := cl.FindSomeFile(context.Background(), queryParams)
 	if err != nil {
 		return err
 	}

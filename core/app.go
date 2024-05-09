@@ -75,7 +75,7 @@ func NewApp(home string) *App {
 }
 
 func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
-	init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), ip, totalSpace, "")
+	init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), ip, strconv.FormatInt(totalSpace, 10), "")
 
 	data := walletTypes.NewTransactionData(
 		init,
@@ -141,7 +141,7 @@ func updateIp(wallet *wallet.Wallet, ip string) error {
 }
 
 func (a *App) GetStorageParams(client grpc.ClientConn) (storageTypes.Params, error) {
-	queryParams := &storageTypes.QueryParams{}
+	queryParams := &storageTypes.QueryParamsRequest{}
 
 	cl := storageTypes.NewQueryClient(client)
 
