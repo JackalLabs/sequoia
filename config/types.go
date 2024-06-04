@@ -29,6 +29,14 @@ type APIConfig struct {
 	IPFSPort int   `yaml:"ipfs_port"`
 }
 
+// v3 and earlier providers used private key to sign txs
+// and by design it can't derive mnemonic seed which makes
+// it incompatible with sequoia's wallet creation.
+type LegacyWallet struct {
+	Key     string `json:"key"`
+	Address string `json:"address"`
+}
+
 func DefaultConfig() *Config {
 	return &Config{
 		QueueInterval: 10,
