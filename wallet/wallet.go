@@ -34,3 +34,23 @@ func CreateWallet(seed string, derivation string, chainCfg types.ChainConfig) (*
 
 	return w, err
 }
+
+func CreateWalletPrivKey(privKey string, chainCfg types.ChainConfig) (*wallet.Wallet, error) {
+	// Set up the SDK config with the proper bech32 prefixes
+	cfg := sdk.GetConfig()
+	cfg.SetBech32PrefixForAccount(chainCfg.Bech32Prefix, fmt.Sprintf("%spub", chainCfg.Bech32Prefix))
+
+	encodingCfg := canine.MakeEncodingConfig()
+
+	c, err := client.NewClient(&chainCfg, encodingCfg.Marshaler)
+	if err != nil {
+		panic(err)
+	}
+
+	w, err := wallet.NewWalletFromKey([]byte(privKey), c, encodingCfg.TxConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	return w, err
+}

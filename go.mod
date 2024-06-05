@@ -278,7 +278,7 @@ replace (
 	//github.com/cosmos/cosmos-sdk => ../cosmos-sdk-new
 
 	//github.com/desmos-labs/cosmos-go-wallet => ../cosmos-go-wallet
-	github.com/desmos-labs/cosmos-go-wallet => github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20231017193534-7de44d189e2a
+	github.com/desmos-labs/cosmos-go-wallet => github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20240605140035-368812a1d4d5
 
 	//github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 
