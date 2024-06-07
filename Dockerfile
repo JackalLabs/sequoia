@@ -1,5 +1,8 @@
 FROM golang:1.21
 
+RUN apt update
+RUN apt install yq -y
+
 ADD . sequoia
 
 WORKDIR sequoia
