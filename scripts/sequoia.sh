@@ -1,3 +1,5 @@
+make install
+
 sequoia init 
 
 yq -i '.proof_interval=120' /root/.sequoia/config.yaml -y
