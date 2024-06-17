@@ -205,7 +205,9 @@ func (f *FileSystem) ProcessFiles(fn func(merkle []byte, owner string, start int
 					return err
 				}
 
-				fn(merkle, owner, start)
+				m := make([]byte, hex.DecodedLen(len(merkle)))
+				hex.Decode(m, merkle)
+				fn(m, owner, start)
 
 				return nil
 			})
@@ -228,6 +230,7 @@ func (f *FileSystem) Dump() (map[string]string, error) {
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
 			k := item.Key()
+
 			if string(k)[:4] == "tree" {
 				continue
 			}
