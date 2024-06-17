@@ -26,7 +26,7 @@ func ListFilesHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http
 
 		mm := make([]string, len(merkles))
 		for i, merkle := range merkles {
-			mm[i] = fmt.Sprintf("%s", merkle)
+			mm[i] = fmt.Sprintf("%x", merkle)
 		}
 
 		f := types.ListResponse{
@@ -60,7 +60,7 @@ func LegacyListFilesHandler(f *file_system.FileSystem) func(http.ResponseWriter,
 
 		for i, m := range merkles {
 			cids[i] = types.LegacyAPIListValue{
-				CID: fmt.Sprintf("%s", m),
+				CID: fmt.Sprintf("%x", m),
 				FID: owners[i],
 			}
 		}

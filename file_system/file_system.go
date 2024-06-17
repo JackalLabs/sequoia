@@ -205,9 +205,7 @@ func (f *FileSystem) ProcessFiles(fn func(merkle []byte, owner string, start int
 					return err
 				}
 
-				m := make([]byte, hex.DecodedLen(len(merkle)))
-				hex.Decode(m, merkle)
-				fn(m, owner, start)
+				fn(merkle, owner, start)
 
 				return nil
 			})
