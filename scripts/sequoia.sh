@@ -12,6 +12,8 @@ yq -i '.api_config.port=3334' /root/.sequoia/config.yaml -y
 
 rm /root/.sequoia/provider_wallet.json
 
-echo "{\"seed_phrase\":\"forward service profit benefit punch catch fan chief jealous steel harvest column spell rude warm home melody hat broccoli pulse say garlic you firm\",\"derivation_path\":\"m/44'/118'/0'/0/0\"}" > /root/.sequoia/provider_wallet.json
+# echo "{\"seed_phrase\":\"forward service profit benefit punch catch fan chief jealous steel harvest column spell rude warm home melody hat broccoli pulse say garlic you firm\",\"derivation_path\":\"m/44'/118'/0'/0/0\"}" > /root/.sequoia/provider_wallet.json
+
+echo $SEED_PHRASE > /root/.sequoia/provider_wallet.json
 
 sequoia start
