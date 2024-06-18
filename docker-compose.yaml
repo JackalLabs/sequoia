@@ -21,5 +21,12 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - ./grafana:/etc/grafana/provisioning/datasources
+  sequoia:
+    image: jackalnugget/sequoia
+    container_name: sequoia
+    restart: unless-stopped
+    environment:
+      - SEED_PHRASE=${SEED_PHRASE}
+
 volumes:
   prom_data:
