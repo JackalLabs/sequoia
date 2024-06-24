@@ -111,8 +111,8 @@ github.com/Shopify/goreferrer v0.0.0-20220729165902-8cddb4f5de06/go.mod h1:7erjK
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
-github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20231017193534-7de44d189e2a h1:7TBxGLnjrwT7JD1mLGPhkES/Dm2GJN0/wB6w1rR6we8=
-github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20231017193534-7de44d189e2a/go.mod h1:1Qv2CAWgjKx/h/yA3xP/3losGFRxxKbxFDjGIqwhvvc=
+github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20240605140035-368812a1d4d5 h1:0vY/XJzi5TU2KYCSi3l02FZjXIKwBQXwAbyYbSnoNhM=
+github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20240605140035-368812a1d4d5/go.mod h1:1Qv2CAWgjKx/h/yA3xP/3losGFRxxKbxFDjGIqwhvvc=
 github.com/TheMarstonConnell/go-ds-badger2 v0.0.0-20240304191516-af5ee03005fc h1:Zm5BYljo+2iwfgKyPKHXt/k5GDAa7vQhB3OZxIrjeKc=
 github.com/TheMarstonConnell/go-ds-badger2 v0.0.0-20240304191516-af5ee03005fc/go.mod h1:66WAKUovf4tFU+Yp6LnG3JQAonJyFxjVQNbz1TTncj0=
 github.com/TheMarstonConnell/ipfs-lite v0.0.0-20240304191454-94283a9ad1c9 h1:3id6BxQQZYwneoqlCATEy7nVB+gpDqoa4cGaPJ4kriE=
@@ -310,8 +310,8 @@ github.com/cosmos/gorocksdb v1.2.0 h1:d0l3jJG8M4hBouIZq0mDUHZ+zjOx044J3nGRskwTb4
 github.com/cosmos/gorocksdb v1.2.0/go.mod h1:aaKvKItm514hKfNJpUJXnnOWeBnk2GL4+Qw9NHizILw=
 github.com/cosmos/iavl v0.19.5 h1:rGA3hOrgNxgRM5wYcSCxgQBap7fW82WZgY78V9po/iY=
 github.com/cosmos/iavl v0.19.5/go.mod h1:X9PKD3J0iFxdmgNLa7b2LYWdsGd90ToV5cAONApkEPw=
-github.com/cosmos/ibc-go/v4 v4.4.2 h1:PG4Yy0/bw6Hvmha3RZbc53KYzaCwuB07Ot4GLyzcBvo=
-github.com/cosmos/ibc-go/v4 v4.4.2/go.mod h1:j/kD2JCIaV5ozvJvaEkWhLxM2zva7/KTM++EtKFYcB8=
+github.com/cosmos/ibc-go/v4 v4.6.0 h1:G7kiD4Zf8Wrxc8BXWIKuFnzI0W4wpvRPrl5HwdfTIsA=
+github.com/cosmos/ibc-go/v4 v4.6.0/go.mod h1:ksiZHUypws0NVP50E3ea0ivVFO/bfS8q8yLg8yZ2ATQ=
 github.com/cosmos/interchain-accounts v0.2.6 h1:TV2M2g1/Rb9MCNw1YePdBKE0rcEczNj1RGHT+2iRYas=
 github.com/cosmos/interchain-accounts v0.2.6/go.mod h1:lUzWNzCiCtIEYZefac5+YgEBz2aR39nMS374jIv1c7o=
 github.com/cosmos/keyring v1.2.0 h1:8C1lBP9xhImmIabyXW4c3vFjjLiBdGCmfLUfeZlV1Yo=
@@ -838,8 +838,8 @@ github.com/iris-contrib/jade v1.1.4/go.mod h1:EDqR+ur9piDl6DUgs6qRrlfzmlx/D5Uybo
 github.com/iris-contrib/pongo2 v0.0.1/go.mod h1:Ssh+00+3GAZqSQb30AvBRNxBx7rf0GqwkjqxNd0u65g=
 github.com/iris-contrib/schema v0.0.1/go.mod h1:urYA3uvUNG1TIIjOSCzHr9/LmbQo8LrOcOqfqxa4hXw=
 github.com/iris-contrib/schema v0.0.6/go.mod h1:iYszG0IOsuIsfzjymw1kMzTL8YQcCWlm65f3wX8J5iA=
-github.com/jackalLabs/canine-chain/v3 v3.0.2-0.20240212161902-b493692f8664 h1:JI/SypHYvEWPSMtcXYD8JpWvBw5cHoH8tqzzbDDaxy8=
-github.com/jackalLabs/canine-chain/v3 v3.0.2-0.20240212161902-b493692f8664/go.mod h1:ZjGcbuX0opY//aozW9TRtq+kPYUfTD5aIH6duf1W5E0=
+github.com/jackalLabs/canine-chain/v3 v3.0.3-rc.3.0.20240611211706-1d26f5317230 h1:telsMQABaiQawAvI06C+pL1XTaU1xmhFQEFfgslYdEw=
+github.com/jackalLabs/canine-chain/v3 v3.0.3-rc.3.0.20240611211706-1d26f5317230/go.mod h1:oBXv9DCT+9g20lTrEHILWGQicCbUlMt+G7/GDU6QkZA=
 github.com/jackpal/go-nat-pmp v1.0.2 h1:KzKSgb7qkJvOUTqYl9/Hg/me3pWgBmERKrTGD7BdWus=
 github.com/jackpal/go-nat-pmp v1.0.2/go.mod h1:QPH045xvCAeXUZOxsnwmrtiCoxIr9eob+4orBN1SBKc=
 github.com/jbenet/go-cienv v0.1.0/go.mod h1:TqNnHUmJgXau0nCzC7kXWeotg3J9W34CUv5Djy1+FlA=
