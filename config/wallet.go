@@ -8,8 +8,11 @@ import (
 	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 	"github.com/cosmos/go-bip39"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+
+	jsoniter "github.com/json-iterator/go"
+
+	"github.com/rs/zerolog/log"
 )
-import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -83,6 +86,17 @@ func InitWallet(home string) (*wallet.Wallet, error) {
 		return nil, err
 	}
 
+	config, err := ReadConfigFile(directory)
+	if err != nil {
+		return nil, err
+	}
+
+	legacyWallet, err := detectLegacyWallet(home)
+	if err == nil {
+		log.Info().Msg("legacy wallet detected")
+		return sequoiaWallet.CreateWalletPrivKey(legacyWallet.Key, config.ChainCfg)
+	}
+
 	err = createWallet(directory)
 	if err != nil {
 		return nil, err
@@ -98,10 +112,21 @@ func InitWallet(home string) (*wallet.Wallet, error) {
 		return nil, err
 	}
 
-	config, err := ReadConfigFile(directory)
+	return sequoiaWallet.CreateWallet(seed.SeedPhrase, seed.DerivationPath, config.ChainCfg)
+}
+
+// returns LegacyWallet if "priv_storkey.json" is found at sequoia home directory,
+// an error if not found or failed to unmarshal
+func detectLegacyWallet(home string) (*LegacyWallet, error) {
+	dir := os.ExpandEnv(home)
+
+	file, err := readFile(dir, "priv_storkey.json")
 	if err != nil {
 		return nil, err
 	}
 
-	return sequoiaWallet.CreateWallet(seed.SeedPhrase, seed.DerivationPath, config.ChainCfg)
+	var legacy LegacyWallet
+	err = json.Unmarshal(file, &legacy)
+
+	return &legacy, err
 }
