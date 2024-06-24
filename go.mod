@@ -230,6 +230,7 @@ require (
 	github.com/tendermint/tendermint v0.34.27 // indirect
 	github.com/tendermint/tm-db v0.6.7 // indirect
 	github.com/tidwall/btree v1.5.0 // indirect
+	github.com/wealdtech/go-merkletree v1.0.0 // indirect
 	github.com/whyrusleeping/chunker v0.0.0-20181014151217-fe64bd25879f // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
@@ -279,7 +280,7 @@ replace (
 	//github.com/cosmos/cosmos-sdk => ../cosmos-sdk-new
 
 	//github.com/desmos-labs/cosmos-go-wallet => ../cosmos-go-wallet
-	github.com/desmos-labs/cosmos-go-wallet => github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20231017193534-7de44d189e2a
+	github.com/desmos-labs/cosmos-go-wallet => github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20240605140035-368812a1d4d5
 
 	//github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 
