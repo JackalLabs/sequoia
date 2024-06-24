@@ -25,13 +25,15 @@ type StrayManagerConfig struct {
 }
 
 type APIConfig struct {
-	Port     int64 `yaml:"port"`
-	IPFSPort int   `yaml:"ipfs_port"`
+	Port       int64  `yaml:"port"`
+	IPFSPort   int    `yaml:"ipfs_port"`
+	IPFSDomain string `yaml:"ipfs_domain"`
 }
 
+// LegacyWallet handles keys from earlier versions of storage providers.
 // v3 and earlier providers used private key to sign txs
-// and by design it can't derive mnemonic seed which makes
-// it incompatible with sequoia's wallet creation.
+// and by design it can't derive mnemonic seed which made
+// it incompatible with sequoia's old wallet creation.
 type LegacyWallet struct {
 	Key     string `json:"key"`
 	Address string `json:"address"`
@@ -57,8 +59,9 @@ func DefaultConfig() *Config {
 		TotalSpace:    1092616192, // 1 gib default
 		DataDirectory: "$HOME/.sequoia/data",
 		APICfg: APIConfig{
-			Port:     3333,
-			IPFSPort: 4005,
+			Port:       3333,
+			IPFSPort:   4005,
+			IPFSDomain: "dns4/ipfs.example.com/tcp/4001",
 		},
 		ProofThreads: 1000,
 	}
