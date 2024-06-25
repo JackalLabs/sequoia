@@ -228,6 +228,7 @@ func (f *FileSystem) Dump() (map[string]string, error) {
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
 			k := item.Key()
+
 			if string(k)[:4] == "tree" {
 				continue
 			}

@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -28,6 +29,30 @@ func CreateWallet(seed string, derivation string, chainCfg types.ChainConfig) (*
 	}
 
 	w, err := wallet.NewWallet(&accountCfg, c, encodingCfg.TxConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	return w, err
+}
+
+func CreateWalletPrivKey(privKey string, chainCfg types.ChainConfig) (*wallet.Wallet, error) {
+	key, err := hex.DecodeString(privKey)
+	if err != nil {
+		return nil, err
+	}
+	// Set up the SDK config with the proper bech32 prefixes
+	cfg := sdk.GetConfig()
+	cfg.SetBech32PrefixForAccount(chainCfg.Bech32Prefix, fmt.Sprintf("%spub", chainCfg.Bech32Prefix))
+
+	encodingCfg := canine.MakeEncodingConfig()
+
+	c, err := client.NewClient(&chainCfg, encodingCfg.Marshaler)
+	if err != nil {
+		panic(err)
+	}
+
+	w, err := wallet.NewWalletFromKey(key, c, encodingCfg.TxConfig)
 	if err != nil {
 		panic(err)
 	}
