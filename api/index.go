@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 
+	"github.com/JackalLabs/sequoia/config"
+
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/rs/zerolog/log"
@@ -32,7 +34,8 @@ func VersionHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Reque
 		}
 
 		v := types.VersionResponse{
-			Version: "1.1.0-lite",
+			Version: config.Version(),
+			Commit:  config.Commit(),
 			ChainID: chainId,
 		}
 
