@@ -24,6 +24,8 @@ services:
   sequoia:
     image: jackalnugget/sequoia
     container_name: sequoia
+    ports:
+      - 3334:3334
     restart: unless-stopped
     environment:
       - SEED_PHRASE=${SEED_PHRASE}

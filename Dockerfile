@@ -14,4 +14,6 @@ COPY *.go ./
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /sequoia
 
+EXPOSE 3334
+
 CMD ["sh", "scripts/sequoia.sh"]
