@@ -3,6 +3,7 @@ package ipfs
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/dgraph-io/badger/v4"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
@@ -12,7 +13,7 @@ import (
 	bds "github.com/ipfs/go-ds-badger2"
 )
 
-func MakeIPFS(ctx context.Context, db *badger.DB, port int) (*ipfslite.Peer, error) {
+func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string) (*ipfslite.Peer, error) {
 	ds, err := bds.NewDatastoreFromDB(db)
 	if err != nil {
 		return nil, err
@@ -24,12 +25,18 @@ func MakeIPFS(ctx context.Context, db *badger.DB, port int) (*ipfslite.Peer, err
 	}
 
 	listen, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port))
+	m := []multiaddr.Multiaddr{listen}
+
+	if !strings.Contains(customDomain, "example.com") && len(customDomain) > 2 {
+		domainListener, _ := multiaddr.NewMultiaddr(customDomain)
+		m = []multiaddr.Multiaddr{listen, domainListener}
+	}
 
 	h, dht, err := ipfslite.SetupLibp2p(
 		ctx,
 		priv,
 		nil,
-		[]multiaddr.Multiaddr{listen},
+		m,
 		ds,
 		ipfslite.Libp2pOptionsExtra...,
 	)
