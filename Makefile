@@ -1,13 +1,19 @@
 export GO111MODULE = on
 
+VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
+COMMIT := $(shell git log -1 --format='%H')
+
 ###############################################################################
 ###                                   All                                   ###
 ###############################################################################
 
+ldflags = -X github.com/JackalLabs/sequoia/config.COMMIT=$(COMMIT) \
+		  -X github.com/JackalLabs/sequoia/config.VERSION=$(VERSION)
+
 all: lint test-unit
 
 install:
-	@go install
+	@go install -ldflags '$(ldflags)'
 
 .PHONY: install
 

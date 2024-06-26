@@ -13,6 +13,7 @@ type ErrorResponse struct {
 
 type VersionResponse struct {
 	Version string `json:"version"`
+	Commit  string `json:"build"`
 	ChainID string `json:"chain-id"`
 }
 
