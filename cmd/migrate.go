@@ -21,11 +21,11 @@ func JprovMigrateCmd() *cobra.Command {
 
 			jprovRootDir := args[0]
 
-			app := core.NewApp(home)
+			app := core.NewV3App(home)
 
-			go app.Migrate(jprovRootDir)
+			app.Migrate(jprovRootDir)
 
-			app.Start()
+			//app.Start()
 
 			return nil
 		},
