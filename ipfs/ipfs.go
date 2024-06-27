@@ -28,8 +28,14 @@ func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string)
 	m := []multiaddr.Multiaddr{listen}
 
 	if !strings.Contains(customDomain, "example.com") && len(customDomain) > 2 {
-		domainListener, _ := multiaddr.NewMultiaddr(customDomain)
-		m = []multiaddr.Multiaddr{listen, domainListener}
+		if !strings.HasPrefix(customDomain, "/") {
+			customDomain = fmt.Sprintf("/%s", customDomain)
+		}
+		domainListener, err := multiaddr.NewMultiaddr(customDomain)
+		if err != nil {
+			return nil, err
+		}
+		m = append(m, domainListener)
 	}
 
 	h, dht, err := ipfslite.SetupLibp2p(
