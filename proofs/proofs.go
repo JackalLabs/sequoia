@@ -9,11 +9,11 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	canine "github.com/jackalLabs/canine-chain/v3/app"
+	canine "github.com/jackalLabs/canine-chain/v4/app"
 
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree/v2"
 	"github.com/wealdtech/go-merkletree/v2/sha3"

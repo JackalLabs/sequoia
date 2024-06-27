@@ -7,7 +7,7 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/client"
 	"github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	canine "github.com/jackalLabs/canine-chain/v3/app"
+	canine "github.com/jackalLabs/canine-chain/v4/app"
 )
 
 func CreateWallet(seed string, derivation string, chainCfg types.ChainConfig) (*wallet.Wallet, error) {
