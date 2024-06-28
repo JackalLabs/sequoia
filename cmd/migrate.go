@@ -9,8 +9,8 @@ import (
 func JprovMigrateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "migrate-jprov",
-		Short:   "migrate jprov storage to sequoia",
-		Long:    "Migrate from jackal-provider storage to sequoia. It does not move files, it creates a copy to sequoia ipfs database.",
+		Short:   "move jprov storage to sequoia",
+		Long:    "jprov converts its storage to sequoia file system. This command moves that storage to sequoia data directory.",
 		Example: "migrate-jprov $HOME/.jackal-storage",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -21,11 +21,11 @@ func JprovMigrateCmd() *cobra.Command {
 
 			jprovRootDir := args[0]
 
-			app := core.NewV3App(home)
+			app := core.NewApp(home)
 
 			app.Migrate(jprovRootDir)
 
-			//app.Start()
+			app.Start()
 
 			return nil
 		},
