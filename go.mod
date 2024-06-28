@@ -21,7 +21,7 @@ require (
 	github.com/rs/zerolog v1.32.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
-	github.com/wealdtech/go-merkletree/v2 v2.5.1
+	github.com/wealdtech/go-merkletree/v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -124,6 +124,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hdevalence/ed25519consensus v0.1.0 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
+	github.com/iden3/go-iden3-crypto v0.0.16 // indirect
 	github.com/improbable-eng/grpc-web v0.15.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
@@ -230,7 +231,6 @@ require (
 	github.com/tendermint/tendermint v0.34.27 // indirect
 	github.com/tendermint/tm-db v0.6.7 // indirect
 	github.com/tidwall/btree v1.5.0 // indirect
-	github.com/wealdtech/go-merkletree v1.0.0 // indirect
 	github.com/whyrusleeping/chunker v0.0.0-20181014151217-fe64bd25879f // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
@@ -245,14 +245,14 @@ require (
 	go.uber.org/mock v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.20.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
-	golang.org/x/term v0.16.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/term v0.20.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.16.1 // indirect
 	gonum.org/v1/gonum v0.14.0 // indirect
 	google.golang.org/genproto v0.0.0-20240102182953-50ed04b92917 // indirect

@@ -24,7 +24,7 @@ import (
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
-	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
 
@@ -75,7 +75,7 @@ func NewApp(home string) *App {
 }
 
 func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
-	init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), ip, totalSpace, "")
+	init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), ip, strconv.FormatInt(totalSpace, 10), "")
 
 	data := walletTypes.NewTransactionData(
 		init,
@@ -97,7 +97,7 @@ func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) err
 }
 
 func updateSpace(wallet *wallet.Wallet, totalSpace int64) error {
-	init := storageTypes.NewMsgSetProviderTotalSpace(wallet.AccAddress(), totalSpace)
+	init := storageTypes.NewMsgSetProviderTotalspace(wallet.AccAddress(), strconv.FormatInt(totalSpace, 10))
 
 	data := walletTypes.NewTransactionData(
 		init,
@@ -141,7 +141,7 @@ func updateIp(wallet *wallet.Wallet, ip string) error {
 }
 
 func (a *App) GetStorageParams(client grpc.ClientConn) (storageTypes.Params, error) {
-	queryParams := &storageTypes.QueryParams{}
+	queryParams := &storageTypes.QueryParamsRequest{}
 
 	cl := storageTypes.NewQueryClient(client)
 
@@ -166,7 +166,7 @@ func (a *App) Start() {
 
 	myAddress := w.AccAddress()
 
-	queryParams := &storageTypes.QueryProvider{
+	queryParams := &storageTypes.QueryProviderRequest{
 		Address: myAddress,
 	}
 
@@ -174,7 +174,7 @@ func (a *App) Start() {
 
 	claimers := make([]string, 0)
 
-	res, err := cl.Provider(context.Background(), queryParams)
+	res, err := cl.Providers(context.Background(), queryParams)
 	if err != nil {
 		log.Info().Msg("Provider does not exist on network or is not connected...")
 		err := initProviderOnChain(w, cfg.Ip, cfg.TotalSpace)
@@ -182,9 +182,9 @@ func (a *App) Start() {
 			panic(err)
 		}
 	} else {
-		claimers = res.Provider.AuthClaimers
+		claimers = res.Providers.AuthClaimers
 
-		totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
+		totalSpace, err := strconv.ParseInt(res.Providers.Totalspace, 10, 64)
 		if err != nil {
 			if err != nil {
 				panic(err)
@@ -196,7 +196,7 @@ func (a *App) Start() {
 				panic(err)
 			}
 		}
-		if res.Provider.Ip != cfg.Ip {
+		if res.Providers.Ip != cfg.Ip {
 			err := updateIp(w, cfg.Ip)
 			if err != nil {
 				panic(err)
