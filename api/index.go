@@ -12,6 +12,9 @@ import (
 
 func IndexHandler(address string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 		v := types.IndexResponse{
 			Status:  "online",
 			Address: address,
@@ -32,6 +35,9 @@ func VersionHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Reque
 			w.WriteHeader(500)
 			return
 		}
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 		v := types.VersionResponse{
 			Version: config.Version(),

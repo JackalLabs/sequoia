@@ -1,8 +1,10 @@
 package api
 
 import (
+	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"time"
 
@@ -15,10 +17,14 @@ import (
 
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/gorilla/mux"
+
+	jsoniter "github.com/json-iterator/go"
 )
-import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
+//go:embed static
+var assets embed.FS
 
 type API struct {
 	port int64
@@ -50,6 +56,12 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 
 	r.Handle("/metrics", promhttp.Handler())
 
+	r.HandleFunc("/withdraw", WithdrawHandler(wallet, p)).Methods("POST")
+
+	html, _ := fs.Sub(assets, "static")
+	fs := http.FileServer(http.FS(html))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
+
 	a.srv = &http.Server{
 		Handler: r,
 		Addr:    fmt.Sprintf("0.0.0.0:%d", a.port),
@@ -58,7 +70,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 		ReadTimeout:  15 * time.Second,
 	}
 
-	log.Logger.Info().Msg(fmt.Sprintf("Sequoia API now listening on %s", a.srv.Addr))
+	log.Logger.Info().Msg(fmt.Sprintf("Sequoia API now listening on %s...", a.srv.Addr))
 	err := a.srv.ListenAndServe()
 	if err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
