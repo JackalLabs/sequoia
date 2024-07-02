@@ -49,8 +49,8 @@ func DefaultConfig() *Config {
 			HandCount:       2,
 		},
 		ChainCfg: types.ChainConfig{
-			RPCAddr:       "https://jackal-testnet-rpc.polkachu.com:443",
-			GRPCAddr:      "jackal-testnet-grpc.polkachu.com:17590",
+			RPCAddr:       "http://localhost:26657",
+			GRPCAddr:      "127.0.0.1:9090",
 			GasPrice:      "0.02ujkl",
 			GasAdjustment: 1.5,
 			Bech32Prefix:  "jkl",

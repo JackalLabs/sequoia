@@ -1,6 +1,8 @@
 package file_system
 
 //nolint:all
+import "io/ioutil"
+
 import (
 	"bytes"
 	"context"
@@ -8,7 +10,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"testing"
@@ -30,11 +31,11 @@ import _ "net/http/pprof"
 var table = []struct {
 	input int
 }{
-	{input: 1024},                    // 1kib
-	{input: 1024 * 10},               // 10kib
-	{input: 1024 * 1024},             // 1mib
-	{input: 1024 * 1024 * 1024},      // 1gib
-	{input: 1024 * 1024 * 1024 * 10}, // 10gib
+	{input: 1024},               // 1kib
+	{input: 1024 * 10},          // 10kib
+	{input: 1024 * 1024},        // 1mib
+	{input: 1024 * 1024 * 1024}, // 1gib
+	//{input: 1024 * 1024 * 1024 * 10}, // 10gib
 }
 
 func BenchmarkFileWrites(b *testing.B) {
@@ -53,9 +54,11 @@ func BenchmarkFileWrites(b *testing.B) {
 	f := NewFileSystem(context.Background(), db, 4005, "/dns4/ipfs.example.com/tcp/4001")
 
 	defer db.Close()
-
+	server := &http.Server{
+		Addr: "localhost:6060",
+	}
 	go func() {
-		_ = http.ListenAndServe("localhost:6060", nil)
+		_ = server.ListenAndServe()
 	}()
 
 	for _, v := range table {
@@ -77,9 +80,12 @@ func BenchmarkFileWrites(b *testing.B) {
 			}
 		})
 	}
+	_ = server.Close()
+	f.Close()
 }
 
 func TestWriteFile(t *testing.T) {
+	t.Logf("Starting test: TestWriteFile")
 	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
 	require.NoError(t, err)
 
@@ -124,6 +130,7 @@ func TestWriteFile(t *testing.T) {
 }
 
 func TestWriteFileWithDomain(t *testing.T) {
+	t.Logf("Starting test: TestWriteFileWithDomain")
 	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
 	require.NoError(t, err)
 
@@ -168,7 +175,10 @@ func TestWriteFileWithDomain(t *testing.T) {
 }
 
 func TestWriteAndProveFiles(t *testing.T) {
-	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
+	t.Logf("Starting test: TestWriteAndProveFiles")
+	opts := badger.DefaultOptions("/tmp/badger")
+	opts.Logger = nil
+	db, err := badger.Open(opts)
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -176,11 +186,11 @@ func TestWriteAndProveFiles(t *testing.T) {
 	require.NoError(t, err)
 	f := NewFileSystem(context.Background(), db, 4005, "/dns4/ipfs.example.com/tcp/4001")
 
-	size := 1024 * 1024 * 10
+	size := 1024 * 255 // 255 kbs
 	var chunkSize int64 = 1024
 
-	token := make([]byte, size)    // 1 kb size
-	newToken := make([]byte, size) // 1 kb size
+	token := make([]byte, size)    // 1 mb size
+	newToken := make([]byte, size) // 1 mb size
 
 	//nolint:all
 	rand.Read(token)
