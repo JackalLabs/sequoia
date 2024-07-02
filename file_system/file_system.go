@@ -261,7 +261,6 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 			return fmt.Errorf("cannot find tree structure | %w", err)
 		}
 		err = t.Value(func(val []byte) error {
-			log.Debug().Msg(string(val))
 			err := json.Unmarshal(val, &newTree)
 			if err != nil {
 				return fmt.Errorf("can't unmarshal tree | %w", err)
