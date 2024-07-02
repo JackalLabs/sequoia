@@ -1,7 +1,9 @@
 package types
 
 const (
-	FlagHome = "home"
+	FlagHome     = "home"
+	FlagLogLevel = "log-level"
 
-	DefaultHome = "$HOME/.sequoia"
+	DefaultHome     = "$HOME/.sequoia"
+	DefaultLogLevel = "info"
 )
