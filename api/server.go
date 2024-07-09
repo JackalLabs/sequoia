@@ -35,7 +35,7 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) {
+func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) error {
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexHandler(wallet.AccAddress()))
 	r.HandleFunc("/upload", PostFileHandler(f, p, wallet, chunkSize))
@@ -62,7 +62,9 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	err := a.srv.ListenAndServe()
 	if err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			panic(err)
+			return err
 		}
 	}
+
+	return nil
 }

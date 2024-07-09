@@ -25,12 +25,12 @@ func CreateWallet(seed string, derivation string, chainCfg types.ChainConfig) (*
 
 	c, err := client.NewClient(&chainCfg, encodingCfg.Marshaler)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	w, err := wallet.NewWallet(&accountCfg, c, encodingCfg.TxConfig)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return w, err
@@ -49,12 +49,12 @@ func CreateWalletPrivKey(privKey string, chainCfg types.ChainConfig) (*wallet.Wa
 
 	c, err := client.NewClient(&chainCfg, encodingCfg.Marshaler)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	w, err := wallet.NewWalletFromKey(key, c, encodingCfg.TxConfig)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return w, err

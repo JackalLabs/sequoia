@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/core"
 	"github.com/rs/zerolog"
@@ -12,15 +15,15 @@ func StartCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
 		Short: "Starts the provider",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			home, err := cmd.Flags().GetString(types.FlagHome)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			logLevel, err := cmd.Flags().GetString(types.FlagLogLevel)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			if logLevel == "info" {
@@ -31,9 +34,19 @@ func StartCmd() *cobra.Command {
 				log.Logger = log.Level(zerolog.ErrorLevel)
 			}
 
-			app := core.NewApp(home)
+			app, err := core.NewApp(home)
+			if err != nil {
+				return err
+			}
 
-			app.Start()
+			for {
+				err := app.Start()
+				if err != nil {
+					fmt.Println(err)
+					time.Sleep(time.Minute)
+					fmt.Println("Attempting restart again...")
+				}
+			}
 		},
 	}
 }
