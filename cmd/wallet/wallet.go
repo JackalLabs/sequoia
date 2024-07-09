@@ -27,23 +27,24 @@ func addressCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "address",
 		Short: "Check this providers address",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			home, err := cmd.Flags().GetString(types.FlagHome)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			_, err = config.Init(home)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			wallet, err := config.InitWallet(home)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			fmt.Printf("Provider Address: %s\n", wallet.AccAddress())
+			return nil
 		},
 	}
 }
@@ -53,25 +54,25 @@ func withdrawCMD() *cobra.Command {
 		Use:   "withdraw [to-address] [amount]",
 		Short: "withdraw tokens from account",
 		Args:  cobra.ExactArgs(2),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			home, err := cmd.Flags().GetString(types.FlagHome)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			_, err = config.Init(home)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			wallet, err := config.InitWallet(home)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			c, err := sdk.ParseCoinNormalized(args[1])
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			m := bankTypes.MsgSend{
@@ -86,7 +87,7 @@ func withdrawCMD() *cobra.Command {
 
 			res, err := wallet.BroadcastTxCommit(data)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			if res.Code == 0 {
@@ -94,6 +95,7 @@ func withdrawCMD() *cobra.Command {
 			} else {
 				fmt.Println("Something went wrong, please try again.")
 			}
+			return nil
 		},
 	}
 }
