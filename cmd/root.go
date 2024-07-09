@@ -46,6 +46,20 @@ func InitCmd() *cobra.Command {
 	return r
 }
 
+func VersionCmd() *cobra.Command {
+	r := &cobra.Command{
+		Use:   "version",
+		Short: "checks the version of sequoia",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Printf("Version: %s\nCommit: %s\n", config.Version(), config.Commit())
+
+			return nil
+		},
+	}
+
+	return r
+}
+
 func RootCmd() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "sequoia",
@@ -53,8 +67,9 @@ func RootCmd() *cobra.Command {
 	}
 
 	r.PersistentFlags().String(types.FlagHome, types.DefaultHome, "sets the home directory for sequoia")
+	r.PersistentFlags().String(types.FlagLogLevel, types.DefaultLogLevel, "log level. info|error|debug")
 
-	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd())
+	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd())
 
 	return r
 }

@@ -38,10 +38,10 @@ type App struct {
 	fileSystem   *file_system.FileSystem
 }
 
-func NewApp(home string) *App {
+func NewApp(home string) (*App, error) {
 	cfg, err := config.Init(home)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	ctx := context.Background()
@@ -50,7 +50,7 @@ func NewApp(home string) *App {
 
 	err = os.MkdirAll(dataDir, os.ModePerm)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	options := badger.DefaultOptions(dataDir)
@@ -60,18 +60,20 @@ func NewApp(home string) *App {
 
 	db, err := badger.Open(options)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	apiServer := api.NewAPI(cfg.APICfg.Port)
 
-	f := file_system.NewFileSystem(ctx, db, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
-
+	f, err := file_system.NewFileSystem(ctx, db, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
+	if err != nil {
+		return nil, err
+	}
 	return &App{
 		fileSystem: f,
 		api:        apiServer,
 		home:       home,
-	}
+	}, nil
 }
 
 func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
@@ -153,15 +155,15 @@ func (a *App) GetStorageParams(client grpc.ClientConn) (storageTypes.Params, err
 	return res.Params, nil
 }
 
-func (a *App) Start() {
+func (a *App) Start() error {
 	cfg, err := config.Init(a.home)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	w, err := config.InitWallet(a.home)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	myAddress := w.AccAddress()
@@ -179,7 +181,7 @@ func (a *App) Start() {
 		log.Info().Msg("Provider does not exist on network or is not connected...")
 		err := initProviderOnChain(w, cfg.Ip, cfg.TotalSpace)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	} else {
 		claimers = res.Provider.AuthClaimers
@@ -187,26 +189,26 @@ func (a *App) Start() {
 		totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
 		if err != nil {
 			if err != nil {
-				panic(err)
+				return err
 			}
 		}
 		if totalSpace != cfg.TotalSpace {
 			err := updateSpace(w, cfg.TotalSpace)
 			if err != nil {
-				panic(err)
+				return err
 			}
 		}
 		if res.Provider.Ip != cfg.Ip {
 			err := updateIp(w, cfg.Ip)
 			if err != nil {
-				panic(err)
+				return err
 			}
 		}
 	}
 
 	params, err := a.GetStorageParams(w.Client.GRPCConn)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	myUrl := cfg.Ip
@@ -221,6 +223,7 @@ func (a *App) Start() {
 	a.monitor = monitoring.NewMonitor(w)
 
 	// Starting the 4 concurrent services
+	// nolint:all
 	go a.api.Serve(a.fileSystem, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
@@ -240,4 +243,6 @@ func (a *App) Start() {
 
 	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.fileSystem.Close()
+
+	return nil
 }

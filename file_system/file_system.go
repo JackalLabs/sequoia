@@ -258,12 +258,12 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 	err := f.db.View(func(txn *badger.Txn) error {
 		t, err := txn.Get(tree)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot find tree structure | %w", err)
 		}
 		err = t.Value(func(val []byte) error {
 			err := json.Unmarshal(val, &newTree)
 			if err != nil {
-				return err
+				return fmt.Errorf("can't unmarshal tree | %w", err)
 			}
 			return nil
 		})
@@ -274,7 +274,7 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 		return nil
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot get tree %w", err)
+		return nil, nil, fmt.Errorf("cannot get tree | %w", err)
 	}
 
 	fcid := ""

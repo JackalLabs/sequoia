@@ -13,12 +13,12 @@ type FileSystem struct {
 	ipfs *ipfslite.Peer
 }
 
-func NewFileSystem(ctx context.Context, db *badger.DB, ipfsPort int, ipfsDomain string) *FileSystem {
+func NewFileSystem(ctx context.Context, db *badger.DB, ipfsPort int, ipfsDomain string) (*FileSystem, error) {
 	ipfs, err := ipfs2.MakeIPFS(ctx, db, ipfsPort, ipfsDomain)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &FileSystem{db: db, ipfs: ipfs}
+	return &FileSystem{db: db, ipfs: ipfs}, nil
 }
 
 func (f *FileSystem) Close() {
