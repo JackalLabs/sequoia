@@ -69,7 +69,7 @@ func RootCmd() *cobra.Command {
 	r.PersistentFlags().String(types.FlagHome, types.DefaultHome, "sets the home directory for sequoia")
 	r.PersistentFlags().String(types.FlagLogLevel, types.DefaultLogLevel, "log level. info|error|debug")
 
-	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd())
+	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd())
 
 	return r
 }
