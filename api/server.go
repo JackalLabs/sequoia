@@ -44,6 +44,8 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	r.HandleFunc("/list", ListFilesHandler(f))
 	r.HandleFunc("/api/data/fids", LegacyListFilesHandler(f))
 
+	r.HandleFunc("/ipfs/peers", IPFSListPeers(f))
+
 	r.HandleFunc("/dump", DumpDBHandler(f))
 
 	r.HandleFunc("/version", VersionHandler(wallet))

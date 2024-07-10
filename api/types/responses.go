@@ -1,5 +1,7 @@
 package types
 
+import "github.com/libp2p/go-libp2p/core/peer"
+
 type UploadResponse struct {
 	Merkle []byte `json:"merkle"`
 	Owner  string `json:"owner"`
@@ -34,4 +36,8 @@ type LegacyAPIListValue struct {
 
 type LegacyAPIListResponse struct {
 	Data []LegacyAPIListValue `json:"data"`
+}
+
+type PeersResponse struct {
+	Peers peer.IDSlice `json:"peers"`
 }
