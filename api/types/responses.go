@@ -41,3 +41,7 @@ type LegacyAPIListResponse struct {
 type PeersResponse struct {
 	Peers peer.IDSlice `json:"peers"`
 }
+
+type CidResponse struct {
+	Cids []string `json:"cids"`
+}
