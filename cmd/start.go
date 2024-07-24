@@ -11,8 +11,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const defaultMaxRestartAttempt = 60
+
 func StartCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Starts the provider",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -24,6 +26,14 @@ func StartCmd() *cobra.Command {
 			logLevel, err := cmd.Flags().GetString(types.FlagLogLevel)
 			if err != nil {
 				return err
+			}
+
+			maxRestartAttempt, err := cmd.Flags().GetInt("restart-attempt")
+			if err != nil {
+				return err
+			}
+			if maxRestartAttempt < 0 {
+				maxRestartAttempt = 0
 			}
 
 			if logLevel == "info" {
@@ -39,14 +49,18 @@ func StartCmd() *cobra.Command {
 				return err
 			}
 
-			for {
-				err := app.Start()
-				if err != nil {
-					fmt.Println(err)
-					time.Sleep(time.Minute)
-					fmt.Println("Attempting restart again...")
-				}
+			err = app.Start()
+
+			for restartAttempt := 0; restartAttempt < maxRestartAttempt && err != nil; restartAttempt++ {
+				fmt.Println(err)
+				fmt.Printf("Attempting restart again in a minute (attempt %d of %d)...\n", restartAttempt+1, maxRestartAttempt)
+				time.Sleep(time.Minute)
+				err = app.Start()
 			}
+			return nil
 		},
 	}
+
+	cmd.Flags().Int("restart-attempt", defaultMaxRestartAttempt, "attempt to restart <restart-attempt> times when the provider fails to start")
+	return cmd
 }
