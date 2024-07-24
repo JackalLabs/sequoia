@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const maxRestartAttempt = 100
+
 func StartCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
@@ -39,14 +41,17 @@ func StartCmd() *cobra.Command {
 				return err
 			}
 
-			for {
-				err := app.Start()
+			restartAttempt := 0
+			err = app.Start()
+			for restartAttempt < maxRestartAttempt {
 				if err != nil {
 					fmt.Println(err)
 					time.Sleep(time.Minute)
 					fmt.Println("Attempting restart again...")
+					err = app.Start()
 				}
 			}
+			return nil
 		},
 	}
 }
