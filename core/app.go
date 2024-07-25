@@ -178,7 +178,7 @@ func (a *App) Start() error {
 
 	res, err := cl.Provider(context.Background(), queryParams)
 	if err != nil {
-		log.Info().Msg("Provider does not exist on network or is not connected...")
+		log.Info().Err(err).Msg("Provider does not exist on network or is not connected...")
 		err := initProviderOnChain(w, cfg.Ip, cfg.TotalSpace)
 		if err != nil {
 			return err
@@ -188,9 +188,7 @@ func (a *App) Start() error {
 
 		totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
 		if err != nil {
-			if err != nil {
-				return err
-			}
+			return err
 		}
 		if totalSpace != cfg.TotalSpace {
 			err := updateSpace(w, cfg.TotalSpace)
