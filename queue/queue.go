@@ -48,6 +48,9 @@ func (q *Queue) Stop() {
 
 func (q *Queue) Listen() {
 	q.running = true
+	defer log.Info().Msg("Queue module stopped")
+
+	log.Info().Msg("Queue module started")
 	for q.running {
 		time.Sleep(time.Millisecond * 333)                                                // pauses for one third of a second
 		if !q.processed.Add(time.Second * time.Duration(q.interval)).Before(time.Now()) { // check every ten seconds
@@ -89,7 +92,7 @@ func (q *Queue) Listen() {
 
 		res, err := q.wallet.BroadcastTxCommit(data)
 		if err != nil {
-			log.Info().Msg(fmt.Sprintf("Failed to post from queue: %s", err.Error()))
+			log.Warn().Err(err).Msg("tx broadcast failed from queue")
 		}
 
 		for i, process := range toProcess {

@@ -29,7 +29,7 @@ func handleErr(err error, w http.ResponseWriter, code int) {
 	w.WriteHeader(code)
 	err = json.NewEncoder(w).Encode(v)
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("json encoder failed to write error response to http response writer")
 	}
 }
 

@@ -209,8 +209,8 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 
 func (p *Prover) Start() {
 	p.running = true
-	for {
-		if !p.running { // stop when running is false
+	for p.running {
+		if !p.running {
 			return
 		}
 
@@ -245,6 +245,7 @@ func (p *Prover) Start() {
 
 		p.processed = time.Now()
 	}
+	log.Info().Msg("Prover module stopped")
 }
 
 func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height int64, startedAt time.Time) {
@@ -252,17 +253,42 @@ func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height 
 	defer p.Dec()
 	err := p.PostProof(merkle, owner, start, height, startedAt)
 	if err != nil {
-		log.Warn().Err(err)
+		log.Warn().
+			Err(err).
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Int64("height", height).
+			Msg("proof error")
+
 		if err.Error() == "rpc error: code = NotFound desc = not found" { // if the file is not found on the network, delete it
+			log.Info().
+				Hex("merkle", merkle).
+				Str("owner", owner).
+				Int64("start", start).
+				Msg("deleting the file that no longer exists on the network")
+
 			err := p.io.DeleteFile(merkle, owner, start)
 			if err != nil {
-				log.Error().Err(err)
+				log.Error().
+					Err(err).
+					Hex("merkle", merkle).
+					Msg("failed to delete file that no longer exist on the network")
 			}
 		}
 		if err.Error() == ErrNotOurs { // if the file is not ours, delete it
+			log.Info().
+				Hex("merkle", merkle).
+				Str("owner", owner).
+				Int64("start", start).
+				Msg("deleting the file that does not belong to this provider")
+
 			err := p.io.DeleteFile(merkle, owner, start)
 			if err != nil {
-				log.Error().Err(err)
+				log.Error().
+					Hex("merkle", merkle).
+					Err(err).
+					Msg("failed to delete file that does not belong to this provider")
 			}
 		}
 	}

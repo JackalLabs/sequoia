@@ -23,7 +23,11 @@ func (h *Hand) Stop() {
 
 func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, myUrl string, chunkSize int64) {
 	h.running = true
-	for h.running {
+	defer log.Info().Msg("Hand stopped")
+	for !h.running {
+		if h.running {
+			return
+		}
 
 		if h.stray == nil {
 			time.Sleep(time.Millisecond * 333)

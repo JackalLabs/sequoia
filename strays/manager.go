@@ -90,12 +90,17 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 
 func (s *StrayManager) Start(f *file_system.FileSystem, myUrl string, chunkSize int64) {
 	s.running = true
+	defer log.Info().Msg("StrayManager stopped")
 
 	for _, hand := range s.hands {
 		go hand.Start(f, s.wallet, myUrl, chunkSize)
 	}
 
 	for s.running {
+		if !s.running {
+			return
+		}
+
 		time.Sleep(time.Millisecond * 333)
 		if s.refreshed.Add(time.Second * s.refreshInterval).Before(time.Now()) {
 			err := s.RefreshList()
