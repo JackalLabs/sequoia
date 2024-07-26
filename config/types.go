@@ -1,6 +1,9 @@
 package config
 
-import "github.com/desmos-labs/cosmos-go-wallet/types"
+import (
+	"github.com/desmos-labs/cosmos-go-wallet/types"
+	"github.com/rs/zerolog"
+)
 
 type Seed struct {
 	SeedPhrase     string `json:"seed_phrase"`
@@ -65,4 +68,23 @@ func DefaultConfig() *Config {
 		},
 		ProofThreads: 1000,
 	}
+}
+
+func (c Config) MarshalZerologObject(e *zerolog.Event) {
+	e.Int64("QueueInterval", c.QueueInterval).
+		Int64("ProofInterval", c.ProofInterval).
+		Int64("StrayCheckInterval", c.StrayManagerCfg.CheckInterval).
+		Int64("StrayRefreshInterval", c.StrayManagerCfg.RefreshInterval).
+		Int("StrayHandCount", c.StrayManagerCfg.HandCount).
+		Str("ChainRPCAddr", c.ChainCfg.RPCAddr).
+		Str("ChainGRPCAddr", c.ChainCfg.GRPCAddr).
+		Str("ChainGasPrice", c.ChainCfg.GasPrice).
+		Float64("ChainGasAdjustment", c.ChainCfg.GasAdjustment).
+		Str("IP", c.Ip).
+		Int64("TotalSpace", c.TotalSpace).
+		Str("DataDirectory", c.DataDirectory).
+		Int64("APIPort", c.APICfg.Port).
+		Int("APIIPFSPort", c.APICfg.IPFSPort).
+		Str("APIIPFSDomain", c.APICfg.IPFSDomain).
+		Int64("ProofThreads", c.ProofThreads)
 }

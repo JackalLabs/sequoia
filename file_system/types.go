@@ -8,6 +8,7 @@ import (
 	ipfs2 "github.com/JackalLabs/sequoia/ipfs"
 	"github.com/dgraph-io/badger/v4"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
+	"github.com/rs/zerolog/log"
 )
 
 type FileSystem struct {
@@ -25,5 +26,12 @@ func NewFileSystem(ctx context.Context, db *badger.DB, ipfsPort int, ipfsDomain 
 }
 
 func (f *FileSystem) Close() {
-	f.db.Close()
+	err := f.db.Close()
+	if err != nil {
+		log.Error().Err(err).Msg("error occurred while closing database")
+	}
+	err = f.ipfsHost.Close()
+	if err != nil {
+		log.Error().Err(err).Msg("error occurred while stopping ipfs host")
+	}
 }

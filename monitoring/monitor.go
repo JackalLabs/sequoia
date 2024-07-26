@@ -7,6 +7,7 @@ import (
 
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"github.com/rs/zerolog/log"
 )
 
 func (m *Monitor) updateBurns() {
@@ -48,6 +49,7 @@ func (m *Monitor) updateBalance() {
 }
 
 func (m *Monitor) Start() {
+	defer log.Info().Msg("Monitor moduel stopped")
 	m.running = true
 
 	for m.running {
