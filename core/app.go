@@ -160,11 +160,13 @@ func (a *App) Start() error {
 	if err != nil {
 		return err
 	}
+	log.Debug().Object("config", cfg).Msg("sequoia config")
 
 	w, err := config.InitWallet(a.home)
 	if err != nil {
 		return err
 	}
+	log.Info().Str("provider_address", w.AccAddress()).Send()
 
 	myAddress := w.AccAddress()
 
@@ -184,6 +186,13 @@ func (a *App) Start() error {
 			return err
 		}
 	} else {
+		log.Debug().
+			Str("address", res.Provider.Address).
+			Str("ip", res.Provider.Ip).
+			Str("totalspace", res.Provider.Totalspace).
+			Str("burned_contracts", res.Provider.BurnedContracts).
+			Str("keybase_identity", res.Provider.KeybaseIdentity).
+			Msg("provider query result")
 		claimers = res.Provider.AuthClaimers
 
 		totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
