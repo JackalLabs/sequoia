@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/ipfs/go-cid"
+	"github.com/wealdtech/go-merkletree/v2"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree/v2/sha3"
