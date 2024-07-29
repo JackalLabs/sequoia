@@ -237,7 +237,7 @@ func (a *App) Start() error {
 	go a.monitor.Start()
 
 	done := make(chan os.Signal, 1)
-	defer signal.Stop(done) //undo signal.Notify effect
+	defer signal.Stop(done) // undo signal.Notify effect
 
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	<-done // Will block here until user hits ctrl+c

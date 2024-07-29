@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ipfs/go-cid"
-
 	"github.com/dgraph-io/badger/v4"
-	"github.com/rs/zerolog/log"
+	"github.com/ipfs/go-cid"
 	"github.com/wealdtech/go-merkletree/v2"
+
+	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree/v2/sha3"
 )
 import jsoniter "github.com/json-iterator/go"
@@ -114,45 +114,46 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 }
 
 func (f *FileSystem) DeleteFile(merkle []byte, owner string, start int64) error {
-	log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
-	fileCount.Dec()
-	err := f.db.Update(func(txn *badger.Txn) error {
-		err := txn.Delete(treeKey(merkle, owner, start))
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	fcid := ""
-	_ = f.db.View(func(txn *badger.Txn) error {
-		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
-		if err != nil {
-			return err
-		}
-
-		_ = b.Value(func(val []byte) error {
-			fcid = string(val)
-			return nil
-		})
-		return nil
-	})
-
-	c, err := cid.Decode(fcid)
-	if err != nil {
-		return err
-	}
-
-	err = f.ipfs.Remove(context.Background(), c)
-	if err != nil {
-		return err
-	}
-
 	return nil
+	//log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
+	//fileCount.Dec()
+	//err := f.db.Update(func(txn *badger.Txn) error {
+	//	err := txn.Delete(treeKey(merkle, owner, start))
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	return nil
+	//})
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//fcid := ""
+	//_ = f.db.View(func(txn *badger.Txn) error {
+	//	b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	_ = b.Value(func(val []byte) error {
+	//		fcid = string(val)
+	//		return nil
+	//	})
+	//	return nil
+	//})
+	//
+	//c, err := cid.Decode(fcid)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//err = f.ipfs.Remove(context.Background(), c)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//return nil
 }
 
 func (f *FileSystem) ListFiles() ([][]byte, []string, []int64, error) {
