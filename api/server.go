@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/cors"
+
 	"github.com/JackalLabs/sequoia/file_system"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -55,8 +57,10 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	r.Handle("/metrics", promhttp.Handler())
 	r.Use(loggingMiddleware)
 
+	handler := cors.Default().Handler(r)
+
 	a.srv = &http.Server{
-		Handler: r,
+		Handler: handler,
 		Addr:    fmt.Sprintf("0.0.0.0:%d", a.port),
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
