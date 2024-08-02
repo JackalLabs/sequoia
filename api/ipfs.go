@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/hex"
 	"net/http"
 
 	"github.com/JackalLabs/sequoia/api/types"
@@ -33,6 +34,31 @@ func IPFSListCids(f *file_system.FileSystem) func(http.ResponseWriter, *http.Req
 
 		f := types.CidResponse{
 			Cids: cids,
+		}
+		err = json.NewEncoder(w).Encode(f)
+		if err != nil {
+			log.Error().Err(err)
+		}
+	}
+}
+
+func IPFSMapCids(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		cids, err := f.MapCids()
+		if err != nil {
+			handleErr(err, w, http.StatusInternalServerError)
+			return
+		}
+
+		m := make(map[string]string)
+
+		for cid, merkle := range cids {
+			merk := hex.EncodeToString(merkle)
+			m[cid] = merk
+		}
+
+		f := types.CidMapResponse{
+			CidMap: m,
 		}
 		err = json.NewEncoder(w).Encode(f)
 		if err != nil {

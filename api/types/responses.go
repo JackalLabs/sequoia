@@ -45,3 +45,11 @@ type PeersResponse struct {
 type CidResponse struct {
 	Cids []string `json:"cids"`
 }
+
+type CidFolderResponse struct {
+	Cid string `json:"cid"`
+}
+
+type CidMapResponse struct {
+	CidMap map[string]string `json:"cid_map"`
+}

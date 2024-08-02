@@ -56,3 +56,29 @@ func (f *FileSystem) ListCids() ([]string, error) {
 
 	return cids, err
 }
+
+func (f *FileSystem) MapCids() (map[string][]byte, error) {
+	cidMap := make(map[string][]byte)
+
+	err := f.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		prefix := []byte("cid/")
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			k := item.Key()
+			merkle := k[len(prefix):]
+			err := item.Value(func(v []byte) error {
+				cidMap[string(v)] = merkle
+
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return cidMap, err
+}
