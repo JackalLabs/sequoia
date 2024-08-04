@@ -19,7 +19,7 @@ func (f *FileSystem) GetHosts() []string {
 	s := make([]string, len(f.ipfsHost.Addrs()))
 
 	for i, multiaddr := range f.ipfsHost.Addrs() {
-		s[i] = fmt.Sprintf("%s @ %s", peerString, multiaddr.String())
+		s[i] = fmt.Sprintf("%s/ipfs/%s", multiaddr.String(), peerString)
 	}
 
 	return s
