@@ -68,7 +68,7 @@ func IPFSMapCids(f *file_system.FileSystem) func(http.ResponseWriter, *http.Requ
 
 		for cid, merkle := range cids {
 			merk := hex.EncodeToString(merkle)
-			m[cid] = merk
+			m[merk] = cid
 		}
 
 		f := types.CidMapResponse{
