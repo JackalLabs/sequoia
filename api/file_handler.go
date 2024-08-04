@@ -141,6 +141,9 @@ func PostIPFSFolder(f *file_system.FileSystem) func(http.ResponseWriter, *http.R
 		cidList := strings.Split(string(body), ",")
 
 		childCIDs := make([]cid.Cid, len(cidList))
+
+		fmt.Println(cidList)
+
 		for i, s := range cidList {
 			c, err := cid.Parse(s)
 			if err != nil {

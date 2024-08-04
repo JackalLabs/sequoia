@@ -11,6 +11,20 @@ func (f *FileSystem) ListPeers() peer.IDSlice {
 	return f.ipfsHost.Peerstore().PeersWithAddrs()
 }
 
+func (f *FileSystem) GetHosts() []string {
+	peerId := f.ipfsHost.ID()
+
+	peerString := peerId.String()
+
+	s := make([]string, len(f.ipfsHost.Addrs()))
+
+	for i, multiaddr := range f.ipfsHost.Addrs() {
+		s[i] = fmt.Sprintf("%s @ %s", peerString, multiaddr.String())
+	}
+
+	return s
+}
+
 func (f *FileSystem) GetCIDFromMerkle(merkle []byte) (cid string, err error) {
 	err = f.db.View(func(txn *badger.Txn) error {
 		c, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))

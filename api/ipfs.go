@@ -24,6 +24,20 @@ func IPFSListPeers(f *file_system.FileSystem) func(http.ResponseWriter, *http.Re
 	}
 }
 
+func IPFSListHosts(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		hosts := f.GetHosts()
+		f := types.HostResponse{
+			Hosts: hosts,
+		}
+
+		err := json.NewEncoder(w).Encode(f)
+		if err != nil {
+			log.Error().Err(err)
+		}
+	}
+}
+
 func IPFSListCids(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		cids, err := f.ListCids()

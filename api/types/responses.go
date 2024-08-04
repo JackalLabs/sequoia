@@ -42,6 +42,10 @@ type PeersResponse struct {
 	Peers peer.IDSlice `json:"peers"`
 }
 
+type HostResponse struct {
+	Hosts []string `json:"hosts"`
+}
+
 type CidResponse struct {
 	Cids []string `json:"cids"`
 }
