@@ -4,9 +4,13 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/ipfs/go-cid"
 
 	"github.com/JackalLabs/sequoia/proofs"
 
@@ -122,6 +126,47 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 		}
 
 		_ = prover.PostProof(merkle, sender, startBlock, startBlock, time.Now())
+	}
+}
+
+func PostIPFSFolder(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			http.Error(w, "Error reading request body", http.StatusInternalServerError)
+			return
+		}
+		defer req.Body.Close()
+
+		cidList := strings.Split(string(body), ",")
+
+		childCIDs := make([]cid.Cid, len(cidList))
+
+		fmt.Println(cidList)
+
+		for i, s := range cidList {
+			c, err := cid.Parse(s)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Could not parse %s", s), http.StatusInternalServerError)
+				return
+			}
+			childCIDs[i] = c
+		}
+
+		root, err := f.CreateIPFSFolder(childCIDs)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		f := types.CidFolderResponse{
+			Cid: root,
+		}
+
+		err = json.NewEncoder(w).Encode(f)
+		if err != nil {
+			log.Error().Err(err)
+		}
 	}
 }
 
