@@ -11,6 +11,20 @@ func (f *FileSystem) ListPeers() peer.IDSlice {
 	return f.ipfsHost.Peerstore().PeersWithAddrs()
 }
 
+func (f *FileSystem) GetHosts() []string {
+	peerId := f.ipfsHost.ID()
+
+	peerString := peerId.String()
+
+	s := make([]string, len(f.ipfsHost.Addrs()))
+
+	for i, multiaddr := range f.ipfsHost.Addrs() {
+		s[i] = fmt.Sprintf("%s/ipfs/%s", multiaddr.String(), peerString)
+	}
+
+	return s
+}
+
 func (f *FileSystem) GetCIDFromMerkle(merkle []byte) (cid string, err error) {
 	err = f.db.View(func(txn *badger.Txn) error {
 		c, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
@@ -55,4 +69,30 @@ func (f *FileSystem) ListCids() ([]string, error) {
 	})
 
 	return cids, err
+}
+
+func (f *FileSystem) MapCids() (map[string][]byte, error) {
+	cidMap := make(map[string][]byte)
+
+	err := f.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		prefix := []byte("cid/")
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			k := item.Key()
+			merkle := k[len(prefix):]
+			err := item.Value(func(v []byte) error {
+				cidMap[string(v)] = merkle
+
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return cidMap, err
 }

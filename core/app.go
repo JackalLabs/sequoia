@@ -24,6 +24,7 @@ import (
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
 
@@ -220,7 +221,12 @@ func (a *App) Start() error {
 		return err
 	}
 
-	recycleDepot, err := recycle.NewRecycleDepot(a.home, params.ChunkSize, a.fileSystem)
+	recycleDepot, err := recycle.NewRecycleDepot(
+		a.home,
+		params.ChunkSize,
+		a.fileSystem,
+		types.NewQueryClient(w.Client.GRPCConn),
+	)
 	if err != nil {
 		return err
 	}
@@ -320,7 +326,12 @@ func (a *App) Salvage(jprovdHome string) error {
 		return err
 	}
 
-	recycleDepot, err := recycle.NewRecycleDepot(a.home, params.ChunkSize, a.fileSystem)
+	recycleDepot, err := recycle.NewRecycleDepot(
+		a.home,
+		params.ChunkSize,
+		a.fileSystem,
+		types.NewQueryClient(w.Client.GRPCConn),
+	)
 	if err != nil {
 		return err
 	}

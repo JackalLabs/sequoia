@@ -9,7 +9,7 @@ import (
 func ReadConfig(data []byte) (*Config, error) {
 	config := Config{}
 
-	err := yaml.Unmarshal([]byte(data), &config)
+	err := yaml.Unmarshal(data, &config)
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +17,7 @@ func ReadConfig(data []byte) (*Config, error) {
 	return &config, nil
 }
 
-func (c *Config) Export() ([]byte, error) {
+func (c Config) Export() ([]byte, error) {
 	sb := strings.Builder{}
 	sb.WriteString("######################\n")
 	sb.WriteString("### Sequoia Config ###\n")

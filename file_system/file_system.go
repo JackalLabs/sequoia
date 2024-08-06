@@ -9,8 +9,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/ipfs/boxo/ipld/unixfs"
+
 	"github.com/dgraph-io/badger/v4"
 	"github.com/ipfs/go-cid"
+	ipldFormat "github.com/ipfs/go-ipld-format"
 	"github.com/wealdtech/go-merkletree/v2"
 
 	"github.com/rs/zerolog/log"
@@ -111,6 +114,33 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 
 	fileCount.Inc()
 	return size, n.Cid().String(), nil
+}
+
+func (f *FileSystem) CreateIPFSFolder(childCIDs []cid.Cid) (cidRes string, err error) {
+	folderNode := unixfs.EmptyDirNode()
+
+	for i, childCID := range childCIDs {
+		// Create a link
+		linkName := fmt.Sprintf("%d", i)
+		link := &ipldFormat.Link{
+			Name: linkName,
+			Cid:  childCID,
+		}
+
+		// Add the link to the folder node
+		err := folderNode.AddRawLink(linkName, link)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// Add the folder node to the DAG service
+	err = f.ipfs.Add(context.Background(), folderNode)
+	if err != nil {
+		return "", err
+	}
+
+	return folderNode.Cid().String(), nil
 }
 
 func (f *FileSystem) DeleteFile(merkle []byte, owner string, start int64) error {
