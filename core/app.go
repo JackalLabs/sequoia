@@ -26,6 +26,8 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/rs/zerolog/log"
+
+	"github.com/JackalLabs/sequoia/recycle"
 )
 
 type App struct {
@@ -218,6 +220,11 @@ func (a *App) Start() error {
 		return err
 	}
 
+	recycleDepot, err := recycle.NewRecycleDepot(a.home, params.ChunkSize, a.fileSystem)
+	if err != nil {
+		return err
+	}
+
 	myUrl := cfg.Ip
 
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
@@ -235,6 +242,18 @@ func (a *App) Start() error {
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
+	go recycleDepot.Start(cfg.StrayManagerCfg.CheckInterval)
+	defer func() {
+		recycleDepot.Stop()
+		_ = a.api.Close()
+		a.q.Stop()
+		a.prover.Stop()
+		a.strayManager.Stop()
+		a.monitor.Stop()
+
+		time.Sleep(time.Second * 30) // give the program some time to shut down
+		a.fileSystem.Close()
+	}()
 
 	done := make(chan os.Signal, 1)
 	defer signal.Stop(done) // undo signal.Notify effect
@@ -243,15 +262,6 @@ func (a *App) Start() error {
 	<-done // Will block here until user hits ctrl+c
 
 	fmt.Println("Shutting Sequoia down safely...")
-
-	_ = a.api.Close()
-	a.q.Stop()
-	a.prover.Stop()
-	a.strayManager.Stop()
-	a.monitor.Stop()
-
-	time.Sleep(time.Second * 30) // give the program some time to shut down
-	a.fileSystem.Close()
 
 	return nil
 }
@@ -310,6 +320,11 @@ func (a *App) Salvage(jprovdHome string) error {
 		return err
 	}
 
+	recycleDepot, err := recycle.NewRecycleDepot(a.home, params.ChunkSize, a.fileSystem)
+	if err != nil {
+		return err
+	}
+
 	myUrl := cfg.Ip
 
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
@@ -321,34 +336,37 @@ func (a *App) Salvage(jprovdHome string) error {
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 	a.monitor = monitoring.NewMonitor(w)
 
+	done := make(chan os.Signal, 1)
+	defer signal.Stop(done) //undo signal.Notify effect
+
 	// Starting the 4 concurrent services
 	// nolint:all
 	go a.api.Serve(a.fileSystem, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
+	go recycleDepot.Start(cfg.StrayManagerCfg.CheckInterval)
+	defer func() {
+		recycleDepot.Stop()
+		_ = a.api.Close()
+		a.q.Stop()
+		a.prover.Stop()
+		a.strayManager.Stop()
+		a.monitor.Stop()
 
-	err = a.salvage(jprovdHome, params.ChunkSize)
+		time.Sleep(time.Second * 30) // give the program some time to shut down
+		a.fileSystem.Close()
+	}()
+
+	err = recycleDepot.SalvageFiles(jprovdHome)
 	if err != nil {
 		return err
 	}
-
-	done := make(chan os.Signal, 1)
-	defer signal.Stop(done) //undo signal.Notify effect
 
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	<-done // Will block here until user hits ctrl+c
 
 	fmt.Println("Shutting Sequoia down safely...")
-
-	_ = a.api.Close()
-	a.q.Stop()
-	a.prover.Stop()
-	a.strayManager.Stop()
-	a.monitor.Stop()
-
-	time.Sleep(time.Second * 30) // give the program some time to shut down
-	a.fileSystem.Close()
 
 	return nil
 }
