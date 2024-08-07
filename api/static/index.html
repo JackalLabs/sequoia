@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>Provider Dashboard</title>
+		<link rel="stylesheet" href="./style.css" />
+		<link rel="icon" href="./favicon.ico" type="image/x-icon" />
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+		<script
+			src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datasource-prometheus@2/dist/chartjs-plugin-datasource-prometheus.umd.min.js"
+			crossorigin="anonymous"
+		></script>
+		<script src="index.js"></script>
+	</head>
+	<body>
+		<h1>Provider Dashboard</h1>
+
+		<div id="status-bar"></div>
+		<div>
+			<h2>Account</h2>
+			Withdraw to:
+			<form>
+				<input type="text" name="to_address" placeholder="jkl1....." />
+				<input type="number" name="amount" placeholder="Amount" />
+			</form>
+			<button id="withdraw-btn">Withdraw</button>
+		</div>
+
+		<div id="stats">
+			<h2>Stats</h2>
+			<canvas id="myChart" style="width: 100%; max-height: 500px"></canvas>
+		</div>
+
+		<div>
+			<h2>Network</h2>
+			<canvas id="networkChart" style="width: 100%; max-height: 500px"></canvas>
+		</div>
+	</body>
+	<script src="chart-stats.js"></script>
+</html>
