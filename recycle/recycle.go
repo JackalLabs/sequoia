@@ -12,7 +12,7 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	query "github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
 
@@ -91,26 +91,16 @@ func record(file io.Writer, merkle []byte, size int, fid string) error {
 
 func (r *RecycleDepot) collectOpenFiles() ([]types.UnifiedFile, error) {
 	req := &types.QueryOpenFiles{
-		Pagination: &query.PageRequest{CountTotal: true},
+		ProviderAddress: r.address,
+		Pagination:      &query.PageRequest{CountTotal: true},
 	}
 	resp, err := r.queryClient.OpenFiles(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msgf("We found %d files open", len(resp.Files))
 
-	uf := make([]types.UnifiedFile, resp.Pagination.GetTotal())
-	uf = append(uf, resp.Files...)
-
-	for len(resp.Pagination.GetNextKey()) != 0 {
-		req.Pagination.Key = resp.Pagination.GetNextKey()
-		resp, err = r.queryClient.OpenFiles(context.Background(), req)
-		if err != nil {
-			return uf, err
-		}
-		uf = append(uf, resp.Files...)
-	}
-
-	return uf, nil
+	return resp.Files, nil
 }
 
 func (r *RecycleDepot) activateFile(openFile types.UnifiedFile) (size int, cid string, err error) {
@@ -131,14 +121,21 @@ func (r *RecycleDepot) activateFile(openFile types.UnifiedFile) (size int, cid s
 }
 
 func (r *RecycleDepot) recycleFiles() error {
+	log.Info().Msg("Trying to recycle files...")
 	openFiles, err := r.collectOpenFiles()
-	if len(openFiles) == 0 && err != nil {
+	if err != nil {
 		log.Error().Err(err).Msg("failed to query open files from chain")
+		return err
+	}
+	if len(openFiles) == 0 {
+		log.Error().Msg("there are no open files")
 		return err
 	}
 
 	// recycle open files that it managed to collect
 	for _, openFile := range openFiles {
+		log.Info().Msgf("Trying to recycle %x...", openFile.Merkle)
+
 		size, cid, err := r.activateFile(openFile)
 		if err != nil {
 			log.Error().

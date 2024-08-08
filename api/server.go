@@ -59,6 +59,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	r.HandleFunc("/dump", DumpDBHandler(f))
 
 	r.HandleFunc("/version", VersionHandler(wallet))
+	r.HandleFunc("/network", NetworkHandler(wallet))
 
 	r.Handle("/metrics", promhttp.Handler())
 	r.Use(loggingMiddleware)

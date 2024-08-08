@@ -1,6 +1,6 @@
 module github.com/JackalLabs/sequoia
 
-go 1.22.0
+go 1.22.2
 
 toolchain go1.22.5
 
@@ -17,7 +17,7 @@ require (
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ds-badger2 v0.1.3
 	github.com/ipfs/go-ipld-format v0.6.0
-	github.com/jackalLabs/canine-chain/v3 v3.2.2
+	github.com/jackalLabs/canine-chain/v4 v4.0.3
 	github.com/json-iterator/go v1.1.12
 	github.com/libp2p/go-libp2p v0.32.2
 	github.com/multiformats/go-multiaddr v0.12.3
@@ -26,7 +26,6 @@ require (
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
-	github.com/wealdtech/go-merkletree v1.0.0
 	github.com/wealdtech/go-merkletree/v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -236,6 +235,7 @@ require (
 	github.com/tendermint/tendermint v0.34.27 // indirect
 	github.com/tendermint/tm-db v0.6.7 // indirect
 	github.com/tidwall/btree v1.5.0 // indirect
+	github.com/wealdtech/go-merkletree v1.0.0 // indirect
 	github.com/whyrusleeping/chunker v0.0.0-20181014151217-fe64bd25879f // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
@@ -301,8 +301,7 @@ replace (
 
 	github.com/ipfs/go-ds-badger2 => github.com/TheMarstonConnell/go-ds-badger2 v0.0.0-20240304191516-af5ee03005fc
 
-	//github.com/jackalLabs/canine-chain/v3 => ../canine-chain
-	github.com/jackalLabs/canine-chain/v3 => github.com/jackalLabs/canine-chain/v3 v3.0.3-rc.3.0.20240611211706-1d26f5317230 // using the master branch for now before v4 releases
+	//github.com/jackalLabs/canine-chain/v4 => ../canine-chain
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27
 
 	github.com/wealdtech/go-merkletree => github.com/TheMarstonConnell/go-merkletree v0.0.0-20230328183338-b5d590ab1aaf

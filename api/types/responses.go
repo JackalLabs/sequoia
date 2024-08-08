@@ -1,6 +1,9 @@
 package types
 
-import "github.com/libp2p/go-libp2p/core/peer"
+import (
+	"github.com/libp2p/go-libp2p/core/peer"
+	coretypes "github.com/tendermint/tendermint/rpc/core/types"
+)
 
 type UploadResponse struct {
 	Merkle []byte `json:"merkle"`
@@ -17,6 +20,11 @@ type VersionResponse struct {
 	Version string `json:"version"`
 	Commit  string `json:"build"`
 	ChainID string `json:"chain-id"`
+}
+
+type NetworkResponse struct {
+	GRPCStatus string                  `json:"grpc-status"`
+	RPCStatus  *coretypes.ResultStatus `json:"rpc-status"`
 }
 
 type IndexResponse struct {

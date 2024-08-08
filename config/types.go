@@ -53,7 +53,7 @@ func DefaultConfig() *Config {
 		},
 		ChainCfg: types.ChainConfig{
 			RPCAddr:       "http://localhost:26657",
-			GRPCAddr:      "127.0.0.1:9090",
+			GRPCAddr:      "localhost:9090",
 			GasPrice:      "0.02ujkl",
 			GasAdjustment: 1.5,
 			Bech32Prefix:  "jkl",

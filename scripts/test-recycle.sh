@@ -4,7 +4,7 @@ set -eu
 
 source ./scripts/setup-chain.sh
 
-UPGRADE_HEIGHT="60"
+UPGRADE_HEIGHT="30"
 
 OLD_CHAIN_VER="v4.0.3"
 NEW_CHAIN_VER="marston/recovery"
@@ -60,7 +60,7 @@ install_new_chain () {
     cd ${PROJ_DIR}
     #git switch tags/${NEW_CHAIN_VER} --detach
     git checkout ${NEW_CHAIN_VER}
-
+    git pull
     bypass_go_version_check ${PROJ_DIR}
     make install
     git restore Makefile
@@ -114,7 +114,7 @@ restart_chain () {
 init_sequoia () {
     rm -rf $HOME/providers/sequoia${1}
     sequoia init --home="$HOME/providers/sequoia${1}"
-
+    rm -rf "$HOME/providers/sequoia${1}/data"
 #    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
 #    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:9090/g' $HOME/providers/sequoia${1}/config.yaml
 
@@ -135,6 +135,8 @@ recycle () {
 shut_down () {
     killall canined sequoia
 }
+
+
 
 install_old
 
