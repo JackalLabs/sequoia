@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
-	query "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
@@ -92,7 +91,7 @@ func record(file io.Writer, merkle []byte, size int, fid string) error {
 func (r *RecycleDepot) collectOpenFiles() ([]types.UnifiedFile, error) {
 	req := &types.QueryOpenFiles{
 		ProviderAddress: r.address,
-		Pagination:      &query.PageRequest{CountTotal: true},
+		Pagination:      nil,
 	}
 	resp, err := r.queryClient.OpenFiles(context.Background(), req)
 	if err != nil {
@@ -107,7 +106,7 @@ func (r *RecycleDepot) activateFile(openFile types.UnifiedFile) (size int, cid s
 	merkle := hex.EncodeToString(openFile.Merkle)
 	fileData, err := r.fs.GetFileData([]byte(merkle))
 	if err != nil {
-		return 0, "", err
+		return 0, "", fmt.Errorf("can not get file data | %w", err)
 	}
 
 	buf := bytes.NewBuffer(fileData)
