@@ -249,17 +249,6 @@ func (a *App) Start() error {
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
 	go recycleDepot.Start(cfg.StrayManagerCfg.CheckInterval)
-	defer func() {
-		recycleDepot.Stop()
-		_ = a.api.Close()
-		a.q.Stop()
-		a.prover.Stop()
-		a.strayManager.Stop()
-		a.monitor.Stop()
-
-		time.Sleep(time.Second * 30) // give the program some time to shut down
-		a.fileSystem.Close()
-	}()
 
 	done := make(chan os.Signal, 1)
 	defer signal.Stop(done) // undo signal.Notify effect
@@ -268,6 +257,16 @@ func (a *App) Start() error {
 	<-done // Will block here until user hits ctrl+c
 
 	fmt.Println("Shutting Sequoia down safely...")
+
+	recycleDepot.Stop()
+	_ = a.api.Close()
+	a.q.Stop()
+	a.prover.Stop()
+	a.strayManager.Stop()
+	a.monitor.Stop()
+
+	time.Sleep(time.Second * 30) // give the program some time to shut down
+	a.fileSystem.Close()
 
 	return nil
 }
@@ -348,7 +347,7 @@ func (a *App) Salvage(jprovdHome string) error {
 	a.monitor = monitoring.NewMonitor(w)
 
 	done := make(chan os.Signal, 1)
-	defer signal.Stop(done) //undo signal.Notify effect
+	defer signal.Stop(done) // undo signal.Notify effect
 
 	// Starting the 4 concurrent services
 	// nolint:all
@@ -357,17 +356,6 @@ func (a *App) Salvage(jprovdHome string) error {
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
 	go recycleDepot.Start(cfg.StrayManagerCfg.CheckInterval)
-	defer func() {
-		recycleDepot.Stop()
-		_ = a.api.Close()
-		a.q.Stop()
-		a.prover.Stop()
-		a.strayManager.Stop()
-		a.monitor.Stop()
-
-		time.Sleep(time.Second * 30) // give the program some time to shut down
-		a.fileSystem.Close()
-	}()
 
 	err = recycleDepot.SalvageFiles(jprovdHome)
 	if err != nil {
@@ -378,6 +366,15 @@ func (a *App) Salvage(jprovdHome string) error {
 	<-done // Will block here until user hits ctrl+c
 
 	fmt.Println("Shutting Sequoia down safely...")
+
+	_ = a.api.Close()
+	a.q.Stop()
+	a.prover.Stop()
+	a.strayManager.Stop()
+	a.monitor.Stop()
+	recycleDepot.Stop()
+	time.Sleep(time.Second * 30) // give the program some time to shut down
+	a.fileSystem.Close()
 
 	return nil
 }

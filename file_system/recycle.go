@@ -30,7 +30,6 @@ func (f *FileSystem) salvageFile(r io.Reader, chunkSize int64) ([]byte, int, err
 	err = f.db.Update(func(txn *badger.Txn) error {
 		return txn.Set([]byte(fmt.Sprintf("cid/%x", root)), []byte(node.Cid().String()))
 	})
-
 	if err != nil {
 		return nil, 0, err
 	}

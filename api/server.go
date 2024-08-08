@@ -34,6 +34,9 @@ func NewAPI(port int64) *API {
 }
 
 func (a *API) Close() error {
+	if a.srv == nil {
+		return fmt.Errorf("no server available")
+	}
 	return a.srv.Close()
 }
 

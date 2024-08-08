@@ -14,7 +14,6 @@ current_dir=$(pwd)
 TMP_ROOT="$(dirname $(pwd))/_build"
 mkdir -p "${TMP_ROOT}"
 
-TMP_BUILD="${TMP_ROOT}"/jprovd
 
 bypass_go_version_check () {
     VER=$(go version)
@@ -53,19 +52,6 @@ install_old () {
         cd sequoia
         cd ${current_dir}
     fi
-
-    PROJ_DIR="${TMP_ROOT}/sequoia"
-
-
-    cd ${PROJ_DIR}
-    git fetch
-    git switch tags/${OLD_PROVIDER_VER} --detach
-    bypass_go_version_check ${PROJ_DIR}
-    make install
-    git restore Makefile
-
-    cd "${current_dir}"
-    sequoia version
 }
 
 install_new_chain () {
@@ -79,6 +65,7 @@ install_new_chain () {
     make install
     git restore Makefile
 
+
     cd "${current_dir}"
     canined version
 }
@@ -88,7 +75,7 @@ start_chain () {
     from_scratch
     fix_config
 
-    screen -d -m -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
+    screen -L -Logfile chain_log.log  -d -m -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
 }
 
 set_upgrade_prop () {
@@ -120,7 +107,7 @@ upgrade_chain () {
 }
 
 restart_chain () {
-    screen -d -m -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
+    screen -L -Logfile chain_log.log -d -m -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
 }
 
 
@@ -128,16 +115,17 @@ init_sequoia () {
     rm -rf $HOME/providers/sequoia${1}
     sequoia init --home="$HOME/providers/sequoia${1}"
 
-    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
-    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:9090/g' $HOME/providers/sequoia${1}/config.yaml
+#    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
+#    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:9090/g' $HOME/providers/sequoia${1}/config.yaml
 
     sed -i -e 's/data_directory: $HOME\/.sequoia\/data/data_directory: $HOME\/providers\/sequoia0\/data/g' $HOME/providers/sequoia${1}/config.yaml
 }
 
 
 start_sequoia () {
-  cp ./scripts/storage "$HOME/providers/sequoia${1}/storage"
-  sequoia jprovd-salvage storage --home="$HOME/providers/sequoia${1}"
+  pwd
+  cp -r ./scripts/storage "$HOME/providers/sequoia${1}/storage"
+  screen -L -Logfile sequoia.log  -d -m -S "sequoia" bash -c "sequoia jprovd-salvage $HOME/providers/sequoia${1} --home=$HOME/providers/sequoia${1}"
 }
 
 recycle () {
@@ -161,12 +149,6 @@ sleep 35
 set_upgrade_prop
 sleep 5
 canined q gov proposal 1
-
-sleep 10
-
-echo "upgrading provider..."
-install_new
-
 
 echo "upgrading chain to v410"
 upgrade_chain

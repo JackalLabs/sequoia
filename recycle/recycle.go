@@ -18,10 +18,10 @@ import (
 
 func (r *RecycleDepot) salvageFile(jprovArhcive archive.Archive, fid string) ([]byte, int, error) {
 	file, err := jprovArhcive.RetrieveFile(fid)
-	defer file.Close()
 	if err != nil {
 		return nil, 0, err
 	}
+	defer file.Close()
 
 	return r.fs.SalvageFile(file, r.chunkSize)
 }
@@ -31,7 +31,7 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 	recordFile, err := os.OpenFile(
 		filepath.Join(r.homeDir, salvageRecordFileName),
 		os.O_RDWR|os.O_CREATE,
-		0644,
+		0o644,
 	)
 	if err != nil {
 		return err
@@ -41,8 +41,9 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 
 	// only used to retrieve files
 	jprovArchive := archive.NewSingleCellArchive(jprovdHome)
-
-	dirList, err := os.ReadDir(filepath.Join(jprovdHome, "storage"))
+	fPath := filepath.Join(jprovdHome, "storage")
+	log.Info().Msgf("Reading recycled files from %s", fPath)
+	dirList, err := os.ReadDir(fPath)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to read jprovd storage directory")
 		return err
@@ -66,7 +67,6 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 			Msg("successfully salvaged file")
 
 		err = record(recordFile, merkle, size, d.Name())
-
 		if err != nil {
 			log.Error().
 				Err(err).
@@ -151,7 +151,6 @@ func (r *RecycleDepot) recycleFiles() error {
 				Str("owner", openFile.Owner).
 				Int64("expires", openFile.Expires).
 				Msg("failed to activate file")
-
 		} else {
 			log.Info().
 				Int("size", size).
@@ -177,15 +176,13 @@ func (r *RecycleDepot) recycleFiles() error {
 
 func (r *RecycleDepot) Start(checkInterval int64) {
 	for {
-		select {
-		case <-r.stop:
+		if r.stop {
 			log.Info().Msg("shutting down recycle depot...")
 			err := r.Close()
 			if err != nil {
 				log.Error().Err(err).Msg("error while closing recycle depot db")
 			}
 			return
-		default:
 		}
 
 		err := r.recycleFiles()
@@ -198,8 +195,7 @@ func (r *RecycleDepot) Start(checkInterval int64) {
 }
 
 func (r *RecycleDepot) Stop() {
-	r.stop <- struct{}{}
-	return
+	r.stop = true
 }
 
 func (r *RecycleDepot) Close() error {

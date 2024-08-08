@@ -3,3 +3,6 @@ data
 /.idea/vcs.xml
 /.idea/modules.xml
 /coverage.txt
+
+*.log
+.idea

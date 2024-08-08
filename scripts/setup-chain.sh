@@ -90,6 +90,7 @@ from_scratch () {
 
 fix_config() {
     sed -i.bak -e 's/stake/ujkl/' $HOME/.canine/config/genesis.json
+    sed -i.bak -e 's/ujklr_ratio/staker_ratio/' $HOME/.canine/config/genesis.json
     sed -i.bak -e 's/^minimum-gas-prices =""/minimum-gas-prices = \"0.0025ujkl\"/' $HOME/.canine/config/app.toml
     sed -i.bak -e 's/enable = false/enable=true/' $HOME/.canine/config/app.toml
     sed -i.bak -e 's/enable=false/enable=true/' $HOME/.canine/config/app.toml

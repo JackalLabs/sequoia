@@ -9,7 +9,7 @@ const salvageRecordFileName = "salvage_record"
 
 type RecycleDepot struct {
 	fs          *fs.FileSystem
-	stop        chan struct{}
+	stop        bool
 	chunkSize   int64
 	homeDir     string
 	queryClient types.QueryClient
@@ -20,7 +20,7 @@ func NewRecycleDepot(home string, chunkSize int64, fs *fs.FileSystem, queryClien
 		fs:          fs,
 		homeDir:     home,
 		chunkSize:   chunkSize,
-		stop:        make(chan struct{}),
+		stop:        false,
 		queryClient: queryClient,
 	}, nil
 }
