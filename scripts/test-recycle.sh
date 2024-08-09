@@ -112,7 +112,7 @@ restart_chain () {
 
 
 init_sequoia () {
-    rm -rf $HOME/providers/sequoia${1}
+    rm -rf "$HOME/providers/sequoia0/data"
     sequoia init --home="$HOME/providers/sequoia${1}"
     rm -rf "$HOME/providers/sequoia${1}/data"
 #    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml

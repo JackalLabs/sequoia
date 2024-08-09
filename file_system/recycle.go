@@ -16,7 +16,7 @@ func (f *FileSystem) salvageFile(r io.Reader, chunkSize int64) ([]byte, int, err
 	}
 
 	// TODO: there must be a better way to do this
-	data := make([]byte, size)
+	data := make([]byte, 0)
 	for _, chunk := range chunks {
 		data = append(data, chunk...)
 	}

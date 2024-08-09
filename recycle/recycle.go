@@ -3,7 +3,6 @@ package recycle
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -15,8 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (r *RecycleDepot) salvageFile(jprovArhcive archive.Archive, fid string) ([]byte, int, error) {
-	file, err := jprovArhcive.RetrieveFile(fid)
+func (r *RecycleDepot) salvageFile(jprovArchive archive.Archive, fid string) ([]byte, int, error) {
+	file, err := jprovArchive.RetrieveFile(fid)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -103,20 +102,26 @@ func (r *RecycleDepot) collectOpenFiles() ([]types.UnifiedFile, error) {
 }
 
 func (r *RecycleDepot) activateFile(openFile types.UnifiedFile) (size int, cid string, err error) {
-	merkle := hex.EncodeToString(openFile.Merkle)
-	fileData, err := r.fs.GetFileData([]byte(merkle))
+	fileData, err := r.fs.GetFileData(openFile.Merkle)
 	if err != nil {
 		return 0, "", fmt.Errorf("can not get file data | %w", err)
 	}
 
 	buf := bytes.NewBuffer(fileData)
-	return r.fs.WriteFile(
+	size, cid, err = r.fs.WriteFile(
 		buf,
-		[]byte(merkle),
+		openFile.Merkle,
 		openFile.Owner,
 		openFile.Start,
 		"",
 		r.chunkSize)
+	if err != nil {
+		return 0, "", fmt.Errorf("could not write file | %w", err)
+	}
+
+	_ = r.prover.PostProof(openFile.Merkle, openFile.Owner, openFile.Start, openFile.Start, time.Now())
+
+	return
 }
 
 func (r *RecycleDepot) recycleFiles() error {
@@ -133,6 +138,11 @@ func (r *RecycleDepot) recycleFiles() error {
 
 	// recycle open files that it managed to collect
 	for _, openFile := range openFiles {
+
+		if openFile.ContainsProver(r.address) {
+			continue
+		}
+
 		log.Info().Msgf("Trying to recycle %x...", openFile.Merkle)
 
 		size, cid, err := r.activateFile(openFile)

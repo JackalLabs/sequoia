@@ -221,11 +221,17 @@ func (a *App) Start() error {
 		return err
 	}
 
+	a.q = queue.NewQueue(w, cfg.QueueInterval)
+	go a.q.Listen()
+
+	prover := proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+
 	recycleDepot, err := recycle.NewRecycleDepot(
 		a.home,
 		myAddress,
 		params.ChunkSize,
 		a.fileSystem,
+		prover,
 		types.NewQueryClient(w.Client.GRPCConn),
 	)
 	if err != nil {
@@ -236,10 +242,7 @@ func (a *App) Start() error {
 
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
-	a.q = queue.NewQueue(w, cfg.QueueInterval)
-	go a.q.Listen()
-
-	a.prover = proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+	a.prover = prover
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 	a.monitor = monitoring.NewMonitor(w)
 
@@ -326,11 +329,17 @@ func (a *App) Salvage(jprovdHome string) error {
 		return err
 	}
 
+	a.q = queue.NewQueue(w, cfg.QueueInterval)
+	go a.q.Listen()
+
+	prover := proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+
 	recycleDepot, err := recycle.NewRecycleDepot(
 		a.home,
 		myAddress,
 		params.ChunkSize,
 		a.fileSystem,
+		prover,
 		types.NewQueryClient(w.Client.GRPCConn),
 	)
 	if err != nil {
@@ -341,10 +350,7 @@ func (a *App) Salvage(jprovdHome string) error {
 
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
-	a.q = queue.NewQueue(w, cfg.QueueInterval)
-	go a.q.Listen()
-
-	a.prover = proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+	a.prover = prover
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 	a.monitor = monitoring.NewMonitor(w)
 
