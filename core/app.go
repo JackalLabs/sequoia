@@ -24,8 +24,11 @@ import (
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/dgraph-io/badger/v4"
-	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/rs/zerolog/log"
+
+	"github.com/JackalLabs/sequoia/recycle"
 )
 
 type App struct {
@@ -218,14 +221,28 @@ func (a *App) Start() error {
 		return err
 	}
 
+	a.q = queue.NewQueue(w, cfg.QueueInterval)
+	go a.q.Listen()
+
+	prover := proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+
+	recycleDepot, err := recycle.NewRecycleDepot(
+		a.home,
+		myAddress,
+		params.ChunkSize,
+		a.fileSystem,
+		prover,
+		types.NewQueryClient(w.Client.GRPCConn),
+	)
+	if err != nil {
+		return err
+	}
+
 	myUrl := cfg.Ip
 
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
-	a.q = queue.NewQueue(w, cfg.QueueInterval)
-	go a.q.Listen()
-
-	a.prover = proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+	a.prover = prover
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 	a.monitor = monitoring.NewMonitor(w)
 
@@ -235,9 +252,123 @@ func (a *App) Start() error {
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
+	go recycleDepot.Start(cfg.StrayManagerCfg.CheckInterval)
 
 	done := make(chan os.Signal, 1)
 	defer signal.Stop(done) // undo signal.Notify effect
+
+	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+	<-done // Will block here until user hits ctrl+c
+
+	fmt.Println("Shutting Sequoia down safely...")
+
+	recycleDepot.Stop()
+	_ = a.api.Close()
+	a.q.Stop()
+	a.prover.Stop()
+	a.strayManager.Stop()
+	a.monitor.Stop()
+
+	time.Sleep(time.Second * 30) // give the program some time to shut down
+	a.fileSystem.Close()
+
+	return nil
+}
+
+func (a *App) Salvage(jprovdHome string) error {
+	cfg, err := config.Init(a.home)
+	if err != nil {
+		return err
+	}
+
+	w, err := config.InitWallet(a.home)
+	if err != nil {
+		return err
+	}
+
+	myAddress := w.AccAddress()
+
+	queryParams := &storageTypes.QueryProvider{
+		Address: myAddress,
+	}
+
+	cl := storageTypes.NewQueryClient(w.Client.GRPCConn)
+
+	claimers := make([]string, 0)
+
+	res, err := cl.Provider(context.Background(), queryParams)
+	if err != nil {
+		log.Info().Msg("Provider does not exist on network or is not connected...")
+		err := initProviderOnChain(w, cfg.Ip, cfg.TotalSpace)
+		if err != nil {
+			return err
+		}
+	} else {
+		claimers = res.Provider.AuthClaimers
+
+		totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
+		if err != nil {
+			return err
+		}
+		if totalSpace != cfg.TotalSpace {
+			err := updateSpace(w, cfg.TotalSpace)
+			if err != nil {
+				return err
+			}
+		}
+		if res.Provider.Ip != cfg.Ip {
+			err := updateIp(w, cfg.Ip)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	params, err := a.GetStorageParams(w.Client.GRPCConn)
+	if err != nil {
+		return err
+	}
+
+	a.q = queue.NewQueue(w, cfg.QueueInterval)
+	go a.q.Listen()
+
+	prover := proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+
+	recycleDepot, err := recycle.NewRecycleDepot(
+		a.home,
+		myAddress,
+		params.ChunkSize,
+		a.fileSystem,
+		prover,
+		types.NewQueryClient(w.Client.GRPCConn),
+	)
+	if err != nil {
+		return err
+	}
+
+	myUrl := cfg.Ip
+
+	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
+
+	a.prover = prover
+	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
+	a.monitor = monitoring.NewMonitor(w)
+
+	done := make(chan os.Signal, 1)
+	defer signal.Stop(done) // undo signal.Notify effect
+
+	// Starting the 4 concurrent services
+	// nolint:all
+	go a.api.Serve(a.fileSystem, a.prover, w, params.ChunkSize)
+	go a.prover.Start()
+	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
+	go a.monitor.Start()
+	go recycleDepot.Start(cfg.StrayManagerCfg.CheckInterval)
+
+	err = recycleDepot.SalvageFiles(jprovdHome)
+	if err != nil {
+		return err
+	}
 
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	<-done // Will block here until user hits ctrl+c
@@ -249,7 +380,7 @@ func (a *App) Start() error {
 	a.prover.Stop()
 	a.strayManager.Stop()
 	a.monitor.Stop()
-
+	recycleDepot.Stop()
 	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.fileSystem.Close()
 

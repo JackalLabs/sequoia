@@ -37,6 +37,8 @@ func (q *Queue) Add(msg types.Msg) (*Message, *sync.WaitGroup) {
 		err: nil,
 	}
 
+	log.Info().Msgf("is queue messed up? %t", q.messages == nil)
+
 	q.messages = append(q.messages, m) // adding the message to the end of the list
 
 	return m, &wg

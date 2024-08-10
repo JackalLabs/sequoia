@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/JackalLabs/sequoia/config"
@@ -37,6 +38,29 @@ func VersionHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Reque
 			Version: config.Version(),
 			Commit:  config.Commit(),
 			ChainID: chainId,
+		}
+
+		err = json.NewEncoder(w).Encode(v)
+		if err != nil {
+			log.Error().Err(err)
+			return
+		}
+	}
+}
+
+func NetworkHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		status, err := wallet.Client.RPCClient.Status(context.Background())
+		if err != nil {
+			w.WriteHeader(500)
+			return
+		}
+
+		grpcStatus := wallet.Client.GRPCConn.GetState()
+
+		v := types.NetworkResponse{
+			GRPCStatus: grpcStatus.String(),
+			RPCStatus:  status,
 		}
 
 		err = json.NewEncoder(w).Encode(v)

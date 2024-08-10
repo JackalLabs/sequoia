@@ -34,6 +34,9 @@ func NewAPI(port int64) *API {
 }
 
 func (a *API) Close() error {
+	if a.srv == nil {
+		return fmt.Errorf("no server available")
+	}
 	return a.srv.Close()
 }
 
@@ -56,6 +59,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	r.HandleFunc("/dump", DumpDBHandler(f))
 
 	r.HandleFunc("/version", VersionHandler(wallet))
+	r.HandleFunc("/network", NetworkHandler(wallet))
 
 	r.Handle("/metrics", promhttp.Handler())
 	r.Use(loggingMiddleware)
