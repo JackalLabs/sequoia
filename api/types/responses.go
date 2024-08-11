@@ -22,6 +22,12 @@ type VersionResponse struct {
 	ChainID string `json:"chain-id"`
 }
 
+type SpaceResponse struct {
+	Total int64 `json:"total_space"`
+	Used  int64 `json:"used_space"`
+	Free  int64 `json:"free_space"`
+}
+
 type NetworkResponse struct {
 	GRPCStatus string                  `json:"grpc-status"`
 	RPCStatus  *coretypes.ResultStatus `json:"rpc-status"`

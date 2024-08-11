@@ -48,7 +48,9 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	r.HandleFunc("/download/{merkle}", DownloadFileHandler(f))
 
 	r.HandleFunc("/list", ListFilesHandler(f))
+	r.HandleFunc("/api/client/list", ListFilesHandler(f))
 	r.HandleFunc("/api/data/fids", LegacyListFilesHandler(f))
+	r.HandleFunc("/api/client/space", SpaceHandler(wallet.Client, wallet.AccAddress()))
 
 	r.HandleFunc("/ipfs/peers", IPFSListPeers(f))
 	r.HandleFunc("/ipfs/hosts", IPFSListHosts(f))
