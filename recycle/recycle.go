@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,6 +32,11 @@ func (r *RecycleDepot) lastSalvagedFile(record *os.File) (string, error) {
 	var cursor int64 = 0
 	stat, _ := record.Stat()
 	filesize := stat.Size()
+
+	if filesize == 0 {
+		return "", nil
+	}
+
 	for {
 		cursor -= 1
 		_, err := record.Seek(cursor, io.SeekEnd)
@@ -68,6 +74,22 @@ func (r *RecycleDepot) lastSalvagedFile(record *os.File) (string, error) {
 	return fid, nil
 }
 
+func countJklFiles(dirList []fs.DirEntry) int64 {
+	var c int64 = 0
+
+	for _, d := range dirList {
+		if !d.IsDir() {
+			continue
+		}
+
+		if strings.HasPrefix(d.Name(), "jklf") {
+			c++
+		}
+	}
+
+	return c
+}
+
 func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 	log.Info().Msg("salvaging jprovd files...")
 	recordFile, err := os.OpenFile(
@@ -90,7 +112,7 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 		log.Error().Err(err).Msg("failed to read jprovd storage directory")
 		return err
 	}
-	r.TotalJprovFiles = int64(len(dirList))
+	r.TotalJprovFiles = countJklFiles(dirList)
 
 	lastSalvaged, err := r.lastSalvagedFile(recordFile)
 	if err != nil {
