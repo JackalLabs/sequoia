@@ -67,7 +67,10 @@ func (r *RecycleDepot) lastSalvagedFile(record *os.File) (string, error) {
 
 	substrs := strings.Split(line, ",")
 
-	record.Seek(0, io.SeekEnd)
+	_, err := record.Seek(0, io.SeekEnd)
+	if err != nil {
+		return "", err
+	}
 
 	fid := strings.TrimSuffix(substrs[2], "\n")
 
