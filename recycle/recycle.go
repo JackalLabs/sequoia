@@ -27,7 +27,7 @@ func (r *RecycleDepot) salvageFile(jprovArchive archive.Archive, fid string) ([]
 }
 
 func (r *RecycleDepot) lastSalvagedFile(record *os.File) (string, error) {
-	//read backwards from the end of the file to find the last salvaged file
+	// read backwards from the end of the file to find the last salvaged file
 	line := ""
 	var cursor int64 = 0
 	stat, _ := record.Stat()

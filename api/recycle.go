@@ -22,5 +22,4 @@ func RecycleSalvageHandler(rd *recycle.RecycleDepot) func(http.ResponseWriter, *
 			return
 		}
 	}
-
 }
