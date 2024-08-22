@@ -9,6 +9,7 @@ import (
 	"github.com/rs/cors"
 
 	"github.com/JackalLabs/sequoia/file_system"
+	"github.com/JackalLabs/sequoia/recycle"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -17,8 +18,9 @@ import (
 
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/gorilla/mux"
+
+	jsoniter "github.com/json-iterator/go"
 )
-import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -40,7 +42,7 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) error {
+func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) error {
 	defer log.Info().Msg("API module stopped")
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexHandler(wallet.AccAddress()))
@@ -62,6 +64,8 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 
 	r.HandleFunc("/version", VersionHandler(wallet))
 	r.HandleFunc("/network", NetworkHandler(wallet))
+
+	r.HandleFunc("/recycle/salvage", RecycleSalvageHandler(rd))
 
 	r.Handle("/metrics", promhttp.Handler())
 	r.Use(loggingMiddleware)

@@ -71,3 +71,9 @@ type CidFolderResponse struct {
 type CidMapResponse struct {
 	CidMap map[string]string `json:"cid_map"`
 }
+
+type RecycleSalvageResponse struct {
+	TotalJackalProviderFiles int64 `json:"total_jackal_provider_files"`
+	SalvagedFilesCount       int64 `json:"salvaged_files_count"`
+	IsSalvageFinished        bool  `json:"is_salvage_finished"`
+}

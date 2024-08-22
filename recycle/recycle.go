@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
@@ -22,6 +24,73 @@ func (r *RecycleDepot) salvageFile(jprovArchive archive.Archive, fid string) ([]
 	defer file.Close()
 
 	return r.fs.SalvageFile(file, r.chunkSize)
+}
+
+func (r *RecycleDepot) lastSalvagedFile(record *os.File) (string, error) {
+	// read backwards from the end of the file to find the last salvaged file
+	line := ""
+	var cursor int64 = 0
+	stat, _ := record.Stat()
+	filesize := stat.Size()
+
+	if filesize == 0 {
+		return "", nil
+	}
+
+	for {
+		cursor -= 1
+		_, err := record.Seek(cursor, io.SeekEnd)
+		if err != nil {
+			return "", err
+		}
+
+		char := make([]byte, 1)
+		_, err = record.Read(char)
+		if err != nil {
+			return "", err
+		}
+
+		if cursor != -1 && (char[0] == 10) {
+			break
+		}
+
+		line = fmt.Sprintf("%s%s", string(char), line)
+
+		if cursor == -filesize {
+			break
+		}
+	}
+
+	if len(line) == 0 {
+		return "", nil
+	}
+
+	substrs := strings.Split(line, ",")
+
+	_, err := record.Seek(0, io.SeekEnd)
+	if err != nil {
+		return "", err
+	}
+
+	fid := strings.TrimSuffix(substrs[2], "\n")
+
+	return fid, nil
+}
+
+func countJklFiles(dirList []fs.DirEntry) int64 {
+	var c int64 = 0
+
+	for _, d := range dirList {
+		if !d.IsDir() {
+			continue
+		}
+
+		if strings.HasPrefix(d.Name(), "jklf") {
+			c++
+		}
+	}
+
+	return c
 }
 
 func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
@@ -46,11 +115,26 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 		log.Error().Err(err).Msg("failed to read jprovd storage directory")
 		return err
 	}
+	r.TotalJprovFiles = countJklFiles(dirList)
 
-	salvaged := 0
+	lastSalvaged, err := r.lastSalvagedFile(recordFile)
+	if err != nil {
+		return err
+	}
+	lastSalvagedFound := false
+
+	r.SalvagedFilesCount = 0
 	for _, d := range dirList {
 		if !d.IsDir() {
 			continue
+		}
+
+		if lastSalvaged != "" && !lastSalvagedFound {
+			if d.Name() == lastSalvaged {
+				lastSalvagedFound = true
+			}
+			r.SalvagedFilesCount++
+			continue // skip the last salvage record to avoid duplicate
 		}
 
 		merkle, size, err := r.salvageFile(jprovArchive, d.Name())
@@ -75,10 +159,10 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 				Msg("failed to record salvage info")
 		}
 
-		salvaged++
+		r.SalvagedFilesCount++
 	}
 
-	log.Info().Int("count", salvaged).Msg("salvaging finished...")
+	log.Info().Int("count", int(r.SalvagedFilesCount)).Msg("salvaging finished...")
 	return nil
 }
 

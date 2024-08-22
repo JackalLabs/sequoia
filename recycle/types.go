@@ -9,13 +9,15 @@ import (
 const salvageRecordFileName = "salvage_record"
 
 type RecycleDepot struct {
-	fs          *fs.FileSystem
-	stop        bool
-	chunkSize   int64
-	homeDir     string
-	queryClient types.QueryClient
-	address     string
-	prover      *proofs.Prover
+	fs                 *fs.FileSystem
+	stop               bool
+	chunkSize          int64
+	homeDir            string
+	queryClient        types.QueryClient
+	address            string
+	prover             *proofs.Prover
+	TotalJprovFiles    int64
+	SalvagedFilesCount int64
 }
 
 func NewRecycleDepot(home string, address string, chunkSize int64, fs *fs.FileSystem, prover *proofs.Prover, queryClient types.QueryClient) (*RecycleDepot, error) {
