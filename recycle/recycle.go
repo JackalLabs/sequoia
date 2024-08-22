@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
@@ -22,6 +23,46 @@ func (r *RecycleDepot) salvageFile(jprovArchive archive.Archive, fid string) ([]
 	defer file.Close()
 
 	return r.fs.SalvageFile(file, r.chunkSize)
+}
+
+func (r *RecycleDepot) lastSalvagedFile(record *os.File) (string, error) {
+	//read backwards from the end of the file to find the last salvaged file
+	line := ""
+	var cursor int64 = 0
+	stat, _ := record.Stat()
+	filesize := stat.Size()
+	for {
+		cursor -= 1
+		_, err := record.Seek(cursor, io.SeekEnd)
+		if err != nil {
+			return "", err
+		}
+
+		char := make([]byte, 1)
+		_, err := record.Read(char)
+		if err != nil {
+			return "", err
+		}
+
+		if cursor != -1 && (char[0] == 10) {
+			break
+		}
+
+		line = fmt.Sprintf("%s%s", string(char), line)
+
+		if cursor == -filesize {
+			break
+		}
+	}
+
+	if len(line) == 0 {
+		return "", nil
+	}
+
+	substrs := strings.Split(line, ",")
+
+	record.Seek(0, io.SeekEnd)
+	return substrs[2], nil
 }
 
 func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
@@ -47,9 +88,18 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 		return err
 	}
 
+	lastSalvaged, err := r.lastSalvagedFile(recordFile)
+	if err != nil {
+		return err
+	}
+
 	salvaged := 0
 	for _, d := range dirList {
 		if !d.IsDir() {
+			continue
+		}
+
+		if lastSalvaged != "" && d.Name() != lastSalvaged {
 			continue
 		}
 
