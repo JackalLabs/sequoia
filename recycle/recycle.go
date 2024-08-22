@@ -39,7 +39,7 @@ func (r *RecycleDepot) lastSalvagedFile(record *os.File) (string, error) {
 		}
 
 		char := make([]byte, 1)
-		_, err := record.Read(char)
+		_, err = record.Read(char)
 		if err != nil {
 			return "", err
 		}
@@ -62,7 +62,10 @@ func (r *RecycleDepot) lastSalvagedFile(record *os.File) (string, error) {
 	substrs := strings.Split(line, ",")
 
 	record.Seek(0, io.SeekEnd)
-	return substrs[2], nil
+
+	fid := strings.TrimSuffix(substrs[2], "\n")
+
+	return fid, nil
 }
 
 func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
@@ -92,6 +95,7 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 	if err != nil {
 		return err
 	}
+	lastSalvagedFound := false
 
 	salvaged := 0
 	for _, d := range dirList {
@@ -99,8 +103,11 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 			continue
 		}
 
-		if lastSalvaged != "" && d.Name() != lastSalvaged {
-			continue
+		if lastSalvaged != "" && !lastSalvagedFound {
+			if d.Name() == lastSalvaged {
+				lastSalvagedFound = true
+			}
+			continue // skip the last salvage record to avoid duplicate
 		}
 
 		merkle, size, err := r.salvageFile(jprovArchive, d.Name())

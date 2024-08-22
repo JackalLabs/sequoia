@@ -249,7 +249,7 @@ func (a *App) Start() error {
 
 	// Starting the 4 concurrent services
 	// nolint:all
-	go a.api.Serve(a.fileSystem, a.prover, w, params.ChunkSize)
+	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
@@ -360,7 +360,7 @@ func (a *App) Salvage(jprovdHome string) error {
 
 	// Starting the 4 concurrent services
 	// nolint:all
-	go a.api.Serve(a.fileSystem, a.prover, w, params.ChunkSize)
+	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
