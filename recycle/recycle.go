@@ -90,6 +90,7 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 		log.Error().Err(err).Msg("failed to read jprovd storage directory")
 		return err
 	}
+	r.TotalJprovFiles = int64(len(dirList))
 
 	lastSalvaged, err := r.lastSalvagedFile(recordFile)
 	if err != nil {
@@ -97,7 +98,7 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 	}
 	lastSalvagedFound := false
 
-	salvaged := 0
+	r.SalvagedFilesCount = 0
 	for _, d := range dirList {
 		if !d.IsDir() {
 			continue
@@ -107,6 +108,7 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 			if d.Name() == lastSalvaged {
 				lastSalvagedFound = true
 			}
+			r.SalvagedFilesCount++
 			continue // skip the last salvage record to avoid duplicate
 		}
 
@@ -132,10 +134,10 @@ func (r *RecycleDepot) SalvageFiles(jprovdHome string) error {
 				Msg("failed to record salvage info")
 		}
 
-		salvaged++
+		r.SalvagedFilesCount++
 	}
 
-	log.Info().Int("count", salvaged).Msg("salvaging finished...")
+	log.Info().Int("count", int(r.SalvagedFilesCount)).Msg("salvaging finished...")
 	return nil
 }
 
