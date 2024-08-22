@@ -60,6 +60,7 @@ func NewApp(home string) (*App, error) {
 
 	options.Logger = &logger.SequoiaLogger{}
 	options.BlockCacheSize = 256 << 25
+	options.MaxLevels = 8
 
 	db, err := badger.Open(options)
 	if err != nil {
