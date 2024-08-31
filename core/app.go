@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/JackalLabs/sequoia/file_system"
+	"github.com/JackalLabs/sequoia/ipfs"
+	"github.com/ipfs/go-datastore"
 
 	"github.com/JackalLabs/sequoia/monitoring"
 
@@ -67,9 +69,23 @@ func NewApp(home string) (*App, error) {
 		return nil, err
 	}
 
+	var ds datastore.Batching
+	switch cfg.DataStoreConfig.Backend {
+	case "badgerds":
+		ds, err = ipfs.NewBadgerDataStore(db)
+		if err != nil {
+			return nil, err
+		}
+	case "flatfs":
+		ds, err = ipfs.NewFlatfsDataStore(cfg.DataStoreConfig.Directory)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	apiServer := api.NewAPI(cfg.APICfg.Port)
 
-	f, err := file_system.NewFileSystem(ctx, db, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
+	f, err := file_system.NewFileSystem(ctx, db, ds, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
 	if err != nil {
 		return nil, err
 	}

@@ -19,6 +19,7 @@ type Config struct {
 	DataDirectory   string             `yaml:"data_directory"`
 	APICfg          APIConfig          `yaml:"api_config"`
 	ProofThreads    int64              `yaml:"proof_threads"`
+	DataStoreConfig DataStoreConfig    `yaml:"data_store_config"`
 }
 
 type StrayManagerConfig struct {
@@ -31,6 +32,14 @@ type APIConfig struct {
 	Port       int64  `yaml:"port"`
 	IPFSPort   int    `yaml:"ipfs_port"`
 	IPFSDomain string `yaml:"ipfs_domain"`
+}
+
+type DataStoreConfig struct {
+	// *choosing badgerdb as data store will need to use the same directory
+	// for data directory
+	Directory string `yaml:"directory"`
+	// data store options: flatfs, badgerdb
+	Backend string `yaml:"backend"`
 }
 
 // LegacyWallet handles keys from earlier versions of storage providers.
@@ -67,6 +76,10 @@ func DefaultConfig() *Config {
 			IPFSDomain: "dns4/ipfs.example.com/tcp/4001",
 		},
 		ProofThreads: 1000,
+		DataStoreConfig: DataStoreConfig{
+			Directory: "$HOME/.sequoia/datastore",
+			Backend:   "flatfs",
+		},
 	}
 }
 
@@ -86,5 +99,6 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 		Int64("APIPort", c.APICfg.Port).
 		Int("APIIPFSPort", c.APICfg.IPFSPort).
 		Str("APIIPFSDomain", c.APICfg.IPFSDomain).
-		Int64("ProofThreads", c.ProofThreads)
+		Int64("ProofThreads", c.ProofThreads).
+		Str("DatastoreBackend", c.DataStoreConfig.Backend)
 }

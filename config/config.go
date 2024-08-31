@@ -1,11 +1,32 @@
 package config
 
 import (
+	"errors"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
+func (c Config) Validate() error {
+	if c.DataDirectory == "" {
+		return errors.New("invalid data directory")
+	}
+
+	switch c.DataStoreConfig.Backend {
+	case "flatfs":
+	case "badgerdb":
+		if c.DataStoreConfig.Directory != c.DataDirectory {
+			return errors.New("badger ds directory must be the same as data directory")
+		}
+	default:
+		return errors.New("invalid data store backend")
+	}
+
+	return nil
+}
+
+// ReadConfig parses data and returns Config.
+// Error during parsing or an invalid configuration in the Config will return an error.
 func ReadConfig(data []byte) (*Config, error) {
 	config := Config{}
 
@@ -14,7 +35,7 @@ func ReadConfig(data []byte) (*Config, error) {
 		return nil, err
 	}
 
-	return &config, nil
+	return &config, config.Validate()
 }
 
 func (c Config) Export() ([]byte, error) {

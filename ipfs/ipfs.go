@@ -7,20 +7,13 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/host"
 
-	"github.com/dgraph-io/badger/v4"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
+	datastore "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
-
-	bds "github.com/ipfs/go-ds-badger2"
 )
 
-func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
-	ds, err := bds.NewDatastoreFromDB(db)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func MakeIPFS(ctx context.Context, ds datastore.Batching, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
 	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 	if err != nil {
 		return nil, nil, err
