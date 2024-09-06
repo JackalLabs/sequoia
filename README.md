@@ -65,13 +65,14 @@ data_store_config:
 
 ######################
 ```  
-
-| `data_directory` | file path | directory to store database (badger db) files |  
-##### `data_store_config`
+`data_directory`: file path | directory to store database (badger db) files  
+#### `data_store_config`
 sequoia uses ipfs go-datastore interface to store files  
 `flatfs` stores raw block contents on disk  
 `badgerds` a key value database that uses LSM tree to store and manage data  
 currently only supports `flatfs` and `badgerds` data store backends  
-| `directory` | file path | directory for data store files |
+`directory`: file path | directory for data store files  
+`backend`: `flatfs` or `badgerds` | data store backend to store files  
+
 > Using `badgerds` as backend requires data store directory to be same as `data_directory` as both uses badger db to store data.
-| `backend` | `flatfs` or `badgerds` | data store backend to store files |
+
