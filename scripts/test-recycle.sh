@@ -144,6 +144,8 @@ start_chain
 echo "CHAIN STARTED!!!"
 sleep 5
 
+init_sequoia 0
+
 start_sequoia 0
 echo "provider started!!!"
 sleep 35
