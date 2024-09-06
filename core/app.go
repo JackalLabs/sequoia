@@ -71,12 +71,12 @@ func NewApp(home string) (*App, error) {
 
 	var ds datastore.Batching
 	switch cfg.DataStoreConfig.Backend {
-	case "badgerds":
+	case config.OptBadgerDS:
 		ds, err = ipfs.NewBadgerDataStore(db)
 		if err != nil {
 			return nil, err
 		}
-	case "flatfs":
+	case config.OptFlatFS:
 		ds, err = ipfs.NewFlatfsDataStore(cfg.DataStoreConfig.Directory)
 		if err != nil {
 			return nil, err

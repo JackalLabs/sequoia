@@ -34,6 +34,9 @@ type APIConfig struct {
 	IPFSDomain string `yaml:"ipfs_domain"`
 }
 
+const OptBadgerDS = "badgerds"
+const OptFlatFS = "flatfs"
+
 type DataStoreConfig struct {
 	// *choosing badgerdb as data store will need to use the same directory
 	// for data directory
@@ -78,7 +81,7 @@ func DefaultConfig() *Config {
 		ProofThreads: 1000,
 		DataStoreConfig: DataStoreConfig{
 			Directory: "$HOME/.sequoia/datastore",
-			Backend:   "flatfs",
+			Backend:   OptFlatFS,
 		},
 	}
 }
