@@ -6,9 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/JackalLabs/jackal-provider/jprov/crypto"
-	"github.com/JackalLabs/jackal-provider/jprov/utils"
-	"github.com/cosmos/cosmos-sdk/client"
+	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
+
 	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 
 	"github.com/JackalLabs/sequoia/cmd/types"
@@ -90,32 +89,44 @@ func ShutdownCmd() *cobra.Command {
 				return nil
 			}
 
-			clientCtx, err := client.GetClientTxContext(cmd)
+			home, err := cmd.Flags().GetString(types.FlagHome)
 			if err != nil {
-				fmt.Println(err)
 				return err
 			}
 
-			address, err := crypto.GetAddress(clientCtx)
+			_, err = config.Init(home)
 			if err != nil {
-				fmt.Println(err)
 				return err
 			}
 
-			fmt.Printf("Terminating provider: %s\n", address)
+			wallet, err := config.InitWallet(home)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Terminating provider: %s\n", wallet.AccAddress())
 			msg := storageTypes.NewMsgShutdownProvider(
-				address,
+				wallet.AccAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				fmt.Println(err)
 				return err
 			}
-			res, err := utils.SendTx(clientCtx, cmd.Flags(), "", msg)
+
+			data := walletTypes.NewTransactionData(
+				msg,
+			).WithGasAuto().WithFeeAuto()
+
+			res, err := wallet.BroadcastTxCommit(data)
 			if err != nil {
-				fmt.Println(err)
 				return err
 			}
-			fmt.Println(res.RawLog)
+
+			if res.Code == 0 {
+				fmt.Println("Shutdown successful!")
+			} else {
+				fmt.Println("Something went wrong, please try again.")
+			}
 			return err
 		},
 	}
