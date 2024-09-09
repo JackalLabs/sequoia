@@ -58,7 +58,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			return
 		}
 
-		proofTypeString := req.Form.Get("start")
+		proofTypeString := req.Form.Get("type")
 		if len(proofTypeString) == 0 {
 			proofTypeString = "0"
 		}
