@@ -198,7 +198,7 @@ func (r *RecycleDepot) activateFile(openFile types.UnifiedFile) (size int, cid s
 		openFile.Owner,
 		openFile.Start,
 		"",
-		r.chunkSize)
+		r.chunkSize, 0)
 	if err != nil {
 		return 0, "", fmt.Errorf("could not write file | %w", err)
 	}

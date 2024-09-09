@@ -37,8 +37,9 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, myUrl str
 		signee := h.stray.Owner
 		merkle := h.stray.Merkle
 		start := h.stray.Start
+		proofType := h.stray.ProofType
 
-		err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize)
+		err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize, proofType)
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil

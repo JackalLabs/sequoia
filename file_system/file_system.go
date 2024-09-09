@@ -73,7 +73,7 @@ func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 	return r, exportedTree, chunks, size, nil
 }
 
-func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64) (size int, cid string, err error) {
+func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64, proofType int64) (size int, cid string, err error) {
 	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
 	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize)
 	if err != nil {
@@ -91,9 +91,20 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 	}
 	buf := bytes.NewBuffer(b)
 
-	n, err := f.ipfs.AddFile(context.Background(), buf, nil)
-	if err != nil {
-		return 0, "", err
+	var n ipldFormat.Node
+	if proofType == 1 {
+		folderNode := unixfs.EmptyDirNode()
+		folderNode.SetData(buf.Bytes())
+		err := f.ipfs.Add(context.Background(), folderNode)
+		if err != nil {
+			return 0, "", err
+		}
+		n = folderNode
+	} else {
+		n, err = f.ipfs.AddFile(context.Background(), buf, nil)
+		if err != nil {
+			return 0, "", err
+		}
 	}
 
 	err = f.db.Update(func(txn *badger.Txn) error {

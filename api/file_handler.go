@@ -58,6 +58,16 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			return
 		}
 
+		proofTypeString := req.Form.Get("start")
+		if len(proofTypeString) == 0 {
+			proofTypeString = "0"
+		}
+		proofType, err := strconv.ParseInt(proofTypeString, 10, 64)
+		if err != nil {
+			handleErr(fmt.Errorf("cannot parse proof type: %w", err), w, http.StatusBadRequest)
+			return
+		}
+
 		file, fh, err := req.FormFile("file") // Retrieve the file from form data
 		if err != nil {
 			handleErr(fmt.Errorf("cannot get file from form: %w", err), w, http.StatusBadRequest)
@@ -101,7 +111,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			}
 		}
 
-		size, c, err := fio.WriteFile(file, merkle, sender, startBlock, wl.AccAddress(), chunkSize)
+		size, c, err := fio.WriteFile(file, merkle, sender, startBlock, wl.AccAddress(), chunkSize, proofType)
 		if err != nil {
 			handleErr(fmt.Errorf("failed to write file to disk: %w", err), w, http.StatusInternalServerError)
 			return
