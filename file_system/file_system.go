@@ -116,31 +116,39 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 	return size, n.Cid().String(), nil
 }
 
-func (f *FileSystem) CreateIPFSFolder(childCIDs []cid.Cid) (cidRes string, err error) {
+func (f *FileSystem) CreateIPFSFolder(childCIDs map[string]cid.Cid) (node ipldFormat.Node, err error) {
+	n, err := f.GenIPFSFolderData(childCIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add the folder node to the DAG service
+	err = f.ipfs.Add(context.Background(), n)
+	if err != nil {
+		return nil, err
+	}
+
+	return n, nil
+}
+
+func (f *FileSystem) GenIPFSFolderData(childCIDs map[string]cid.Cid) (node ipldFormat.Node, err error) {
 	folderNode := unixfs.EmptyDirNode()
 
-	for i, childCID := range childCIDs {
+	for key, childCID := range childCIDs {
 		// Create a link
-		linkName := fmt.Sprintf("%d", i)
 		link := &ipldFormat.Link{
-			Name: linkName,
+			Name: key,
 			Cid:  childCID,
 		}
 
 		// Add the link to the folder node
-		err := folderNode.AddRawLink(linkName, link)
+		err := folderNode.AddRawLink(key, link)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
-	// Add the folder node to the DAG service
-	err = f.ipfs.Add(context.Background(), folderNode)
-	if err != nil {
-		return "", err
-	}
-
-	return folderNode.Cid().String(), nil
+	return folderNode, nil
 }
 
 func (f *FileSystem) DeleteFile(merkle []byte, owner string, start int64) error {

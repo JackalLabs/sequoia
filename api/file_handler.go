@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -138,19 +137,24 @@ func PostIPFSFolder(f *file_system.FileSystem) func(http.ResponseWriter, *http.R
 		}
 		defer req.Body.Close()
 
-		cidList := strings.Split(string(body), ",")
+		var cidList map[string]string
 
-		childCIDs := make([]cid.Cid, len(cidList))
+		err = json.Unmarshal(body, &cidList)
+		if err != nil {
+			if err != nil {
+				http.Error(w, "Error parsing request body", http.StatusInternalServerError)
+				return
+			}
+		}
 
-		fmt.Println(cidList)
-
-		for i, s := range cidList {
+		childCIDs := make(map[string]cid.Cid)
+		for key, s := range cidList {
 			c, err := cid.Parse(s)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("Could not parse %s", s), http.StatusInternalServerError)
 				return
 			}
-			childCIDs[i] = c
+			childCIDs[key] = c
 		}
 
 		root, err := f.CreateIPFSFolder(childCIDs)
@@ -160,7 +164,8 @@ func PostIPFSFolder(f *file_system.FileSystem) func(http.ResponseWriter, *http.R
 		}
 
 		f := types.CidFolderResponse{
-			Cid: root,
+			Cid:  root.Cid().String(),
+			Data: root.RawData(),
 		}
 
 		err = json.NewEncoder(w).Encode(f)
