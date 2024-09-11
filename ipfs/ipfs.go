@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/libp2p/go-libp2p"
-	tls "github.com/libp2p/go-libp2p-tls"
 	"github.com/libp2p/go-libp2p/core/host"
 	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"strings"
@@ -62,7 +61,6 @@ func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string)
 		libp2p.NATPortMap(),
 		libp2p.EnableRelay(),
 		libp2p.EnableAutoRelay(),
-		libp2p.Security(tls.ID, tls.New),
 	)
 
 	h, dht, err := ipfslite.SetupLibp2p(
