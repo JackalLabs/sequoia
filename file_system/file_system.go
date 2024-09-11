@@ -94,8 +94,12 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 	var n ipldFormat.Node
 	if proofType == 1 {
 		folderNode := unixfs.EmptyDirNode()
-		folderNode.SetData(buf.Bytes())
-		err := f.ipfs.Add(context.Background(), folderNode)
+		err := folderNode.UnmarshalJSON(buf.Bytes())
+		if err != nil {
+			return 0, "", err
+		}
+
+		err = f.ipfs.Add(context.Background(), folderNode)
 		if err != nil {
 			return 0, "", err
 		}
