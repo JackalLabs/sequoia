@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
+	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"strings"
 
 	"github.com/dgraph-io/badger/v4"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
+	bds "github.com/ipfs/go-ds-badger2"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
-
-	bds "github.com/ipfs/go-ds-badger2"
 )
 
 func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
@@ -59,8 +59,7 @@ func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string)
 		libp2p.Transport(quic.NewTransport),
 		libp2p.EnableNATService(),
 		libp2p.NATPortMap(),
-		libp2p.EnableRelay(),
-		libp2p.EnableAutoRelay(),
+		libp2p.Security(libp2ptls.ID, libp2ptls.New),
 	)
 
 	h, dht, err := ipfslite.SetupLibp2p(
