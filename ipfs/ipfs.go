@@ -6,7 +6,6 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
-	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"strings"
 
 	"github.com/dgraph-io/badger/v4"
@@ -56,7 +55,6 @@ func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string)
 	}
 
 	opts := libp2p.ChainOptions(
-		libp2p.Transport(quic.NewTransport),
 		libp2p.Security(libp2ptls.ID, libp2ptls.New),
 	)
 
