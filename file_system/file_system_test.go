@@ -220,7 +220,7 @@ func TestWriteAndProveFiles(t *testing.T) {
 	totalBlocks := size / int(chunkSize)
 	for i := 0; i < totalBlocks; i++ {
 
-		p, c, err := proofs.GenProof(f, root, owner, start, i, int(chunkSize))
+		p, c, err := proofs.GenProof(f, root, owner, start, i, int(chunkSize), 0)
 		require.NoError(t, err)
 
 		h := sha256.New()

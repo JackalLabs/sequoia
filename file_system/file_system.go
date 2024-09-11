@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/ipfs/boxo/ipld/merkledag"
+
 	"github.com/ipfs/boxo/ipld/unixfs"
 
 	"github.com/dgraph-io/badger/v4"
@@ -304,7 +306,7 @@ func (f *FileSystem) Dump() (map[string]string, error) {
 	return files, err
 }
 
-func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64, chunkToLoad int, chunkSize int) (*merkletree.MerkleTree, []byte, error) {
+func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64, chunkToLoad int, chunkSize int, proofType int64) (*merkletree.MerkleTree, []byte, error) {
 	tree := treeKey(merkle, owner, start)
 
 	var newTree merkletree.MerkleTree
@@ -353,9 +355,22 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 		return nil, nil, fmt.Errorf("failed to decode cid: %s | %w", fcid, err)
 	}
 
-	chunkOut, err := f.ipfs.GetFileChunk(context.Background(), c, chunkToLoad, chunkSize)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get chunk from unixfs %w", err)
+	var chunkOut []byte
+	if proofType == 1 {
+		n, err := f.ipfs.Get(context.Background(), c)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get node chunk for cid: %s | %w", fcid, err)
+		}
+		data, err := n.(*merkledag.ProtoNode).MarshalJSON()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to cast proto node: %s | %w", fcid, err)
+		}
+		chunkOut = data
+	} else {
+		chunkOut, err = f.ipfs.GetFileChunk(context.Background(), c, chunkToLoad, chunkSize)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get chunk from unixfs %w", err)
+		}
 	}
 
 	if chunkOut == nil {
