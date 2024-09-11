@@ -3,9 +3,11 @@ package ipfs
 import (
 	"context"
 	"fmt"
-	"strings"
-
+	"github.com/libp2p/go-libp2p"
+	tls "github.com/libp2p/go-libp2p-tls"
 	"github.com/libp2p/go-libp2p/core/host"
+	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
+	"strings"
 
 	"github.com/dgraph-io/badger/v4"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
@@ -26,16 +28,22 @@ func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string)
 		return nil, nil, err
 	}
 
+	defaultPort, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/4001")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to make ipv4 ipfs address | %w", err)
+	}
+
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to make ipv4 ipfs address | %w", err)
 	}
+
 	listen6, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip6/::/tcp/%d", port))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to make ipv6 ipfs address | %w", err)
 	}
 
-	m := []multiaddr.Multiaddr{listen, listen6}
+	m := []multiaddr.Multiaddr{listen, listen6, defaultPort}
 
 	if !strings.Contains(customDomain, "example.com") && len(customDomain) > 2 {
 		if !strings.HasPrefix(customDomain, "/") {
@@ -48,13 +56,22 @@ func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string)
 		m = append(m, domainListener)
 	}
 
+	opts := libp2p.ChainOptions(
+		libp2p.Transport(quic.NewTransport),
+		libp2p.EnableNATService(),
+		libp2p.NATPortMap(),
+		libp2p.EnableRelay(),
+		libp2p.EnableAutoRelay(),
+		libp2p.Security(tls.ID, tls.New),
+	)
+
 	h, dht, err := ipfslite.SetupLibp2p(
 		ctx,
 		priv,
 		nil,
 		m,
 		ds,
-		ipfslite.Libp2pOptionsExtra...,
+		append(ipfslite.Libp2pOptionsExtra, opts)...,
 	)
 	if err != nil {
 		return nil, h, err
