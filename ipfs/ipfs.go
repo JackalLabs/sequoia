@@ -57,7 +57,6 @@ func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string)
 
 	opts := libp2p.ChainOptions(
 		libp2p.Transport(quic.NewTransport),
-		libp2p.EnableNATService(),
 		libp2p.NATPortMap(),
 		libp2p.Security(libp2ptls.ID, libp2ptls.New),
 	)
