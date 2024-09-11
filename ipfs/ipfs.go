@@ -8,12 +8,13 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
+	"github.com/ipfs/boxo/blockstore"
 	datastore "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
 )
 
-func MakeIPFS(ctx context.Context, ds datastore.Batching, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
+func MakeIPFS(ctx context.Context, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
 	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 	if err != nil {
 		return nil, nil, err
@@ -53,7 +54,7 @@ func MakeIPFS(ctx context.Context, ds datastore.Batching, port int, customDomain
 		return nil, h, err
 	}
 
-	lite, err := ipfslite.New(ctx, ds, nil, h, dht, nil)
+	lite, err := ipfslite.New(ctx, ds, bs, h, dht, nil)
 	if err != nil {
 		return nil, h, err
 	}

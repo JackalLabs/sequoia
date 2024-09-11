@@ -12,10 +12,10 @@ func (c Config) Validate() error {
 		return errors.New("invalid data directory")
 	}
 
-	switch c.DataStoreConfig.Backend {
+	switch c.BlockStoreConfig.Backend {
 	case OptFlatFS:
 	case OptBadgerDS:
-		if c.DataStoreConfig.Directory != c.DataDirectory {
+		if c.BlockStoreConfig.Directory != c.DataDirectory {
 			return errors.New("badger ds directory must be the same as data directory")
 		}
 	default:
@@ -28,7 +28,7 @@ func (c Config) Validate() error {
 // ReadConfig parses data and returns Config.
 // Error during parsing or an invalid configuration in the Config will return an error.
 func ReadConfig(data []byte) (*Config, error) {
-	//not using a default config to detect badger ds users
+	// not using a default config to detect badger ds users
 	config := Config{}
 
 	err := yaml.Unmarshal(data, &config)
@@ -36,9 +36,9 @@ func ReadConfig(data []byte) (*Config, error) {
 		return nil, err
 	}
 
-	if config.DataStoreConfig.Backend == "" && config.DataStoreConfig.Directory == "" {
-		config.DataStoreConfig.Backend = OptBadgerDS
-		config.DataStoreConfig.Directory = config.DataDirectory
+	if config.BlockStoreConfig.Backend == "" && config.BlockStoreConfig.Directory == "" {
+		config.BlockStoreConfig.Backend = OptBadgerDS
+		config.BlockStoreConfig.Directory = config.DataDirectory
 	}
 
 	return &config, config.Validate()
