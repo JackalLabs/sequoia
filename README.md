@@ -59,20 +59,18 @@ api_config:
     ipfs_port: 4005
     ipfs_domain: dns4/ipfs.example.com/tcp/4001
 proof_threads: 1000
-data_store_config:
+block_store_config:
     directory: $HOME/.sequoia/datastore
-    backend: flatfs
+    type: flatfs
 
 ######################
 ```  
-`data_directory`: file path | directory to store database (badger db) files  
-#### `data_store_config`
-sequoia uses ipfs go-datastore interface to store files  
-`flatfs` stores raw block contents on disk  
-`badgerds` a key value database that uses LSM tree to store and manage data  
-currently only supports `flatfs` and `badgerds` data store backends  
-`directory`: file path | directory for data store files  
-`backend`: `flatfs` or `badgerds` | data store backend to store files  
-
-> Using `badgerds` as backend requires data store directory to be same as `data_directory` as both uses badger db to store data.
+`data_directory`: directory for database files
+#### `block_store_config`
+`directory`: directory for block store files  
+`type`: `flatfs` or `badgerds`  
+There are two types of block store available to sequoia:  
+`badgerds` is a key value database that uses LSM tree to store and manage data. The storage limit is < 11TB.  
+`flatfs` stores raw block contents on disk. Relies on underlying file system for stability and performance.  
+> Using `badgerds` requires the block store directory to be same as `data_directory` because badgerdb is used for database as well.
 
