@@ -19,7 +19,7 @@ type Config struct {
 	DataDirectory    string             `yaml:"data_directory"`
 	APICfg           APIConfig          `yaml:"api_config"`
 	ProofThreads     int64              `yaml:"proof_threads"`
-	BlockStoreConfig BlockStoreConfig   `yaml:"data_store_config"`
+	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config"`
 }
 
 type StrayManagerConfig struct {
@@ -44,7 +44,7 @@ type BlockStoreConfig struct {
 	// for data directory
 	Directory string `yaml:"directory"`
 	// data store options: flatfs, badgerdb
-	Backend string `yaml:"backend"`
+	Type string `yaml:"type"`
 }
 
 // LegacyWallet handles keys from earlier versions of storage providers.
@@ -83,7 +83,7 @@ func DefaultConfig() *Config {
 		ProofThreads: 1000,
 		BlockStoreConfig: BlockStoreConfig{
 			Directory: "$HOME/.sequoia/blockstore",
-			Backend:   OptFlatFS,
+			Type:      OptFlatFS,
 		},
 	}
 }
@@ -105,5 +105,5 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 		Int("APIIPFSPort", c.APICfg.IPFSPort).
 		Str("APIIPFSDomain", c.APICfg.IPFSDomain).
 		Int64("ProofThreads", c.ProofThreads).
-		Str("BlockstoreBackend", c.BlockStoreConfig.Backend)
+		Str("BlockstoreBackend", c.BlockStoreConfig.Type)
 }

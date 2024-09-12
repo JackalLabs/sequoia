@@ -51,7 +51,7 @@ func BenchmarkFileWrites(b *testing.B) {
 	err = db.DropAll()
 	require.NoError(b, err)
 
-	f, err := NewFileSystem(context.Background(), db, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	f, err := NewFileSystem(context.Background(), db, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(b, err)
 	defer db.Close()
 	server := &http.Server{

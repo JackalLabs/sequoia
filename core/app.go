@@ -25,7 +25,7 @@ import (
 	"github.com/JackalLabs/sequoia/strays"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v4"
+	badger "github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/rs/zerolog/log"
@@ -76,7 +76,7 @@ func NewApp(home string) (*App, error) {
 
 	var bs blockstore.Blockstore
 	bs = nil
-	switch cfg.BlockStoreConfig.Backend {
+	switch cfg.BlockStoreConfig.Type {
 	case config.OptBadgerDS:
 	case config.OptFlatFS:
 		bs, err = ipfs.NewFlatfsBlockStore(cfg.BlockStoreConfig.Directory)

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 )
 
 func (c Config) Validate() error {
@@ -12,7 +12,7 @@ func (c Config) Validate() error {
 		return errors.New("invalid data directory")
 	}
 
-	switch c.BlockStoreConfig.Backend {
+	switch c.BlockStoreConfig.Type {
 	case OptFlatFS:
 	case OptBadgerDS:
 		if c.BlockStoreConfig.Directory != c.DataDirectory {
@@ -36,8 +36,8 @@ func ReadConfig(data []byte) (*Config, error) {
 		return nil, err
 	}
 
-	if config.BlockStoreConfig.Backend == "" && config.BlockStoreConfig.Directory == "" {
-		config.BlockStoreConfig.Backend = OptBadgerDS
+	if config.BlockStoreConfig.Type == "" && config.BlockStoreConfig.Directory == "" {
+		config.BlockStoreConfig.Type = OptBadgerDS
 		config.BlockStoreConfig.Directory = config.DataDirectory
 	}
 

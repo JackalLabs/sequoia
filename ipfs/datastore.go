@@ -1,7 +1,7 @@
 package ipfs
 
 import (
-	"github.com/dgraph-io/badger/v4"
+	badger "github.com/dgraph-io/badger/v4"
 	"github.com/ipfs/boxo/blockstore"
 	ds "github.com/ipfs/go-datastore"
 	bds "github.com/ipfs/go-ds-badger2"
