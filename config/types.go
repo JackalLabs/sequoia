@@ -10,15 +10,16 @@ type Seed struct {
 	DerivationPath string `json:"derivation_path"`
 }
 type Config struct {
-	QueueInterval   int64              `yaml:"queue_interval"`
-	ProofInterval   int64              `yaml:"proof_interval"`
-	StrayManagerCfg StrayManagerConfig `yaml:"stray_manager"`
-	ChainCfg        types.ChainConfig  `yaml:"chain_config"`
-	Ip              string             `yaml:"domain"`
-	TotalSpace      int64              `yaml:"total_bytes_offered"`
-	DataDirectory   string             `yaml:"data_directory"`
-	APICfg          APIConfig          `yaml:"api_config"`
-	ProofThreads    int64              `yaml:"proof_threads"`
+	QueueInterval    int64              `yaml:"queue_interval"`
+	ProofInterval    int64              `yaml:"proof_interval"`
+	StrayManagerCfg  StrayManagerConfig `yaml:"stray_manager"`
+	ChainCfg         types.ChainConfig  `yaml:"chain_config"`
+	Ip               string             `yaml:"domain"`
+	TotalSpace       int64              `yaml:"total_bytes_offered"`
+	DataDirectory    string             `yaml:"data_directory"`
+	APICfg           APIConfig          `yaml:"api_config"`
+	ProofThreads     int64              `yaml:"proof_threads"`
+	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config"`
 }
 
 type StrayManagerConfig struct {
@@ -31,6 +32,19 @@ type APIConfig struct {
 	Port       int64  `yaml:"port"`
 	IPFSPort   int    `yaml:"ipfs_port"`
 	IPFSDomain string `yaml:"ipfs_domain"`
+}
+
+const (
+	OptBadgerDS = "badgerds"
+	OptFlatFS   = "flatfs"
+)
+
+type BlockStoreConfig struct {
+	// *choosing badgerdb as block store will need to use the same directory
+	// for data directory
+	Directory string `yaml:"directory"`
+	// data store options: flatfs, badgerdb
+	Type string `yaml:"type"`
 }
 
 // LegacyWallet handles keys from earlier versions of storage providers.
@@ -67,6 +81,10 @@ func DefaultConfig() *Config {
 			IPFSDomain: "dns4/ipfs.example.com/tcp/4001",
 		},
 		ProofThreads: 1000,
+		BlockStoreConfig: BlockStoreConfig{
+			Directory: "$HOME/.sequoia/blockstore",
+			Type:      OptFlatFS,
+		},
 	}
 }
 
@@ -86,5 +104,6 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 		Int64("APIPort", c.APICfg.Port).
 		Int("APIIPFSPort", c.APICfg.IPFSPort).
 		Str("APIIPFSDomain", c.APICfg.IPFSDomain).
-		Int64("ProofThreads", c.ProofThreads)
+		Int64("ProofThreads", c.ProofThreads).
+		Str("BlockstoreBackend", c.BlockStoreConfig.Type)
 }

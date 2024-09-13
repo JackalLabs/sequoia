@@ -6,7 +6,7 @@ import (
 	"path"
 
 	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
-	"github.com/cosmos/go-bip39"
+	bip39 "github.com/cosmos/go-bip39"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
 	jsoniter "github.com/json-iterator/go"

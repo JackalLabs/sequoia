@@ -3,6 +3,8 @@ package file_system
 import (
 	"context"
 
+	"github.com/ipfs/boxo/blockstore"
+	"github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p/core/host"
 
 	ipfs2 "github.com/JackalLabs/sequoia/ipfs"
@@ -17,8 +19,8 @@ type FileSystem struct {
 	ipfsHost host.Host
 }
 
-func NewFileSystem(ctx context.Context, db *badger.DB, ipfsPort int, ipfsDomain string) (*FileSystem, error) {
-	ipfs, host, err := ipfs2.MakeIPFS(ctx, db, ipfsPort, ipfsDomain)
+func NewFileSystem(ctx context.Context, db *badger.DB, ds datastore.Batching, bs blockstore.Blockstore, ipfsPort int, ipfsDomain string) (*FileSystem, error) {
+	ipfs, host, err := ipfs2.MakeIPFS(ctx, ds, bs, ipfsPort, ipfsDomain)
 	if err != nil {
 		return nil, err
 	}

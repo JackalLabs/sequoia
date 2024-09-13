@@ -1,12 +1,34 @@
 package config
 
 import (
+	"errors"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 )
 
+func (c Config) Validate() error {
+	if c.DataDirectory == "" {
+		return errors.New("invalid data directory")
+	}
+
+	switch c.BlockStoreConfig.Type {
+	case OptFlatFS:
+	case OptBadgerDS:
+		if c.BlockStoreConfig.Directory != c.DataDirectory {
+			return errors.New("badger ds directory must be the same as data directory")
+		}
+	default:
+		return errors.New("invalid data store backend")
+	}
+
+	return nil
+}
+
+// ReadConfig parses data and returns Config.
+// Error during parsing or an invalid configuration in the Config will return an error.
 func ReadConfig(data []byte) (*Config, error) {
+	// not using a default config to detect badger ds users
 	config := Config{}
 
 	err := yaml.Unmarshal(data, &config)
@@ -14,7 +36,12 @@ func ReadConfig(data []byte) (*Config, error) {
 		return nil, err
 	}
 
-	return &config, nil
+	if config.BlockStoreConfig.Type == "" && config.BlockStoreConfig.Directory == "" {
+		config.BlockStoreConfig.Type = OptBadgerDS
+		config.BlockStoreConfig.Directory = config.DataDirectory
+	}
+
+	return &config, config.Validate()
 }
 
 func (c Config) Export() ([]byte, error) {
