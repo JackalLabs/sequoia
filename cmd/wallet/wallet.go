@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"context"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -18,7 +19,7 @@ func WalletCmd() *cobra.Command {
 		Short: "Wallet subcommands",
 	}
 
-	c.AddCommand(addressCmd(), withdrawCMD())
+	c.AddCommand(addressCmd(), withdrawCMD(), balanceCMD())
 
 	return c
 }
@@ -44,6 +45,45 @@ func addressCmd() *cobra.Command {
 			}
 
 			fmt.Printf("Provider Address: %s\n", wallet.AccAddress())
+			return nil
+		},
+	}
+}
+
+func balanceCMD() *cobra.Command {
+	return &cobra.Command{
+		Use:   "balance",
+		Short: "Displays the balance of the provider.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			home, err := cmd.Flags().GetString(types.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			_, err = config.Init(home)
+			if err != nil {
+				return err
+			}
+
+			wallet, err := config.InitWallet(home)
+			if err != nil {
+				return err
+			}
+
+			queryClient := bankTypes.NewQueryClient(wallet.Client.GRPCConn)
+
+			params := &bankTypes.QueryBalanceRequest{
+				Denom:   "ujkl",
+				Address: wallet.AccAddress(),
+			}
+
+			res, err := queryClient.Balance(context.Background(), params)
+			if err != nil {
+				fmt.Println(err)
+				return nil
+			}
+
+			fmt.Printf("Balance: %s\n", res.Balance)
 			return nil
 		},
 	}

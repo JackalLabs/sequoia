@@ -74,6 +74,8 @@ from_scratch () {
     canined add-genesis-account jkl18encuf0esmxv3pxqjqvn0u4tgd6yzuc8urzlp0 1100000000000ujkl
     canined add-genesis-account jkl1sqt9v0zwwx362szrek7pr3lpq29aygw06hgyza 1100000000000ujkl
     canined add-genesis-account jkl1yu099xns2qpslvyrymxq3hwrqhevs7qxksvu8p 1100000000000ujkl
+    canined add-genesis-account jkl1su8xhm089rg2qs7hx4ngzt42mg45ma89g00e30 1100000000000ujkl
+
 
     # Allocate genesis accounts
     canined add-genesis-account $KEY 1000000000000ujkl --keyring-backend $KEYRING
