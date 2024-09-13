@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
 
 	"github.com/JackalLabs/sequoia/proofs"
 

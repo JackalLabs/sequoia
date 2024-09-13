@@ -30,3 +30,47 @@ Once the wallet is funded, running `sequoia start` again will start the provider
 ### Earning Rewards
 
 In order for your provider to run correctly, you will need to set up a domain for your provider pointed at the port your provider is running on and set that up in the `config.yaml`. You will also need to make sure you have port `4005` (or whatever you specified in the config) open on TCP and UDP for IPFS support, or you could be penalized by the reporting system.
+
+### Configuration
+
+Default config looks like this:  
+```yaml
+######################
+### Sequoia Config ###
+######################
+
+queue_interval: 10
+proof_interval: 120
+stray_manager:
+    check_interval: 30
+    refresh_interval: 120
+    hands: 2
+chain_config:
+    bech32_prefix: jkl
+    rpc_addr: http://localhost:26657
+    grpc_addr: localhost:9090
+    gas_price: 0.02ujkl
+    gas_adjustment: 1.5
+domain: https://example.com
+total_bytes_offered: 1092616192
+data_directory: $HOME/.sequoia/data
+api_config:
+    port: 3333
+    ipfs_port: 4005
+    ipfs_domain: dns4/ipfs.example.com/tcp/4001
+proof_threads: 1000
+block_store_config:
+    directory: $HOME/.sequoia/datastore
+    type: flatfs
+
+######################
+```  
+`data_directory`: directory for database files
+#### `block_store_config`
+`directory`: directory for block store files  
+`type`: `flatfs` or `badgerds`  
+There are two types of block store available to sequoia:  
+`badgerds` is a key value database that uses LSM tree to store and manage data. The storage limit is < 11TB.  
+`flatfs` stores raw block contents on disk. Relies on underlying file system for stability and performance.  
+> Using `badgerds` requires the block store directory to be same as `data_directory` because badgerdb is used for database as well.
+
