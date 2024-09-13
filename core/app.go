@@ -74,12 +74,13 @@ func NewApp(home string) (*App, error) {
 		return nil, err
 	}
 
+	bsDir := os.ExpandEnv(cfg.BlockStoreConfig.Directory)
 	var bs blockstore.Blockstore
 	bs = nil
 	switch cfg.BlockStoreConfig.Type {
 	case config.OptBadgerDS:
 	case config.OptFlatFS:
-		bs, err = ipfs.NewFlatfsBlockStore(cfg.BlockStoreConfig.Directory)
+		bs, err = ipfs.NewFlatfsBlockStore(bsDir)
 		if err != nil {
 			return nil, err
 		}

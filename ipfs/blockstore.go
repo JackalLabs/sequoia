@@ -14,7 +14,7 @@ func NewFlatfsBlockStore(path string) (blockstore.Blockstore, error) {
 		return nil, err
 	}
 
-	return blockstore.NewBlockstore(ds, blockstore.Option{}), nil
+	return blockstore.NewBlockstore(ds, blockstore.NoPrefix()), nil
 }
 
 func NewBadgerDataStore(db *badger.DB) (ds.Batching, error) {
