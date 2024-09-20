@@ -3,17 +3,17 @@ package ipfs
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
-	"strings"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
-	bds "github.com/ipfs/go-ds-badger2"
+	"github.com/ipfs/boxo/blockstore"
+	"github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
-	"github.com/ipfs/boxo/blockstore"
-	datastore "github.com/ipfs/go-datastore"
 )
 
 func MakeIPFS(ctx context.Context, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
