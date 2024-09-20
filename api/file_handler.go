@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -9,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
 
 	"github.com/JackalLabs/sequoia/proofs"
 
@@ -209,8 +210,7 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			_ = json.NewEncoder(w).Encode(v)
 
 		}
-
-		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(file)))
-		_, _ = w.Write(file)
+		rs := bytes.NewReader(file)
+		http.ServeContent(w, req, merkleString, time.Time{}, rs)
 	}
 }

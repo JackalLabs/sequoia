@@ -8,19 +8,15 @@ import (
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"strings"
 
-	"github.com/dgraph-io/badger/v4"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	bds "github.com/ipfs/go-ds-badger2"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/ipfs/boxo/blockstore"
+	datastore "github.com/ipfs/go-datastore"
 )
 
-func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
-	ds, err := bds.NewDatastoreFromDB(db)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func MakeIPFS(ctx context.Context, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
 	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 	if err != nil {
 		return nil, nil, err
@@ -70,7 +66,7 @@ func MakeIPFS(ctx context.Context, db *badger.DB, port int, customDomain string)
 		return nil, h, err
 	}
 
-	lite, err := ipfslite.New(ctx, ds, nil, h, dht, nil)
+	lite, err := ipfslite.New(ctx, ds, bs, h, dht, nil)
 	if err != nil {
 		return nil, h, err
 	}

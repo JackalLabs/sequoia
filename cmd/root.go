@@ -1,8 +1,14 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
+
+	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
+
+	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 
 	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/cmd/wallet"
@@ -46,6 +52,88 @@ func InitCmd() *cobra.Command {
 	return r
 }
 
+func askForConfirmation(s string) bool {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Printf("%s [y/n]: ", s)
+
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("failed to read string")
+			return false
+		}
+
+		response = strings.ToLower(strings.TrimSpace(response))
+
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+	}
+}
+
+func ShutdownCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "terminate",
+		Short: "Permanently remove provider from network and get deposit back",
+		Long:  "Permanently remove provider from network and get deposit back.",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			if !askForConfirmation("Terminate Provider Permanently?") {
+				return nil
+			}
+
+			if !askForConfirmation("You're absolutely sure?") {
+				return nil
+			}
+
+			home, err := cmd.Flags().GetString(types.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			_, err = config.Init(home)
+			if err != nil {
+				return err
+			}
+
+			wallet, err := config.InitWallet(home)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Terminating provider: %s\n", wallet.AccAddress())
+			msg := storageTypes.NewMsgShutdownProvider(
+				wallet.AccAddress(),
+			)
+			if err := msg.ValidateBasic(); err != nil {
+				fmt.Println(err)
+				return err
+			}
+
+			data := walletTypes.NewTransactionData(
+				msg,
+			).WithGasAuto().WithFeeAuto()
+
+			res, err := wallet.BroadcastTxCommit(data)
+			if err != nil {
+				return err
+			}
+
+			if res.Code == 0 {
+				fmt.Println("Shutdown successful!")
+			} else {
+				fmt.Println("Something went wrong, please try again.")
+			}
+			return err
+		},
+	}
+
+	return cmd
+}
+
 func VersionCmd() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "version",
@@ -69,7 +157,7 @@ func RootCmd() *cobra.Command {
 	r.PersistentFlags().String(types.FlagHome, types.DefaultHome, "sets the home directory for sequoia")
 	r.PersistentFlags().String(types.FlagLogLevel, types.DefaultLogLevel, "log level. info|error|debug")
 
-	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), SalvageCmd())
+	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), SalvageCmd(), ShutdownCmd())
 
 	return r
 }

@@ -1,7 +1,11 @@
 package file_system
 
 //nolint:all
-import "io/ioutil"
+import (
+	"io/ioutil"
+
+	"github.com/JackalLabs/sequoia/ipfs"
+)
 
 import (
 	"bytes"
@@ -51,7 +55,10 @@ func BenchmarkFileWrites(b *testing.B) {
 	err = db.DropAll()
 	require.NoError(b, err)
 
-	f, err := NewFileSystem(context.Background(), db, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	ds, err := ipfs.NewBadgerDataStore(db)
+	require.NoError(b, err)
+
+	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(b, err)
 	defer db.Close()
 	server := &http.Server{
@@ -91,7 +98,11 @@ func TestWriteFile(t *testing.T) {
 
 	err = db.DropAll()
 	require.NoError(t, err)
-	f, err := NewFileSystem(context.Background(), db, 4005, "/dns4/ipfs.example.com/tcp/4001")
+
+	ds, err := ipfs.NewBadgerDataStore(db)
+	require.NoError(t, err)
+
+	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -137,7 +148,11 @@ func TestWriteFileWithDomain(t *testing.T) {
 
 	err = db.DropAll()
 	require.NoError(t, err)
-	f, err := NewFileSystem(context.Background(), db, 4005, "dns4/jackal-testnet-v4-storage.p2p.brocha.in/tcp/30506")
+
+	ds, err := ipfs.NewBadgerDataStore(db)
+	require.NoError(t, err)
+
+	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "dns4/jackal-testnet-v4-storage.p2p.brocha.in/tcp/30506")
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -186,7 +201,11 @@ func TestWriteAndProveFiles(t *testing.T) {
 
 	err = db.DropAll()
 	require.NoError(t, err)
-	f, err := NewFileSystem(context.Background(), db, 4005, "/dns4/ipfs.example.com/tcp/4001")
+
+	ds, err := ipfs.NewBadgerDataStore(db)
+	require.NoError(t, err)
+
+	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(t, err)
 	size := 1024 * 255 // 255 kbs
 	var chunkSize int64 = 1024

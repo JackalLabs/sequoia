@@ -15,7 +15,7 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/rs/zerolog/log"
-	"github.com/wealdtech/go-merkletree/v2"
+	merkletree "github.com/wealdtech/go-merkletree/v2"
 	"github.com/wealdtech/go-merkletree/v2/sha3"
 )
 import jsoniter "github.com/json-iterator/go"

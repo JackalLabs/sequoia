@@ -3,7 +3,7 @@ package proofs
 import (
 	"time"
 
-	"github.com/wealdtech/go-merkletree/v2"
+	merkletree "github.com/wealdtech/go-merkletree/v2"
 
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"

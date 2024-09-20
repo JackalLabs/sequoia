@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/JackalLabs/sequoia/file_system"
+	"github.com/JackalLabs/sequoia/ipfs"
+	"github.com/ipfs/boxo/blockstore"
 
 	"github.com/JackalLabs/sequoia/monitoring"
 
@@ -23,7 +25,7 @@ import (
 	"github.com/JackalLabs/sequoia/strays"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/dgraph-io/badger/v4"
+	badger "github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/rs/zerolog/log"
@@ -67,9 +69,26 @@ func NewApp(home string) (*App, error) {
 		return nil, err
 	}
 
+	ds, err := ipfs.NewBadgerDataStore(db)
+	if err != nil {
+		return nil, err
+	}
+
+	bsDir := os.ExpandEnv(cfg.BlockStoreConfig.Directory)
+	var bs blockstore.Blockstore
+	bs = nil
+	switch cfg.BlockStoreConfig.Type {
+	case config.OptBadgerDS:
+	case config.OptFlatFS:
+		bs, err = ipfs.NewFlatfsBlockStore(bsDir)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	apiServer := api.NewAPI(cfg.APICfg.Port)
 
-	f, err := file_system.NewFileSystem(ctx, db, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
+	f, err := file_system.NewFileSystem(ctx, db, ds, bs, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
 	if err != nil {
 		return nil, err
 	}
