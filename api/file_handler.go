@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -194,8 +195,7 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			_ = json.NewEncoder(w).Encode(v)
 
 		}
-
-		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(file)))
-		_, _ = w.Write(file)
+		rs := bytes.NewReader(file)
+		http.ServeContent(w, req, merkleString, time.Time{}, rs)
 	}
 }
