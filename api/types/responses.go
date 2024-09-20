@@ -65,7 +65,8 @@ type CidResponse struct {
 }
 
 type CidFolderResponse struct {
-	Cid string `json:"cid"`
+	Cid  string `json:"cid"`
+	Data []byte `json:"data"`
 }
 
 type CidMapResponse struct {

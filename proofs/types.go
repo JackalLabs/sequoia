@@ -24,7 +24,7 @@ type Prover struct {
 type FileSystem interface {
 	DeleteFile([]byte, string, int64) error
 	ProcessFiles(func([]byte, string, int64)) error
-	GetFileTreeByChunk([]byte, string, int64, int, int) (*merkletree.MerkleTree, []byte, error)
+	GetFileTreeByChunk([]byte, string, int64, int, int, int64) (*merkletree.MerkleTree, []byte, error)
 }
 
 func (p *Prover) Inc() {
