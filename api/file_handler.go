@@ -196,6 +196,6 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 
 		}
 		rs := bytes.NewReader(file)
-		http.ServeContent(w, req, merkleString, time.Now(), rs)
+		http.ServeContent(w, req, merkleString, time.Time{}, rs)
 	}
 }
