@@ -4,6 +4,9 @@ import (
 	"errors"
 	"os"
 	"path"
+
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
 const ConfigFileName = "config.yaml"
@@ -62,7 +65,6 @@ func ReadConfigFile(directory string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return config, nil
 }
 
@@ -79,5 +81,16 @@ func Init(home string) (*Config, error) {
 		return nil, err
 	}
 
-	return ReadConfigFile(directory)
+	config, err := ReadConfigFile(directory)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := viper.Unmarshal(&config); err != nil {
+		return nil, err
+	}
+
+	log.Debug().Object("config", config)
+
+	return config, nil
 }

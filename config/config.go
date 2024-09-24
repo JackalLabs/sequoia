@@ -31,8 +31,7 @@ func ReadConfig(data []byte) (*Config, error) {
 	// not using a default config to detect badger ds users
 	config := Config{}
 
-	err := yaml.Unmarshal(data, &config)
-	if err != nil {
+	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}
 
