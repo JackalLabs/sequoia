@@ -9,7 +9,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-const ConfigFileName = "config.yaml"
+const (
+	ConfigName     = "config"
+	ConfigType     = "yaml"
+	ConfigFileName = ConfigName + "." + ConfigType
+)
 
 func createIfNotExists(directory string, fileName string, contents []byte) (bool, error) {
 	filePath := path.Join(directory, fileName)
@@ -76,7 +80,8 @@ func Init(home string) (*Config, error) {
 		return nil, err
 	}
 
-	viper.SetConfigName(ConfigFileName)
+	viper.SetConfigName(ConfigName)
+	viper.SetConfigType(ConfigType)
 	viper.AddConfigPath(directory)
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -85,13 +90,17 @@ func Init(home string) (*Config, error) {
 			if err != nil {
 				return nil, err
 			}
+		} else {
+			return nil, err
 		}
 	}
-
-	config, err := ReadConfigFile(directory)
-	if err != nil {
-		return nil, err
-	}
+	/*
+		config, err := ReadConfigFile(directory)
+		if err != nil {
+			return nil, err
+		}
+	*/
+	var config Config
 
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, err
@@ -99,5 +108,5 @@ func Init(home string) (*Config, error) {
 
 	log.Debug().Object("config", config)
 
-	return config, nil
+	return &config, nil
 }
