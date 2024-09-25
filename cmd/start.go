@@ -9,7 +9,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const defaultMaxRestartAttempt = 60
@@ -61,19 +60,6 @@ func StartCmd() *cobra.Command {
 			return nil
 		},
 	}
-
-	cmd.Flags().Int("restart-attempt", defaultMaxRestartAttempt, "attempt to restart <restart-attempt> times when the provider fails to start")
-	cmd.Flags().String("domain", "http://example.com", "provider comain")
-	cmd.Flags().Int64("api_config.port", 3333, "port to serve api requests")
-	cmd.Flags().Int("api_config.ipfs_port", 4005, "port for IPFS")
-	cmd.Flags().String("api_config.ipfs_domain", "dns4/ipfs.example.com/tcp/4001", "IPFS domain")
-	cmd.Flags().Int64("proof_threads", 1000, "maximum threads for proofs")
-	cmd.Flags().String("data_directory", "$HOME/.sequoia/data", "directory to store database files")
-	cmd.Flags().Int64("queue_interval", 10, "seconds to wait until next cycle to flush the transaction queue")
-	cmd.Flags().Int64("proof_interval", 120, "seconds to wait until next cycle to post proofs")
-	cmd.Flags().Int64("total_bytes_offered", 1092616192, "maximum storage space to provide in bytes")
-
-	viper.BindPFlags(cmd.Flags())
 
 	return cmd
 }
