@@ -76,9 +76,16 @@ func Init(home string) (*Config, error) {
 		return nil, err
 	}
 
-	err = createFiles(directory)
-	if err != nil {
-		return nil, err
+	viper.SetConfigName(ConfigFileName)
+	viper.AddConfigPath(directory)
+
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			err := createFiles(directory)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	config, err := ReadConfigFile(directory)
