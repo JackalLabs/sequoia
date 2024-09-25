@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/JackalLabs/sequoia/api/types"
+
 	"github.com/rs/cors"
 
 	"github.com/JackalLabs/sequoia/file_system"
@@ -45,27 +47,33 @@ func (a *API) Close() error {
 func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) error {
 	defer log.Info().Msg("API module stopped")
 	r := mux.NewRouter()
-	r.HandleFunc("/", IndexHandler(wallet.AccAddress()))
-	r.HandleFunc("/upload", PostFileHandler(f, p, wallet, chunkSize))
-	r.HandleFunc("/download/{merkle}", DownloadFileHandler(f))
 
-	r.HandleFunc("/list", ListFilesHandler(f))
-	r.HandleFunc("/api/client/list", ListFilesHandler(f))
-	r.HandleFunc("/api/data/fids", LegacyListFilesHandler(f))
-	r.HandleFunc("/api/client/space", SpaceHandler(wallet.Client, wallet.AccAddress()))
+	outline := types.NewOutline()
 
-	r.HandleFunc("/ipfs/peers", IPFSListPeers(f))
-	r.HandleFunc("/ipfs/hosts", IPFSListHosts(f))
-	r.HandleFunc("/ipfs/cids", IPFSListCids(f))
-	r.HandleFunc("/ipfs/cid_map", IPFSMapCids(f))
-	r.HandleFunc("/ipfs/make_folder", PostIPFSFolder(f))
+	outline.RegisterGetRoute(r, "/", IndexHandler(wallet.AccAddress()))
 
-	r.HandleFunc("/dump", DumpDBHandler(f))
+	outline.RegisterPostRoute(r, "/upload", PostFileHandler(f, p, wallet, chunkSize))
+	outline.RegisterGetRoute(r, "/download/{merkle}", DownloadFileHandler(f))
 
-	r.HandleFunc("/version", VersionHandler(wallet))
-	r.HandleFunc("/network", NetworkHandler(wallet))
+	outline.RegisterGetRoute(r, "/list", ListFilesHandler(f))
+	outline.RegisterGetRoute(r, "/api/client/list", ListFilesHandler(f))
+	outline.RegisterGetRoute(r, "/api/data/fids", LegacyListFilesHandler(f))
+	outline.RegisterGetRoute(r, "/api/client/space", SpaceHandler(wallet.Client, wallet.AccAddress()))
 
-	r.HandleFunc("/recycle/salvage", RecycleSalvageHandler(rd))
+	outline.RegisterGetRoute(r, "/ipfs/peers", IPFSListPeers(f))
+	outline.RegisterGetRoute(r, "/ipfs/hosts", IPFSListHosts(f))
+	outline.RegisterGetRoute(r, "/ipfs/cids", IPFSListCids(f))
+	outline.RegisterGetRoute(r, "/ipfs/cid_map", IPFSMapCids(f))
+	outline.RegisterPostRoute(r, "/ipfs/make_folder", PostIPFSFolder(f))
+
+	outline.RegisterGetRoute(r, "/dump", DumpDBHandler(f))
+
+	outline.RegisterGetRoute(r, "/version", VersionHandler(wallet))
+	outline.RegisterGetRoute(r, "/network", NetworkHandler(wallet))
+
+	outline.RegisterGetRoute(r, "/recycle/salvage", RecycleSalvageHandler(rd))
+
+	outline.RegisterGetRoute(r, "/api", outline.OutlineHandler())
 
 	r.Handle("/metrics", promhttp.Handler())
 	r.Use(loggingMiddleware)
