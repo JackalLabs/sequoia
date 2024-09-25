@@ -168,7 +168,10 @@ func RootCmd() *cobra.Command {
 	r.PersistentFlags().Int64("proof_interval", 120, "seconds to wait until next cycle to post proofs")
 	r.PersistentFlags().Int64("total_bytes_offered", 1092616192, "maximum storage space to provide in bytes")
 
-	viper.BindPFlags(r.PersistentFlags())
+	err := viper.BindPFlags(r.PersistentFlags())
+	if err != nil {
+		panic(err)
+	}
 
 	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), SalvageCmd(), ShutdownCmd())
 
