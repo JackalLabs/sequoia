@@ -4,9 +4,16 @@ import (
 	"errors"
 	"os"
 	"path"
+
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
-const ConfigFileName = "config.yaml"
+const (
+	ConfigName     = "config"
+	ConfigType     = "yaml"
+	ConfigFileName = ConfigName + "." + ConfigType
+)
 
 func createIfNotExists(directory string, fileName string, contents []byte) (bool, error) {
 	filePath := path.Join(directory, fileName)
@@ -62,7 +69,6 @@ func ReadConfigFile(directory string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return config, nil
 }
 
@@ -74,10 +80,33 @@ func Init(home string) (*Config, error) {
 		return nil, err
 	}
 
-	err = createFiles(directory)
-	if err != nil {
+	viper.SetConfigName(ConfigName)
+	viper.SetConfigType(ConfigType)
+	viper.AddConfigPath(directory)
+
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			err := createFiles(directory)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+	/*
+		config, err := ReadConfigFile(directory)
+		if err != nil {
+			return nil, err
+		}
+	*/
+	var config Config
+
+	if err := viper.Unmarshal(&config); err != nil {
 		return nil, err
 	}
 
-	return ReadConfigFile(directory)
+	log.Debug().Object("config", config)
+
+	return &config, nil
 }

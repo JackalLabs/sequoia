@@ -16,6 +16,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func init() {
@@ -156,6 +157,21 @@ func RootCmd() *cobra.Command {
 
 	r.PersistentFlags().String(types.FlagHome, types.DefaultHome, "sets the home directory for sequoia")
 	r.PersistentFlags().String(types.FlagLogLevel, types.DefaultLogLevel, "log level. info|error|debug")
+	r.PersistentFlags().Int("restart-attempt", defaultMaxRestartAttempt, "attempt to restart <restart-attempt> times when the provider fails to start")
+	r.PersistentFlags().String("domain", "http://example.com", "provider comain")
+	r.PersistentFlags().Int64("api_config.port", 3333, "port to serve api requests")
+	r.PersistentFlags().Int("api_config.ipfs_port", 4005, "port for IPFS")
+	r.PersistentFlags().String("api_config.ipfs_domain", "dns4/ipfs.example.com/tcp/4001", "IPFS domain")
+	r.PersistentFlags().Int64("proof_threads", 1000, "maximum threads for proofs")
+	r.PersistentFlags().String("data_directory", "$HOME/.sequoia/data", "directory to store database files")
+	r.PersistentFlags().Int64("queue_interval", 10, "seconds to wait until next cycle to flush the transaction queue")
+	r.PersistentFlags().Int64("proof_interval", 120, "seconds to wait until next cycle to post proofs")
+	r.PersistentFlags().Int64("total_bytes_offered", 1092616192, "maximum storage space to provide in bytes")
+
+	err := viper.BindPFlags(r.PersistentFlags())
+	if err != nil {
+		panic(err)
+	}
 
 	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), SalvageCmd(), ShutdownCmd())
 

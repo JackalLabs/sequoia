@@ -7,6 +7,7 @@ import (
 
 	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 	bip39 "github.com/cosmos/go-bip39"
+	"github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
 	jsoniter "github.com/json-iterator/go"
@@ -94,7 +95,7 @@ func InitWallet(home string) (*wallet.Wallet, error) {
 	legacyWallet, err := detectLegacyWallet(home)
 	if err == nil {
 		log.Info().Msg("legacy wallet detected")
-		return sequoiaWallet.CreateWalletPrivKey(legacyWallet.Key, config.ChainCfg)
+		return sequoiaWallet.CreateWalletPrivKey(legacyWallet.Key, types.ChainConfig(config.ChainCfg))
 	}
 
 	err = createWallet(directory)
@@ -112,7 +113,7 @@ func InitWallet(home string) (*wallet.Wallet, error) {
 		return nil, err
 	}
 
-	return sequoiaWallet.CreateWallet(seed.SeedPhrase, seed.DerivationPath, config.ChainCfg)
+	return sequoiaWallet.CreateWallet(seed.SeedPhrase, seed.DerivationPath, types.ChainConfig(config.ChainCfg))
 }
 
 // returns LegacyWallet if "priv_storkey.json" is found at sequoia home directory,
