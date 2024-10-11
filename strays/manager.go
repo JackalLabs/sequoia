@@ -182,7 +182,7 @@ func (s *StrayManager) RefreshList() error {
 		s.strays = append(s.strays, &newStray)
 	}
 
-	s.lastSize = res.Size()
+	s.lastSize = int(res.Pagination.Total)
 
 	return nil
 }
