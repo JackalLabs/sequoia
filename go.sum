@@ -859,8 +859,8 @@ github.com/iris-contrib/jade v1.1.4/go.mod h1:EDqR+ur9piDl6DUgs6qRrlfzmlx/D5Uybo
 github.com/iris-contrib/pongo2 v0.0.1/go.mod h1:Ssh+00+3GAZqSQb30AvBRNxBx7rf0GqwkjqxNd0u65g=
 github.com/iris-contrib/schema v0.0.1/go.mod h1:urYA3uvUNG1TIIjOSCzHr9/LmbQo8LrOcOqfqxa4hXw=
 github.com/iris-contrib/schema v0.0.6/go.mod h1:iYszG0IOsuIsfzjymw1kMzTL8YQcCWlm65f3wX8J5iA=
-github.com/jackalLabs/canine-chain/v4 v4.1.0 h1:3PA7UNn2Nu7HHY+LAnpCMQxg32GyRt+F6ntQTLIve/A=
-github.com/jackalLabs/canine-chain/v4 v4.1.0/go.mod h1:td0cUHEvmWwqTA+pS8ItQzZxZqFVx/RGqb8MMgOAq+w=
+github.com/jackalLabs/canine-chain/v4 v4.1.1 h1:dUkk9kclOLC2Ku3QjNcnya5B7fo13MWPZEVy6qJ8lF8=
+github.com/jackalLabs/canine-chain/v4 v4.1.1/go.mod h1:td0cUHEvmWwqTA+pS8ItQzZxZqFVx/RGqb8MMgOAq+w=
 github.com/jackpal/go-nat-pmp v1.0.2 h1:KzKSgb7qkJvOUTqYl9/Hg/me3pWgBmERKrTGD7BdWus=
 github.com/jackpal/go-nat-pmp v1.0.2/go.mod h1:QPH045xvCAeXUZOxsnwmrtiCoxIr9eob+4orBN1SBKc=
 github.com/jbenet/go-cienv v0.1.0/go.mod h1:TqNnHUmJgXau0nCzC7kXWeotg3J9W34CUv5Djy1+FlA=

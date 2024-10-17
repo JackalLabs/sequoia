@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/types/query"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
@@ -174,13 +177,19 @@ func record(file io.Writer, merkle []byte, size int, fid string) error {
 func (r *RecycleDepot) collectOpenFiles() ([]types.UnifiedFile, error) {
 	req := &types.QueryOpenFiles{
 		ProviderAddress: r.address,
-		Pagination:      nil,
+		Pagination: &query.PageRequest{
+			Key:        nil,
+			Offset:     0,
+			Limit:      300,
+			CountTotal: true,
+			Reverse:    rand.Int63n(2) == 0,
+		},
 	}
 	resp, err := r.queryClient.OpenFiles(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
-	log.Info().Msgf("We found %d files open", len(resp.Files))
+	log.Info().Msgf("We found %d files open", resp.Pagination.Total)
 
 	return resp.Files, nil
 }
