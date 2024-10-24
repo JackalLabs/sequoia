@@ -13,7 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64) error {
+func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64, proofType int64) error {
 	queryParams := &types.QueryFindFile{
 		Merkle: merkle,
 	}
@@ -37,7 +37,7 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 			continue
 		}
 
-		size, err := DownloadFileFromURL(f, url, merkle, owner, start, wallet.AccAddress(), chunkSize)
+		size, err := DownloadFileFromURL(f, url, merkle, owner, start, wallet.AccAddress(), chunkSize, proofType)
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Couldn't get %x from %s, trying again...", merkle, url))
 			continue
@@ -58,7 +58,7 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 	return nil
 }
 
-func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, owner string, start int64, address string, chunkSize int64) (int, error) {
+func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, owner string, start int64, address string, chunkSize int64, proofType int64) (int, error) {
 	log.Info().Msg(fmt.Sprintf("Downloading %x from %s...", merkle, url))
 	cli := http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%x", url, merkle), nil)
@@ -93,7 +93,7 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	size, _, err := f.WriteFile(reader, merkle, owner, start, address, chunkSize)
+	size, _, err := f.WriteFile(reader, merkle, owner, start, address, chunkSize, proofType)
 	if err != nil {
 		return 0, err
 	}

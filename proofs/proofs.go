@@ -51,8 +51,8 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (b
 // GenProof generates a proof from an arbitrary file on the file system
 //
 // returns proof, item and error
-func GenProof(io FileSystem, merkle []byte, owner string, start int64, block int, chunkSize int) ([]byte, []byte, error) {
-	tree, chunk, err := io.GetFileTreeByChunk(merkle, owner, start, block, chunkSize)
+func GenProof(io FileSystem, merkle []byte, owner string, start int64, block int, chunkSize int, proofType int64) ([]byte, []byte, error) {
+	tree, chunk, err := io.GetFileTreeByChunk(merkle, owner, start, block, chunkSize, proofType)
 	if err != nil {
 		e := fmt.Errorf("cannot get chunk for %x at %d | %w", merkle, block, err)
 		log.Error().Err(e)
@@ -143,7 +143,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 	log.Debug().Msg(fmt.Sprintf("Getting file tree by chunk for %x", merkle))
 
-	proof, item, err := GenProof(p.io, merkle, owner, start, block, p.chunkSize)
+	proof, item, err := GenProof(p.io, merkle, owner, start, block, p.chunkSize, file.ProofType)
 
 	return proof, item, newProof.ChunkToProve, err
 }
