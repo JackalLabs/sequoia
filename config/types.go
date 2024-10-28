@@ -30,6 +30,11 @@ type Config struct {
 	APICfg           APIConfig          `yaml:"api_config" mapstructure:"api_config"`
 	ProofThreads     int16              `yaml:"proof_threads" mapstructure:"proof_threads"`
 	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config" mapstructure:"block_store_config"`
+	LogFile          string             `yaml:"log_file" mapstructure:"log_file"`
+}
+
+func DefaultLogFile() string {
+	return "$HOME/.sequoia/log/sequoia.log"
 }
 
 func DefaultQueueInterval() int64 {
@@ -71,16 +76,18 @@ func DefaultStrayManagerConfig() StrayManagerConfig {
 }
 
 type APIConfig struct {
-	Port       int64  `yaml:"port" mapstructure:"port"`
-	IPFSPort   int    `yaml:"ipfs_port" mapstructure:"ipfs_port"`
-	IPFSDomain string `yaml:"ipfs_domain" mapstructure:"ipfs_domain"`
+	Port         int64  `yaml:"port" mapstructure:"port"`
+	IPFSPort     int    `yaml:"ipfs_port" mapstructure:"ipfs_port"`
+	IPFSDomain   string `yaml:"ipfs_domain" mapstructure:"ipfs_domain"`
+	EnableLogAPI bool   `yaml:"enable_log_api" mapstructure:"enable_log_api"`
 }
 
 func DefaultAPIConfig() APIConfig {
 	return APIConfig{
-		Port:       3333,
-		IPFSPort:   4005,
-		IPFSDomain: "dns4/ipfs.example.com/tcp/4001",
+		Port:         3333,
+		IPFSPort:     4005,
+		IPFSDomain:   "dns4/ipfs.example.com/tcp/4001",
+		EnableLogAPI: true,
 	}
 }
 
@@ -135,6 +142,7 @@ func DefaultConfig() *Config {
 		APICfg:           DefaultAPIConfig(),
 		ProofThreads:     DefaultProofThreads(),
 		BlockStoreConfig: DefaultBlockStoreConfig(),
+		LogFile:          DefaultLogFile(),
 	}
 }
 

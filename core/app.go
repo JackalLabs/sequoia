@@ -28,6 +28,7 @@ import (
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/JackalLabs/sequoia/recycle"
@@ -41,12 +42,28 @@ type App struct {
 	home         string
 	monitor      *monitoring.Monitor
 	fileSystem   *file_system.FileSystem
+	logFile      os.File
 }
 
 func NewApp(home string) (*App, error) {
 	cfg, err := config.Init(home)
 	if err != nil {
 		return nil, err
+	}
+
+	// setup logger to use log file
+	if cfg.LogFile != "" {
+		path := os.ExpandEnv(cfg.LogFile)
+
+		logf, err := os.OpenFile(path, os.O_WRONLY, 0755)
+		if err != nil {
+			return nil, err
+		}
+
+		stdw := zerolog.ConsoleWriter{Out: os.Stderr}
+		fw := zerolog.ConsoleWriter{Out: logf, NoColor: true}
+		multi := zerolog.MultiLevelWriter(stdw, fw)
+		log.Logger = log.Output(multi)
 	}
 
 	ctx := context.Background()
@@ -404,5 +421,5 @@ func (a *App) Salvage(jprovdHome string) error {
 	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.fileSystem.Close()
 
-	return nil
+	return a.logFile.Close()
 }

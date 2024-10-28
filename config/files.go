@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -15,7 +16,15 @@ const (
 	ConfigFileName = ConfigName + "." + ConfigType
 )
 
+// Creates necessary directory and file if they do not exist
+// Returns false if the file exists and true if the file does not exist
+// If an error occurs, it returns false and the error
 func createIfNotExists(directory string, fileName string, contents []byte) (bool, error) {
+	err := os.MkdirAll(directory, 0755)
+	if err != nil {
+		return false, err
+	}
+
 	filePath := path.Join(directory, fileName)
 	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
 		f, err := os.Create(filePath)
@@ -94,12 +103,7 @@ func Init(home string) (*Config, error) {
 			return nil, err
 		}
 	}
-	/*
-		config, err := ReadConfigFile(directory)
-		if err != nil {
-			return nil, err
-		}
-	*/
+
 	var config Config
 
 	if err := viper.Unmarshal(&config); err != nil {
@@ -108,5 +112,13 @@ func Init(home string) (*Config, error) {
 
 	log.Debug().Object("config", config)
 
+	// setup logger to use log file
+	if config.LogFile != "" {
+		path := os.ExpandEnv(config.LogFile)
+		_, err := createIfNotExists(filepath.Dir(path), filepath.Base(path), []byte{})
+		if err != nil {
+			return nil, errors.Join(errors.New("could not create log file"), err)
+		}
+	}
 	return &config, nil
 }
