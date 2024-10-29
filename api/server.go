@@ -44,7 +44,7 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) error {
+func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64, logFileName string) error {
 	defer log.Info().Msg("API module stopped")
 	r := mux.NewRouter()
 
@@ -74,6 +74,8 @@ func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proo
 	outline.RegisterGetRoute(r, "/recycle/salvage", RecycleSalvageHandler(rd))
 
 	outline.RegisterGetRoute(r, "/api", outline.OutlineHandler())
+
+	outline.RegisterGetRoute(r, "/log", LogHandler(logFileName))
 
 	r.Handle("/metrics", promhttp.Handler())
 	r.Use(loggingMiddleware)

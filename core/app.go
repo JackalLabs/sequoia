@@ -59,7 +59,7 @@ func NewApp(home string) (*App, error) {
 	if cfg.LogFile != "" {
 		path := os.ExpandEnv(cfg.LogFile)
 
-		logf, err := os.OpenFile(path, os.O_WRONLY, 0755)
+		logf, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0755)
 		if err != nil {
 			return nil, err
 		}
@@ -289,9 +289,13 @@ func (a *App) Start() error {
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 	a.monitor = monitoring.NewMonitor(w)
 
+	logFileName := ""
+	if a.logFile != nil {
+		logFileName = a.logFile.Name()
+	}
 	// Starting the 4 concurrent services
 	// nolint:all
-	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize)
+	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize, logFileName)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
@@ -400,9 +404,13 @@ func (a *App) Salvage(jprovdHome string) error {
 	done := make(chan os.Signal, 1)
 	defer signal.Stop(done) // undo signal.Notify effect
 
+	logFileName := ""
+	if a.logFile != nil {
+		logFileName = a.logFile.Name()
+	}
 	// Starting the 4 concurrent services
 	// nolint:all
-	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize)
+	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize, logFileName)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
