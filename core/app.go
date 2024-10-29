@@ -42,10 +42,14 @@ type App struct {
 	home         string
 	monitor      *monitoring.Monitor
 	fileSystem   *file_system.FileSystem
-	logFile      os.File
+	logFile      *os.File
 }
 
 func NewApp(home string) (*App, error) {
+	app := App{
+		home: home,
+	}
+
 	cfg, err := config.Init(home)
 	if err != nil {
 		return nil, err
@@ -59,6 +63,8 @@ func NewApp(home string) (*App, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		app.logFile = logf
 
 		stdw := zerolog.ConsoleWriter{Out: os.Stderr}
 		fw := zerolog.ConsoleWriter{Out: logf, NoColor: true}
@@ -109,11 +115,11 @@ func NewApp(home string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &App{
-		fileSystem: f,
-		api:        apiServer,
-		home:       home,
-	}, nil
+
+	app.fileSystem = f
+	app.api = apiServer
+
+	return &app, nil
 }
 
 func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
@@ -421,5 +427,9 @@ func (a *App) Salvage(jprovdHome string) error {
 	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.fileSystem.Close()
 
-	return a.logFile.Close()
+	if a.logFile != nil {
+		return a.logFile.Close()
+	}
+
+	return nil
 }
