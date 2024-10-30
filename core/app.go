@@ -290,7 +290,7 @@ func (a *App) Start() error {
 	a.monitor = monitoring.NewMonitor(w)
 
 	logFileName := ""
-	if a.logFile != nil {
+	if a.logFile != nil && cfg.APICfg.EnableLogAPI {
 		logFileName = a.logFile.Name()
 	}
 	// Starting the 4 concurrent services
@@ -405,7 +405,7 @@ func (a *App) Salvage(jprovdHome string) error {
 	defer signal.Stop(done) // undo signal.Notify effect
 
 	logFileName := ""
-	if a.logFile != nil {
+	if a.logFile != nil && cfg.APICfg.EnableLogAPI {
 		logFileName = a.logFile.Name()
 	}
 	// Starting the 4 concurrent services

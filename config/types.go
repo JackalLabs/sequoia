@@ -87,7 +87,7 @@ func DefaultAPIConfig() APIConfig {
 		Port:         3333,
 		IPFSPort:     4005,
 		IPFSDomain:   "dns4/ipfs.example.com/tcp/4001",
-		EnableLogAPI: true,
+		EnableLogAPI: false,
 	}
 }
 

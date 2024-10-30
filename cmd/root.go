@@ -168,6 +168,7 @@ func RootCmd() *cobra.Command {
 	r.PersistentFlags().Int64("proof_interval", 120, "seconds to wait until next cycle to post proofs")
 	r.PersistentFlags().Int64("total_bytes_offered", 1092616192, "maximum storage space to provide in bytes")
 	r.PersistentFlags().String("log_file", "$HOME/.sequoia/log/sequoia.log", "write logs to a file, leave empty string to disable this")
+	r.PersistentFlags().Bool("api_config.enable_log_api", false, "enable log api")
 
 	err := viper.BindPFlags(r.PersistentFlags())
 	if err != nil {

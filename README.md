@@ -58,10 +58,12 @@ api_config:
     port: 3333
     ipfs_port: 4005
     ipfs_domain: dns4/ipfs.example.com/tcp/4001
+    enable_log_api: false
 proof_threads: 1000
 block_store_config:
     directory: $HOME/.sequoia/datastore
     type: flatfs
+log_file: $HOME/.sequoia/log/sequoia.log
 
 ######################
 ```  
@@ -72,5 +74,9 @@ block_store_config:
 There are two types of block store available to sequoia:  
 `badgerds` is a key value database that uses LSM tree to store and manage data. The storage limit is < 11TB.  
 `flatfs` stores raw block contents on disk. Relies on underlying file system for stability and performance.  
-> Using `badgerds` requires the block store directory to be same as `data_directory` because badgerdb is used for database as well.
+> Using `badgerds` requires the block store directory to be same as `data_directory` because badgerdb is used for database as well.  
+
+#### `log`
+`log_file`: write log to a file.  
+`enable_log_api`: this enables api that can view log from the log file.  
 
