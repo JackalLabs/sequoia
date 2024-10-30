@@ -39,14 +39,15 @@ func LogHandler(logFileName string) func(http.ResponseWriter, *http.Request) {
 			return
 
 		}
-		bytes := 100
+
+		length := 100
 		var err error
-		v := req.Header.Get("bytes")
+		v := req.Header.Get("length")
 		if v != "" {
-			bytes, err = strconv.Atoi(v)
+			length, err = strconv.Atoi(v)
 			if err != nil {
 				v := types.ErrorResponse{
-					Error: errors.New("failed to parse int").Error(),
+					Error: errors.New("failed to parse length").Error(),
 				}
 				w.WriteHeader(http.StatusBadRequest)
 				err = json.NewEncoder(w).Encode(v)
@@ -72,8 +73,9 @@ func LogHandler(logFileName string) func(http.ResponseWriter, *http.Request) {
 
 		}
 
-		buf := make([]byte, bytes)
-		_, err = readLogFile(logf, buf)
+		buf := make([]byte, length)
+		read, err := readLogFile(logf, buf)
+		buf = buf[:read]
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: errors.New("failed to get logs").Error(),
@@ -85,7 +87,7 @@ func LogHandler(logFileName string) func(http.ResponseWriter, *http.Request) {
 			}
 			return
 		}
-		err = json.NewEncoder(w).Encode(string(buf))
+		_, err = w.Write(buf)
 		if err != nil {
 			log.Error().Err(err)
 		}
@@ -93,7 +95,17 @@ func LogHandler(logFileName string) func(http.ResponseWriter, *http.Request) {
 }
 
 func readLogFile(logFile *os.File, buf []byte) (read int, err error) {
-	_, err = logFile.Seek(-int64(len(buf)), io.SeekEnd)
+	stat, err := logFile.Stat()
+	if err != nil {
+		return 0, err
+	}
+	size := stat.Size()
+	offset := size - int64(len(buf))
+	if offset < 0 {
+		offset = 0
+	}
+
+	_, err = logFile.Seek(offset, io.SeekStart)
 	if err != nil {
 		return 0, err
 	}
