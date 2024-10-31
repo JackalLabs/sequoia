@@ -79,7 +79,7 @@ type APIConfig struct {
 	Port         int64  `yaml:"port" mapstructure:"port"`
 	IPFSPort     int    `yaml:"ipfs_port" mapstructure:"ipfs_port"`
 	IPFSDomain   string `yaml:"ipfs_domain" mapstructure:"ipfs_domain"`
-	EnableLogAPI bool   `yaml:"enable_log_api" mapstructure:"enable_log_api"`
+	EnableLogSSH bool   `yaml:"enable_log_ssh" mapstructure:"enable_log_ssh"`
 }
 
 func DefaultAPIConfig() APIConfig {
@@ -87,7 +87,7 @@ func DefaultAPIConfig() APIConfig {
 		Port:         3333,
 		IPFSPort:     4005,
 		IPFSDomain:   "dns4/ipfs.example.com/tcp/4001",
-		EnableLogAPI: false,
+		EnableLogSSH: false,
 	}
 }
 

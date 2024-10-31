@@ -75,8 +75,6 @@ func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proo
 
 	outline.RegisterGetRoute(r, "/api", outline.OutlineHandler())
 
-	outline.RegisterGetRoute(r, "/log", LogHandler(logFileName))
-
 	r.Handle("/metrics", promhttp.Handler())
 	r.Use(loggingMiddleware)
 
