@@ -31,6 +31,7 @@ type Config struct {
 	ProofThreads     int16              `yaml:"proof_threads" mapstructure:"proof_threads"`
 	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config" mapstructure:"block_store_config"`
 	LogFile          string             `yaml:"log_file" mapstructure:"log_file"`
+	LogSSHConfig     LogSSHConfig       `yaml:"log_ssh_config" mapstructure:"log_ssh_config"`
 }
 
 func DefaultLogFile() string {
@@ -76,18 +77,32 @@ func DefaultStrayManagerConfig() StrayManagerConfig {
 }
 
 type APIConfig struct {
-	Port         int64  `yaml:"port" mapstructure:"port"`
-	IPFSPort     int    `yaml:"ipfs_port" mapstructure:"ipfs_port"`
-	IPFSDomain   string `yaml:"ipfs_domain" mapstructure:"ipfs_domain"`
-	EnableLogSSH bool   `yaml:"enable_log_ssh" mapstructure:"enable_log_ssh"`
+	Port       int64  `yaml:"port" mapstructure:"port"`
+	IPFSPort   int    `yaml:"ipfs_port" mapstructure:"ipfs_port"`
+	IPFSDomain string `yaml:"ipfs_domain" mapstructure:"ipfs_domain"`
 }
 
 func DefaultAPIConfig() APIConfig {
 	return APIConfig{
-		Port:         3333,
-		IPFSPort:     4005,
-		IPFSDomain:   "dns4/ipfs.example.com/tcp/4001",
-		EnableLogSSH: false,
+		Port:       3333,
+		IPFSPort:   4005,
+		IPFSDomain: "dns4/ipfs.example.com/tcp/4001",
+	}
+}
+
+type LogSSHConfig struct {
+	Enable            bool     `yaml:"enable" mapstructure:"enable"`
+	Host              string   `yaml:"host" mapstructure:"host"`
+	Port              string   `yaml:"port" mapstructure:"port"`
+	AuthorizedPubKeys []string `yaml:"authorized_pub_keys" mapstructure:"authorized_pub_keys"`
+}
+
+func DefaultLogSSHConfig() LogSSHConfig {
+	return LogSSHConfig{
+		Enable:            false,
+		AuthorizedPubKeys: []string{},
+		Host:              "localhost",
+		Port:              "23234",
 	}
 }
 
@@ -143,6 +158,7 @@ func DefaultConfig() *Config {
 		ProofThreads:     DefaultProofThreads(),
 		BlockStoreConfig: DefaultBlockStoreConfig(),
 		LogFile:          DefaultLogFile(),
+		LogSSHConfig:     DefaultLogSSHConfig(),
 	}
 }
 
@@ -177,4 +193,6 @@ func init() {
 	viper.SetDefault("APICfg", DefaultAPIConfig())
 	viper.SetDefault("ProofThreads", DefaultProofThreads())
 	viper.SetDefault("BlockStoreConfig", DefaultBlockStoreConfig())
+	viper.SetDefault("LogFile", DefaultLogFile())
+	viper.SetDefault("LogSSHConfig", DefaultLogSSHConfig())
 }

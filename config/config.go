@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"golang.org/x/crypto/ssh"
 	"strings"
 
 	yaml "gopkg.in/yaml.v3"
@@ -20,6 +21,15 @@ func (c Config) Validate() error {
 		}
 	default:
 		return errors.New("invalid data store backend")
+	}
+
+	if c.LogSSHConfig.Enable {
+		for i := range c.LogSSHConfig.AuthorizedPubKeys {
+			_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(c.LogSSHConfig.AuthorizedPubKeys[i]))
+			if err != nil {
+				return errors.Join(errors.New("invalid ssh authorized key"), err)
+			}
+		}
 	}
 
 	return nil

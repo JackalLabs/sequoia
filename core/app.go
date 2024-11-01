@@ -2,7 +2,9 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -32,6 +34,11 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/JackalLabs/sequoia/recycle"
+
+	"github.com/charmbracelet/ssh"
+	"github.com/charmbracelet/wish"
+	"github.com/charmbracelet/wish/logging"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 type App struct {
@@ -43,6 +50,7 @@ type App struct {
 	monitor      *monitoring.Monitor
 	fileSystem   *file_system.FileSystem
 	logFile      *os.File
+	sshServer    *ssh.Server
 }
 
 func NewApp(home string) (*App, error) {
@@ -118,6 +126,29 @@ func NewApp(home string) (*App, error) {
 
 	app.fileSystem = f
 	app.api = apiServer
+
+	sshServer, err := wish.NewServer(
+		wish.WithAddress(net.JoinHostPort(cfg.LogSSHConfig.Host, cfg.LogSSHConfig.Port)),
+		wish.WithPublicKeyAuth(func(_ ssh.Context, key ssh.PublicKey) bool {
+			for _, k := range cfg.LogSSHConfig.AuthorizedPubKeys {
+				parsedKey, _, _, _, _ := gossh.ParseAuthorizedKey([]byte(k))
+				if ssh.KeysEqual(key, parsedKey) {
+					return true
+				}
+			}
+			return false
+		}),
+		wish.WithMiddleware(
+			logging.Middleware(),
+			func(next ssh.Handler) ssh.Handler {
+				return func(sesh ssh.Session) {
+					wish.Println(sesh, "authorized")
+				}
+			},
+		),
+	)
+
+	app.sshServer = sshServer
 
 	return &app, nil
 }
@@ -289,22 +320,23 @@ func (a *App) Start() error {
 	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
 	a.monitor = monitoring.NewMonitor(w)
 
-	logFileName := ""
-	if a.logFile != nil && cfg.APICfg.EnableLogAPI {
-		logFileName = a.logFile.Name()
-	}
+	done := make(chan os.Signal, 1)
+	defer signal.Stop(done) // undo signal.Notify effect
+	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	// Starting the 4 concurrent services
 	// nolint:all
-	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize, logFileName)
+	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
 	go recycleDepot.Start(cfg.StrayManagerCfg.CheckInterval)
+	go func() {
+		if err := a.sshServer.ListenAndServe(); !errors.Is(err, ssh.ErrServerClosed) {
+			log.Error().Err(err).Msg("Could not start ssh server")
+			done <- nil
+		}
+	}()
 
-	done := make(chan os.Signal, 1)
-	defer signal.Stop(done) // undo signal.Notify effect
-
-	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	<-done // Will block here until user hits ctrl+c
 
 	fmt.Println("Shutting Sequoia down safely...")
@@ -318,6 +350,15 @@ func (a *App) Start() error {
 
 	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.fileSystem.Close()
+
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*30)
+	defer func() {
+		cancel()
+	}()
+
+	if err := a.sshServer.Shutdown(ctx); err != nil && !errors.Is(err, ssh.ErrServerClosed) {
+		log.Error().Err(err).Msg("could not stop ssh server")
+	}
 
 	return nil
 }
@@ -404,13 +445,9 @@ func (a *App) Salvage(jprovdHome string) error {
 	done := make(chan os.Signal, 1)
 	defer signal.Stop(done) // undo signal.Notify effect
 
-	logFileName := ""
-	if a.logFile != nil && cfg.APICfg.EnableLogAPI {
-		logFileName = a.logFile.Name()
-	}
 	// Starting the 4 concurrent services
 	// nolint:all
-	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize, logFileName)
+	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
