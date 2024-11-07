@@ -31,7 +31,7 @@ type Config struct {
 	ProofThreads     int16              `yaml:"proof_threads" mapstructure:"proof_threads"`
 	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config" mapstructure:"block_store_config"`
 	LogFile          string             `yaml:"log_file" mapstructure:"log_file"`
-	LogSSHConfig     LogSSHConfig       `yaml:"log_ssh_config" mapstructure:"log_ssh_config"`
+	SSHConfig        SSHConfig          `yaml:"ssh_config" mapstructure:"ssh_config"`
 }
 
 func DefaultLogFile() string {
@@ -90,15 +90,16 @@ func DefaultAPIConfig() APIConfig {
 	}
 }
 
-type LogSSHConfig struct {
+type SSHConfig struct {
 	Enable            bool     `yaml:"enable" mapstructure:"enable"`
 	Host              string   `yaml:"host" mapstructure:"host"`
 	Port              string   `yaml:"port" mapstructure:"port"`
 	AuthorizedPubKeys []string `yaml:"authorized_pub_keys" mapstructure:"authorized_pub_keys"`
+	HostKeyFile       string   `yaml:"host_key_file" mapstructure:"host_key_file"`
 }
 
-func DefaultLogSSHConfig() LogSSHConfig {
-	return LogSSHConfig{
+func DefaultSSHConfig() SSHConfig {
+	return SSHConfig{
 		Enable:            false,
 		AuthorizedPubKeys: []string{},
 		Host:              "localhost",
@@ -158,7 +159,7 @@ func DefaultConfig() *Config {
 		ProofThreads:     DefaultProofThreads(),
 		BlockStoreConfig: DefaultBlockStoreConfig(),
 		LogFile:          DefaultLogFile(),
-		LogSSHConfig:     DefaultLogSSHConfig(),
+		SSHConfig:        DefaultSSHConfig(),
 	}
 }
 
@@ -194,5 +195,5 @@ func init() {
 	viper.SetDefault("ProofThreads", DefaultProofThreads())
 	viper.SetDefault("BlockStoreConfig", DefaultBlockStoreConfig())
 	viper.SetDefault("LogFile", DefaultLogFile())
-	viper.SetDefault("LogSSHConfig", DefaultLogSSHConfig())
+	viper.SetDefault("SSHConfig", DefaultSSHConfig())
 }

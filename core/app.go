@@ -24,7 +24,9 @@ import (
 	"github.com/JackalLabs/sequoia/logger"
 	"github.com/JackalLabs/sequoia/proofs"
 	"github.com/JackalLabs/sequoia/queue"
+	seqssh "github.com/JackalLabs/sequoia/ssh"
 	"github.com/JackalLabs/sequoia/strays"
+
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	badger "github.com/dgraph-io/badger/v4"
@@ -37,6 +39,7 @@ import (
 
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
+	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/charmbracelet/wish/logging"
 	gossh "golang.org/x/crypto/ssh"
 )
@@ -128,9 +131,9 @@ func NewApp(home string) (*App, error) {
 	app.api = apiServer
 
 	sshServer, err := wish.NewServer(
-		wish.WithAddress(net.JoinHostPort(cfg.LogSSHConfig.Host, cfg.LogSSHConfig.Port)),
+		wish.WithAddress(net.JoinHostPort(cfg.SSHConfig.Host, cfg.SSHConfig.Port)),
 		wish.WithPublicKeyAuth(func(_ ssh.Context, key ssh.PublicKey) bool {
-			for _, k := range cfg.LogSSHConfig.AuthorizedPubKeys {
+			for _, k := range cfg.SSHConfig.AuthorizedPubKeys {
 				parsedKey, _, _, _, _ := gossh.ParseAuthorizedKey([]byte(k))
 				if ssh.KeysEqual(key, parsedKey) {
 					return true
@@ -145,8 +148,13 @@ func NewApp(home string) (*App, error) {
 					wish.Println(sesh, "authorized")
 				}
 			},
+			bubbletea.Middleware(seqssh.MakeTeaHandler(os.ExpandEnv(cfg.LogFile))),
 		),
+		ssh.HostKeyFile(os.ExpandEnv(cfg.SSHConfig.HostKeyFile)),
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	app.sshServer = sshServer
 

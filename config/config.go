@@ -23,9 +23,9 @@ func (c Config) Validate() error {
 		return errors.New("invalid data store backend")
 	}
 
-	if c.LogSSHConfig.Enable {
-		for i := range c.LogSSHConfig.AuthorizedPubKeys {
-			_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(c.LogSSHConfig.AuthorizedPubKeys[i]))
+	if c.SSHConfig.Enable {
+		for i := range c.SSHConfig.AuthorizedPubKeys {
+			_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(c.SSHConfig.AuthorizedPubKeys[i]))
 			if err != nil {
 				return errors.Join(errors.New("invalid ssh authorized key"), err)
 			}
