@@ -21,7 +21,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const contentsSize = 2000
+const contentsSize = 3000
 
 type model struct {
 	isFileAtTop bool
@@ -32,6 +32,10 @@ type model struct {
 	ready       bool
 	logViewPort viewport.Model
 }
+
+type latestLogMsg []byte
+
+type logContentMsg []byte
 
 type logFileMsg *os.File
 
@@ -69,22 +73,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.fileInfo = fileInfo
 		m.contents = make([]byte, contentsSize)
-		offset := fileInfo.Size() - contentsSize
-		_, err = m.logFile.Seek(offset, io.SeekStart)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to initialize viewport content")
-			return m, tea.Quit
-		}
-		_, err = m.logFile.Read(m.contents)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to initialize viewport content")
-			return m, tea.Quit
-		}
 		m.logViewPort.SetContent(string(m.contents))
 		m.logViewPort.GotoBottom()
+		return m, readLatestLog(m.logFile)
 	case tea.KeyMsg:
 		if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
 			return m, tea.Quit
+		}
+
+		if k := msg.String(); k == "r" {
+			return m, readLatestLog(m.logFile)
 		}
 
 		//handle buffered content loading
@@ -133,6 +131,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			newLineCount := m.logViewPort.TotalLineCount()
 			m.logViewPort.SetYOffset(newLineCount - oldLineCount)
 		}
+	case latestLogMsg:
+		m.contents = msg
+		m.logViewPort.SetContent(string(m.contents))
+		m.logViewPort.GotoBottom()
 	case tea.WindowSizeMsg:
 		if !m.ready {
 			m.logViewPort = viewport.New(msg.Width, msg.Height)
@@ -171,5 +173,42 @@ func MakeTeaHandler(logFileName string) bubbletea.Handler {
 
 		return m, nil
 
+	}
+}
+
+func readLatestLog(logFile *os.File) tea.Cmd {
+	return func() tea.Msg {
+		fileInfo, err := logFile.Stat()
+		if err != nil {
+			return errorMsg{err}
+		}
+		fileSize := fileInfo.Size()
+
+		bufferSize := contentsSize
+		offset := fileSize - contentsSize
+		if offset < 0 {
+			offset = 0
+			bufferSize = int(fileSize)
+		}
+
+		contents := make([]byte, bufferSize)
+		n, err := logFile.Seek(offset, io.SeekStart)
+		if err != nil {
+			return errorMsg{err}
+		}
+
+		if n < 0 {
+			n, err = logFile.Seek(0, io.SeekStart)
+			if err != nil {
+				return errorMsg{err}
+			}
+		}
+
+		_, err = logFile.Read(contents)
+		if err != nil {
+			return errorMsg{err}
+		}
+
+		return latestLogMsg(contents)
 	}
 }

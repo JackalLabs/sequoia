@@ -104,9 +104,9 @@ func Init(home string) (*Config, error) {
 		}
 	}
 
-	var config Config
+	var config *Config = DefaultConfig()
 
-	if err := viper.Unmarshal(&config); err != nil {
+	if err := viper.Unmarshal(config); err != nil {
 		return nil, err
 	}
 
@@ -120,5 +120,5 @@ func Init(home string) (*Config, error) {
 			return nil, errors.Join(errors.New("could not create log file"), err)
 		}
 	}
-	return &config, nil
+	return config, config.Validate()
 }

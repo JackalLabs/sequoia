@@ -104,6 +104,7 @@ func DefaultSSHConfig() SSHConfig {
 		AuthorizedPubKeys: []string{},
 		Host:              "localhost",
 		Port:              "23234",
+		HostKeyFile:       "",
 	}
 }
 

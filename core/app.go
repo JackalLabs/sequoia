@@ -130,33 +130,37 @@ func NewApp(home string) (*App, error) {
 	app.fileSystem = f
 	app.api = apiServer
 
-	sshServer, err := wish.NewServer(
-		wish.WithAddress(net.JoinHostPort(cfg.SSHConfig.Host, cfg.SSHConfig.Port)),
-		wish.WithPublicKeyAuth(func(_ ssh.Context, key ssh.PublicKey) bool {
-			for _, k := range cfg.SSHConfig.AuthorizedPubKeys {
-				parsedKey, _, _, _, _ := gossh.ParseAuthorizedKey([]byte(k))
-				if ssh.KeysEqual(key, parsedKey) {
-					return true
+	if cfg.SSHConfig.Enable {
+		sshServer, err := wish.NewServer(
+			wish.WithAddress(net.JoinHostPort(cfg.SSHConfig.Host, cfg.SSHConfig.Port)),
+			wish.WithPublicKeyAuth(func(_ ssh.Context, key ssh.PublicKey) bool {
+				for _, k := range cfg.SSHConfig.AuthorizedPubKeys {
+					parsedKey, _, _, _, _ := gossh.ParseAuthorizedKey([]byte(k))
+					if ssh.KeysEqual(key, parsedKey) {
+						return true
+					}
 				}
+				return false
+			}),
+			wish.WithMiddleware(
+				logging.Middleware(),
+				bubbletea.Middleware(seqssh.MakeTeaHandler(os.ExpandEnv(cfg.LogFile))),
+			),
+		)
+		if err != nil {
+			return nil, err
+		}
+		if cfg.SSHConfig.HostKeyFile != "" {
+			err = sshServer.SetOption(
+				ssh.HostKeyFile(os.ExpandEnv(cfg.SSHConfig.HostKeyFile)),
+			)
+			if err != nil {
+				return nil, err
 			}
-			return false
-		}),
-		wish.WithMiddleware(
-			logging.Middleware(),
-			func(next ssh.Handler) ssh.Handler {
-				return func(sesh ssh.Session) {
-					wish.Println(sesh, "authorized")
-				}
-			},
-			bubbletea.Middleware(seqssh.MakeTeaHandler(os.ExpandEnv(cfg.LogFile))),
-		),
-		ssh.HostKeyFile(os.ExpandEnv(cfg.SSHConfig.HostKeyFile)),
-	)
-	if err != nil {
-		return nil, err
-	}
+		}
 
-	app.sshServer = sshServer
+		app.sshServer = sshServer
+	}
 
 	return &app, nil
 }

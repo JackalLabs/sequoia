@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"golang.org/x/crypto/ssh"
+	"os"
 	"strings"
 
 	yaml "gopkg.in/yaml.v3"
@@ -29,6 +30,10 @@ func (c Config) Validate() error {
 			if err != nil {
 				return errors.Join(errors.New("invalid ssh authorized key"), err)
 			}
+		}
+
+		if _, err := os.Stat(c.SSHConfig.HostKeyFile); err != nil && c.SSHConfig.HostKeyFile != "" {
+			return errors.Join(errors.New("invalid host key file path"), err)
 		}
 	}
 
