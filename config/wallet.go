@@ -87,7 +87,7 @@ func InitWallet(home string) (*wallet.Wallet, error) {
 		return nil, err
 	}
 
-	config, err := ReadConfigFile(directory)
+	config, err := Init(home)
 	if err != nil {
 		return nil, err
 	}

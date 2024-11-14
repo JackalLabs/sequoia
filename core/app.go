@@ -39,6 +39,7 @@ import (
 
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
+	"github.com/charmbracelet/wish/activeterm"
 	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/charmbracelet/wish/logging"
 	gossh "golang.org/x/crypto/ssh"
@@ -131,32 +132,29 @@ func NewApp(home string) (*App, error) {
 	app.api = apiServer
 
 	if cfg.SSHConfig.Enable {
-		sshServer, err := wish.NewServer(
-			wish.WithAddress(net.JoinHostPort(cfg.SSHConfig.Host, cfg.SSHConfig.Port)),
-			wish.WithPublicKeyAuth(func(_ ssh.Context, key ssh.PublicKey) bool {
-				for _, k := range cfg.SSHConfig.AuthorizedPubKeys {
-					parsedKey, _, _, _, _ := gossh.ParseAuthorizedKey([]byte(k))
-					if ssh.KeysEqual(key, parsedKey) {
-						return true
-					}
+		var serverOpts []ssh.Option
+		if cfg.SSHConfig.HostKeyFile != "" {
+			serverOpts = append(serverOpts, ssh.HostKeyFile(os.ExpandEnv(cfg.SSHConfig.HostKeyFile)))
+		}
+		serverOpts = append(serverOpts, wish.WithAddress(net.JoinHostPort(cfg.SSHConfig.Host, cfg.SSHConfig.Port)))
+		serverOpts = append(serverOpts, wish.WithPublicKeyAuth(func(_ ssh.Context, key ssh.PublicKey) bool {
+			for _, k := range cfg.SSHConfig.AuthorizedPubKeys {
+				parsedKey, _, _, _, _ := gossh.ParseAuthorizedKey([]byte(k))
+				if ssh.KeysEqual(key, parsedKey) {
+					return true
 				}
-				return false
-			}),
-			wish.WithMiddleware(
-				logging.Middleware(),
-				bubbletea.Middleware(seqssh.MakeTeaHandler(os.ExpandEnv(cfg.LogFile))),
-			),
-		)
+			}
+			return false
+		}))
+		serverOpts = append(serverOpts, wish.WithMiddleware(
+			logging.Middleware(),
+			bubbletea.Middleware(seqssh.MakeTeaHandler(os.ExpandEnv(cfg.LogFile))),
+			activeterm.Middleware(),
+		))
+
+		sshServer, err := wish.NewServer(serverOpts...)
 		if err != nil {
 			return nil, err
-		}
-		if cfg.SSHConfig.HostKeyFile != "" {
-			err = sshServer.SetOption(
-				ssh.HostKeyFile(os.ExpandEnv(cfg.SSHConfig.HostKeyFile)),
-			)
-			if err != nil {
-				return nil, err
-			}
 		}
 
 		app.sshServer = sshServer

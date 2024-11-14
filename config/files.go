@@ -74,7 +74,7 @@ func ReadConfigFile(directory string) (*Config, error) {
 		return nil, err
 	}
 
-	config, err := ReadConfig(configData)
+	config, err := readConfig(configData)
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +110,8 @@ func Init(home string) (*Config, error) {
 		return nil, err
 	}
 
+	config.expandPaths()
+
 	log.Debug().Object("config", config)
 
 	// setup logger to use log file
@@ -120,5 +122,5 @@ func Init(home string) (*Config, error) {
 			return nil, errors.Join(errors.New("could not create log file"), err)
 		}
 	}
-	return config, config.Validate()
+	return config, config.validate()
 }

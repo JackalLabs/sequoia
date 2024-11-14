@@ -9,7 +9,7 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
-func (c Config) Validate() error {
+func (c Config) validate() error {
 	if c.DataDirectory == "" {
 		return errors.New("invalid data directory")
 	}
@@ -40,9 +40,9 @@ func (c Config) Validate() error {
 	return nil
 }
 
-// ReadConfig parses data and returns Config.
+// readConfig parses data and returns Config.
 // Error during parsing or an invalid configuration in the Config will return an error.
-func ReadConfig(data []byte) (*Config, error) {
+func readConfig(data []byte) (*Config, error) {
 	// not using a default config to detect badger ds users
 	config := Config{}
 
@@ -55,9 +55,14 @@ func ReadConfig(data []byte) (*Config, error) {
 		config.BlockStoreConfig.Directory = config.DataDirectory
 	}
 
-	return &config, config.Validate()
+	config.DataDirectory = expandPath(config.DataDirectory)
+	config.LogFile = expandPath(config.DataDirectory)
+	config.SSHConfig.HostKeyFile = expandPath(config.SSHConfig.HostKeyFile)
+
+	return &config, config.validate()
 }
 
+// Export converts the config to yaml format
 func (c Config) Export() ([]byte, error) {
 	sb := strings.Builder{}
 	sb.WriteString("######################\n")

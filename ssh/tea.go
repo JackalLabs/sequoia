@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -162,10 +161,7 @@ func (m model) View() string {
 
 func MakeTeaHandler(logFileName string) bubbletea.Handler {
 	return func(s ssh.Session) (tea.Model, []tea.ProgramOption) {
-		var content string
-		for i := 0; i < 1000; i++ {
-			content = fmt.Sprintf("%s%d\n", content, i)
-		}
+		log.Info().Str("user", s.User()).Str("addr", s.RemoteAddr().String()).Msg("New ssh connection request")
 		m := model{
 			ready:       false,
 			logFileName: logFileName,
