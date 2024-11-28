@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/ipfs/boxo/ipld/merkledag"
+
 	"github.com/ipfs/boxo/ipld/unixfs"
 
 	"github.com/dgraph-io/badger/v4"
@@ -73,7 +75,7 @@ func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 	return r, exportedTree, chunks, size, nil
 }
 
-func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64) (size int, cid string, err error) {
+func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64, proofType int64) (size int, cid string, err error) {
 	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
 	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize)
 	if err != nil {
@@ -91,9 +93,24 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 	}
 	buf := bytes.NewBuffer(b)
 
-	n, err := f.ipfs.AddFile(context.Background(), buf, nil)
-	if err != nil {
-		return 0, "", err
+	var n ipldFormat.Node
+	if proofType == 1 {
+		folderNode := unixfs.EmptyDirNode()
+		err := folderNode.UnmarshalJSON(buf.Bytes())
+		if err != nil {
+			return 0, "", err
+		}
+
+		err = f.ipfs.Add(context.Background(), folderNode)
+		if err != nil {
+			return 0, "", err
+		}
+		n = folderNode
+	} else {
+		n, err = f.ipfs.AddFile(context.Background(), buf, nil)
+		if err != nil {
+			return 0, "", err
+		}
 	}
 
 	err = f.db.Update(func(txn *badger.Txn) error {
@@ -116,31 +133,39 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 	return size, n.Cid().String(), nil
 }
 
-func (f *FileSystem) CreateIPFSFolder(childCIDs []cid.Cid) (cidRes string, err error) {
+func (f *FileSystem) CreateIPFSFolder(childCIDs map[string]cid.Cid) (node ipldFormat.Node, err error) {
+	n, err := f.GenIPFSFolderData(childCIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add the folder node to the DAG service
+	err = f.ipfs.Add(context.Background(), n)
+	if err != nil {
+		return nil, err
+	}
+
+	return n, nil
+}
+
+func (f *FileSystem) GenIPFSFolderData(childCIDs map[string]cid.Cid) (node ipldFormat.Node, err error) {
 	folderNode := unixfs.EmptyDirNode()
 
-	for i, childCID := range childCIDs {
+	for key, childCID := range childCIDs {
 		// Create a link
-		linkName := fmt.Sprintf("%d", i)
 		link := &ipldFormat.Link{
-			Name: linkName,
+			Name: key,
 			Cid:  childCID,
 		}
 
 		// Add the link to the folder node
-		err := folderNode.AddRawLink(linkName, link)
+		err := folderNode.AddRawLink(key, link)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
-	// Add the folder node to the DAG service
-	err = f.ipfs.Add(context.Background(), folderNode)
-	if err != nil {
-		return "", err
-	}
-
-	return folderNode.Cid().String(), nil
+	return folderNode, nil
 }
 
 func (f *FileSystem) DeleteFile(merkle []byte, owner string, start int64) error {
@@ -281,7 +306,7 @@ func (f *FileSystem) Dump() (map[string]string, error) {
 	return files, err
 }
 
-func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64, chunkToLoad int, chunkSize int) (*merkletree.MerkleTree, []byte, error) {
+func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64, chunkToLoad int, chunkSize int, proofType int64) (*merkletree.MerkleTree, []byte, error) {
 	tree := treeKey(merkle, owner, start)
 
 	var newTree merkletree.MerkleTree
@@ -330,9 +355,22 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 		return nil, nil, fmt.Errorf("failed to decode cid: %s | %w", fcid, err)
 	}
 
-	chunkOut, err := f.ipfs.GetFileChunk(context.Background(), c, chunkToLoad, chunkSize)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get chunk from unixfs %w", err)
+	var chunkOut []byte
+	if proofType == 1 {
+		n, err := f.ipfs.Get(context.Background(), c)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get node chunk for cid: %s | %w", fcid, err)
+		}
+		data, err := n.(*merkledag.ProtoNode).MarshalJSON()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to cast proto node: %s | %w", fcid, err)
+		}
+		chunkOut = data
+	} else {
+		chunkOut, err = f.ipfs.GetFileChunk(context.Background(), c, chunkToLoad, chunkSize)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get chunk from unixfs %w", err)
+		}
 	}
 
 	if chunkOut == nil {
