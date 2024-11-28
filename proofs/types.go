@@ -16,8 +16,8 @@ type Prover struct {
 	processed      time.Time
 	interval       int64
 	io             FileSystem
-	threads        int64
-	currentThreads int64
+	threads        int16
+	currentThreads int16
 	chunkSize      int
 }
 

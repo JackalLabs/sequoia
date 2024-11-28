@@ -1,37 +1,87 @@
 package config
 
 import (
-	"github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 )
 
 type Seed struct {
 	SeedPhrase     string `json:"seed_phrase"`
 	DerivationPath string `json:"derivation_path"`
 }
+
+// required for the mapstructure tag
+type ChainConfig struct {
+	Bech32Prefix  string  `yaml:"bech32_prefix" mapstructure:"bech32_prefix"`
+	RPCAddr       string  `yaml:"rpc_addr" mapstructure:"rpc_addr"`
+	GRPCAddr      string  `yaml:"grpc_addr" mapstructure:"grpc_addr"`
+	GasPrice      string  `yaml:"gas_price" mapstructure:"gas_price"`
+	GasAdjustment float64 `yaml:"gas_adjustment" mapstructure:"gas_adjustment"`
+}
+
 type Config struct {
-	QueueInterval    int64              `yaml:"queue_interval"`
-	ProofInterval    int64              `yaml:"proof_interval"`
-	StrayManagerCfg  StrayManagerConfig `yaml:"stray_manager"`
-	ChainCfg         types.ChainConfig  `yaml:"chain_config"`
-	Ip               string             `yaml:"domain"`
-	TotalSpace       int64              `yaml:"total_bytes_offered"`
-	DataDirectory    string             `yaml:"data_directory"`
-	APICfg           APIConfig          `yaml:"api_config"`
-	ProofThreads     int64              `yaml:"proof_threads"`
-	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config"`
+	QueueInterval    int64              `yaml:"queue_interval" mapstructure:"queue_interval"`
+	ProofInterval    int64              `yaml:"proof_interval" mapstructure:"proof_interval"`
+	StrayManagerCfg  StrayManagerConfig `yaml:"stray_manager" mapstructure:"stray_manager"`
+	ChainCfg         ChainConfig        `yaml:"chain_config" mapstructure:"chain_config"`
+	Ip               string             `yaml:"domain" mapstructure:"domain"`
+	TotalSpace       int64              `yaml:"total_bytes_offered" mapstructure:"total_bytes_offered"`
+	DataDirectory    string             `yaml:"data_directory" mapstructure:"data_directory"`
+	APICfg           APIConfig          `yaml:"api_config" mapstructure:"api_config"`
+	ProofThreads     int16              `yaml:"proof_threads" mapstructure:"proof_threads"`
+	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config" mapstructure:"block_store_config"`
+}
+
+func DefaultQueueInterval() int64 {
+	return 10
+}
+
+func DefaultProofInterval() int64 {
+	return 120
+}
+
+func DefaultIP() string {
+	return "https://example.com"
+}
+
+func DefaultTotalSpace() int64 {
+	return 1092616192
+}
+
+func DefaultDataDirectory() string {
+	return "$HOME/.sequoia/data"
+}
+
+func DefaultProofThreads() int16 {
+	return 1000
 }
 
 type StrayManagerConfig struct {
-	CheckInterval   int64 `yaml:"check_interval"`
-	RefreshInterval int64 `yaml:"refresh_interval"`
-	HandCount       int   `yaml:"hands"`
+	CheckInterval   int64 `yaml:"check_interval" mapstructure:"check_interval"`
+	RefreshInterval int64 `yaml:"refresh_interval" mapstructure:"refresh_interval"`
+	HandCount       int   `yaml:"hands" mapstructure:"hands"`
+}
+
+func DefaultStrayManagerConfig() StrayManagerConfig {
+	return StrayManagerConfig{
+		CheckInterval:   30,
+		RefreshInterval: 120,
+		HandCount:       2,
+	}
 }
 
 type APIConfig struct {
-	Port       int64  `yaml:"port"`
-	IPFSPort   int    `yaml:"ipfs_port"`
-	IPFSDomain string `yaml:"ipfs_domain"`
+	Port       int64  `yaml:"port" mapstructure:"port"`
+	IPFSPort   int    `yaml:"ipfs_port" mapstructure:"ipfs_port"`
+	IPFSDomain string `yaml:"ipfs_domain" mapstructure:"ipfs_domain"`
+}
+
+func DefaultAPIConfig() APIConfig {
+	return APIConfig{
+		Port:       3333,
+		IPFSPort:   4005,
+		IPFSDomain: "dns4/ipfs.example.com/tcp/4001",
+	}
 }
 
 const (
@@ -42,9 +92,16 @@ const (
 type BlockStoreConfig struct {
 	// *choosing badgerdb as block store will need to use the same directory
 	// for data directory
-	Directory string `yaml:"directory"`
+	Directory string `yaml:"directory" mapstructure:"directory"`
 	// data store options: flatfs, badgerdb
-	Type string `yaml:"type"`
+	Type string `yaml:"type" mapstructure:"type"`
+}
+
+func DefaultBlockStoreConfig() BlockStoreConfig {
+	return BlockStoreConfig{
+		Directory: "$HOME/.sequoia/blockstore",
+		Type:      OptFlatFS,
+	}
 }
 
 // LegacyWallet handles keys from earlier versions of storage providers.
@@ -56,35 +113,28 @@ type LegacyWallet struct {
 	Address string `json:"address"`
 }
 
+func DefaultChainConfig() ChainConfig {
+	return ChainConfig{
+		RPCAddr:       "http://localhost:26657",
+		GRPCAddr:      "localhost:9090",
+		GasPrice:      "0.02ujkl",
+		GasAdjustment: 1.5,
+		Bech32Prefix:  "jkl",
+	}
+}
+
 func DefaultConfig() *Config {
 	return &Config{
-		QueueInterval: 10,
-		ProofInterval: 120,
-		StrayManagerCfg: StrayManagerConfig{
-			CheckInterval:   30,
-			RefreshInterval: 120,
-			HandCount:       2,
-		},
-		ChainCfg: types.ChainConfig{
-			RPCAddr:       "http://localhost:26657",
-			GRPCAddr:      "localhost:9090",
-			GasPrice:      "0.02ujkl",
-			GasAdjustment: 1.5,
-			Bech32Prefix:  "jkl",
-		},
-		Ip:            "https://example.com",
-		TotalSpace:    1092616192, // 1 gib default
-		DataDirectory: "$HOME/.sequoia/data",
-		APICfg: APIConfig{
-			Port:       3333,
-			IPFSPort:   4005,
-			IPFSDomain: "dns4/ipfs.example.com/tcp/4001",
-		},
-		ProofThreads: 1000,
-		BlockStoreConfig: BlockStoreConfig{
-			Directory: "$HOME/.sequoia/blockstore",
-			Type:      OptFlatFS,
-		},
+		QueueInterval:    DefaultQueueInterval(),
+		ProofInterval:    DefaultProofInterval(),
+		StrayManagerCfg:  DefaultStrayManagerConfig(),
+		ChainCfg:         DefaultChainConfig(),
+		Ip:               DefaultIP(),
+		TotalSpace:       DefaultTotalSpace(), // 1 gib default
+		DataDirectory:    DefaultDataDirectory(),
+		APICfg:           DefaultAPIConfig(),
+		ProofThreads:     DefaultProofThreads(),
+		BlockStoreConfig: DefaultBlockStoreConfig(),
 	}
 }
 
@@ -104,6 +154,19 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 		Int64("APIPort", c.APICfg.Port).
 		Int("APIIPFSPort", c.APICfg.IPFSPort).
 		Str("APIIPFSDomain", c.APICfg.IPFSDomain).
-		Int64("ProofThreads", c.ProofThreads).
+		Int16("ProofThreads", c.ProofThreads).
 		Str("BlockstoreBackend", c.BlockStoreConfig.Type)
+}
+
+func init() {
+	viper.SetDefault("QueueInterval", DefaultQueueInterval())
+	viper.SetDefault("ProofInterval", DefaultProofInterval())
+	viper.SetDefault("StrayManagerCfg", DefaultStrayManagerConfig())
+	viper.SetDefault("ChainCfg", DefaultChainConfig())
+	viper.SetDefault("Ip", DefaultIP())
+	viper.SetDefault("TotalSpace", DefaultTotalSpace()) // 1 gib defaul
+	viper.SetDefault("DataDirectory", DefaultDataDirectory())
+	viper.SetDefault("APICfg", DefaultAPIConfig())
+	viper.SetDefault("ProofThreads", DefaultProofThreads())
+	viper.SetDefault("BlockStoreConfig", DefaultBlockStoreConfig())
 }

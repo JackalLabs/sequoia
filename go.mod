@@ -19,7 +19,7 @@ require (
 	github.com/ipfs/go-ds-badger2 v0.1.3
 	github.com/ipfs/go-ds-flatfs v0.5.1
 	github.com/ipfs/go-ipld-format v0.6.0
-	github.com/jackalLabs/canine-chain/v4 v4.0.3
+	github.com/jackalLabs/canine-chain/v4 v4.1.1
 	github.com/json-iterator/go v1.1.12
 	github.com/libp2p/go-libp2p v0.32.2
 	github.com/multiformats/go-multiaddr v0.12.3
@@ -27,6 +27,7 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cobra v1.8.0
+	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tendermint/tendermint v0.34.27
 	github.com/wealdtech/go-merkletree/v2 v2.6.0
@@ -230,7 +231,6 @@ require (
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.16.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect

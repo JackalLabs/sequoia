@@ -155,7 +155,7 @@ func (s *StrayManager) RefreshList() error {
 
 	var val uint64
 	if s.lastSize > 300 {
-		val = uint64(s.rand.Int63n(int64(s.lastSize)))
+		val = uint64(s.rand.Int63n(s.lastSize))
 	}
 
 	page := &query.PageRequest{ // more randomly pick from the stray pile
@@ -182,7 +182,7 @@ func (s *StrayManager) RefreshList() error {
 		s.strays = append(s.strays, &newStray)
 	}
 
-	s.lastSize = res.Size()
+	s.lastSize = int64(res.Pagination.Total)
 
 	return nil
 }

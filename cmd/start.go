@@ -61,6 +61,5 @@ func StartCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int("restart-attempt", defaultMaxRestartAttempt, "attempt to restart <restart-attempt> times when the provider fails to start")
 	return cmd
 }
