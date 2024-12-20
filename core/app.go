@@ -11,7 +11,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -353,27 +352,20 @@ func (a *App) ConnectPeers(cl *client.Client) {
 			continue
 		}
 
-		var wg sync.WaitGroup
-		for _, host := range hosts.Hosts {
-			wg.Add(1)
+		for _, h := range hosts.Hosts {
+			host := h
 			go func() {
-				if strings.Contains(host, "127.0.0.1") {
-					wg.Done()
+				if strings.Contains(host, "127.0.0.1") || strings.Contains(host, "ip6/") {
 					return
 				}
 				adr, err := peer.AddrInfoFromString(host)
 				if err != nil {
-					wg.Done()
 					log.Warn().Msgf("Could not parse host %s from %s", adr, ip)
 					return
 				}
-
 				a.fileSystem.Connect(adr)
-				wg.Done()
 			}()
 		}
-		wg.Wait()
-
 	}
 }
 
