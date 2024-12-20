@@ -261,7 +261,7 @@ func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height 
 			Msg("proof error")
 
 		if err.Error() == "rpc error: code = NotFound desc = not found" { // if the file is not found on the network, delete it
-			log.Info().
+			log.Debug().
 				Hex("merkle", merkle).
 				Str("owner", owner).
 				Int64("start", start).
