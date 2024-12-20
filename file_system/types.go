@@ -40,6 +40,7 @@ func (f *FileSystem) Close() {
 }
 
 func (f *FileSystem) Connect(info *peer.AddrInfo) {
+	log.Info().Msgf("Attempting connection to %s", info.String())
 	err := f.ipfsHost.Connect(context.Background(), *info)
 	if err != nil {
 		log.Warn().Msgf("Could not connect to %s | %v", info.String(), err)

@@ -276,12 +276,12 @@ func (a *App) Start() error {
 
 	// Starting the 4 concurrent services
 	// nolint:all
+	go a.ConnectPeers(w.Client)
 	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
 	go recycleDepot.Start(cfg.StrayManagerCfg.CheckInterval)
-	go a.ConnectPeers(w.Client)
 
 	done := make(chan os.Signal, 1)
 	defer signal.Stop(done) // undo signal.Notify effect
@@ -305,6 +305,7 @@ func (a *App) Start() error {
 }
 
 func (a *App) ConnectPeers(cl *client.Client) {
+	log.Info().Msg("Starting IPFS Peering cycle...")
 	ctx := context.Background()
 	queryClient := storageTypes.NewQueryClient(cl.GRPCConn)
 
@@ -322,8 +323,9 @@ func (a *App) ConnectPeers(cl *client.Client) {
 			log.Warn().Msgf("Couldn't get provider details from %s, something is really wrong with the network!", provider)
 			continue
 		}
-
 		ip := providerDetails.Provider.Ip
+
+		log.Info().Msgf("Attempting to peer with %s", ip)
 
 		ipfsHostAddress := path.Join(ip, "/ipfs/hosts")
 

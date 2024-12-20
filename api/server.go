@@ -44,7 +44,7 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) error {
+func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) {
 	defer log.Info().Msg("API module stopped")
 	r := mux.NewRouter()
 
@@ -92,9 +92,8 @@ func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proo
 	err := a.srv.ListenAndServe()
 	if err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			return err
+			log.Warn().Err(err)
+			return
 		}
 	}
-
-	return nil
 }
