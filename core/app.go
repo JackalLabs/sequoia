@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path"
@@ -327,11 +328,18 @@ func (a *App) ConnectPeers(cl *client.Client) {
 
 		log.Info().Msgf("Attempting to peer with %s", ip)
 
-		ipfsHostAddress := path.Join(ip, "/ipfs/hosts")
+		uip, err := url.Parse(ip)
+		if err != nil {
+			log.Warn().Msgf("Could not get parse %s", ip)
+			continue
+		}
+		uip.Path = path.Join(uip.Path, "ipfs", "hosts")
+
+		ipfsHostAddress := uip.String()
 
 		res, err := http.Get(ipfsHostAddress)
 		if err != nil {
-			log.Warn().Msgf("Could not get hosts from %s", ip)
+			log.Warn().Msgf("Could not get hosts from %s", ipfsHostAddress)
 			continue
 		}
 		defer res.Body.Close()
