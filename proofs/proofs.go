@@ -199,7 +199,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 		log.Error().Msg(postRes.ErrorMessage)
 	}
 
-	log.Info().Msg(fmt.Sprintf("%x was successfully proven", merkle))
+	log.Debug().Msg(fmt.Sprintf("%x was successfully proven", merkle))
 
 	log.Debug().Msg(fmt.Sprintf("TX Hash: %s", m.Hash()))
 
