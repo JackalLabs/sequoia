@@ -133,8 +133,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 	proven := file.ProvenThisBlock(blockHeight+int64(t.Seconds()/5.0), newProof.LastProven)
 	if proven {
-		log.Info().Msg(fmt.Sprintf("%x was proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
-		log.Debug().Msg("File was already proven")
+		log.Debug().Msg(fmt.Sprintf("%x was proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
 		return nil, nil, 0, nil
 	}
 	log.Info().Msg(fmt.Sprintf("%x was not yet proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
@@ -200,7 +199,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 		log.Error().Msg(postRes.ErrorMessage)
 	}
 
-	log.Info().Msg(fmt.Sprintf("%x was successfully proven", merkle))
+	log.Debug().Msg(fmt.Sprintf("%x was successfully proven", merkle))
 
 	log.Debug().Msg(fmt.Sprintf("TX Hash: %s", m.Hash()))
 
@@ -262,7 +261,7 @@ func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height 
 			Msg("proof error")
 
 		if err.Error() == "rpc error: code = NotFound desc = not found" { // if the file is not found on the network, delete it
-			log.Info().
+			log.Debug().
 				Hex("merkle", merkle).
 				Str("owner", owner).
 				Int64("start", start).

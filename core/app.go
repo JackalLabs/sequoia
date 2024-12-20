@@ -2,12 +2,21 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"path"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
+
+	apiTypes "github.com/JackalLabs/sequoia/api/types"
+	"github.com/desmos-labs/cosmos-go-wallet/client"
+	"github.com/libp2p/go-libp2p/core/peer"
 
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/JackalLabs/sequoia/ipfs"
@@ -268,6 +277,7 @@ func (a *App) Start() error {
 
 	// Starting the 4 concurrent services
 	// nolint:all
+	go a.ConnectPeers(w.Client)
 	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
@@ -293,6 +303,70 @@ func (a *App) Start() error {
 	a.fileSystem.Close()
 
 	return nil
+}
+
+func (a *App) ConnectPeers(cl *client.Client) {
+	log.Info().Msg("Starting IPFS Peering cycle...")
+	ctx := context.Background()
+	queryClient := storageTypes.NewQueryClient(cl.GRPCConn)
+
+	activeProviders, err := queryClient.ActiveProviders(ctx, &storageTypes.QueryActiveProviders{})
+	if err != nil {
+		log.Warn().Msg("Cannot get active provider list. Won't try IPFS Peers.")
+		return
+	}
+
+	for _, provider := range activeProviders.Providers {
+		providerDetails, err := queryClient.Provider(ctx, &storageTypes.QueryProvider{
+			Address: provider.Address,
+		})
+		if err != nil {
+			log.Warn().Msgf("Couldn't get provider details from %s, something is really wrong with the network!", provider)
+			continue
+		}
+		ip := providerDetails.Provider.Ip
+
+		log.Info().Msgf("Attempting to peer with %s", ip)
+
+		uip, err := url.Parse(ip)
+		if err != nil {
+			log.Warn().Msgf("Could not get parse %s", ip)
+			continue
+		}
+		uip.Path = path.Join(uip.Path, "ipfs", "hosts")
+
+		ipfsHostAddress := uip.String()
+
+		res, err := http.Get(ipfsHostAddress)
+		if err != nil {
+			log.Warn().Msgf("Could not get hosts from %s", ipfsHostAddress)
+			continue
+		}
+		defer res.Body.Close()
+
+		var hosts apiTypes.HostResponse
+
+		err = json.NewDecoder(res.Body).Decode(&hosts)
+		if err != nil {
+			log.Warn().Msgf("Could not parse hosts %s", ip)
+			continue
+		}
+
+		for _, h := range hosts.Hosts {
+			host := h
+			go func() {
+				if strings.Contains(host, "127.0.0.1") || strings.Contains(host, "ip6/") {
+					return
+				}
+				adr, err := peer.AddrInfoFromString(host)
+				if err != nil {
+					log.Warn().Msgf("Could not parse host %s from %s", adr, ip)
+					return
+				}
+				a.fileSystem.Connect(adr)
+			}()
+		}
+	}
 }
 
 func (a *App) Salvage(jprovdHome string) error {
