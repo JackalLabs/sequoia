@@ -20,7 +20,7 @@ func TestNotes(t *testing.T) {
 		Hidden:    false,
 		Shard:     false,
 		NoCopy:    false,
-		HashFun:   "sha-256",
+		HashFun:   "sha2-256",
 	}
 	p, err := json.Marshal(params)
 	r.NoError(err)

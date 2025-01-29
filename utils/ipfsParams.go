@@ -21,7 +21,10 @@ func GetIPFSParams(file *types.UnifiedFile) *ipfslite.AddParams {
 		return nil
 	}
 
-	ip := ipfsParams.(string)
+	ip, ok := ipfsParams.(string)
+	if !ok {
+		return nil
+	}
 
 	log.Info().Msgf("PARAMS: %s", ip)
 
