@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/JackalLabs/sequoia/utils"
+
 	cid "github.com/ipfs/go-cid"
 
 	"github.com/JackalLabs/sequoia/proofs"
@@ -112,7 +114,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			}
 		}
 
-		size, c, err := fio.WriteFile(file, merkle, sender, startBlock, wl.AccAddress(), chunkSize, proofType)
+		size, c, err := fio.WriteFile(file, merkle, sender, startBlock, chunkSize, proofType, utils.GetIPFSParams(&f))
 		if err != nil {
 			handleErr(fmt.Errorf("failed to write file to disk: %w", err), w, http.StatusInternalServerError)
 			return

@@ -81,7 +81,7 @@ func BenchmarkFileWrites(b *testing.B) {
 				root, _, _, _, err := BuildTree(buf2, 10240)
 				require.NoError(b, err)
 
-				_, _, err = f.WriteFile(buf, root, "file_owner", 0, "myself", 10240, 0)
+				_, _, err = f.WriteFile(buf, root, "file_owner", 0, 10240, 0, nil)
 				require.NoError(b, err)
 
 			}
@@ -115,7 +115,7 @@ func TestWriteFile(t *testing.T) {
 	m, err := hex.DecodeString(merkle)
 	require.NoError(t, err)
 
-	size, _, err := f.WriteFile(buf, m, "file_owner", 0, "myself", 1024, 0)
+	size, _, err := f.WriteFile(buf, m, "file_owner", 0, 1024, 0, nil)
 
 	require.NoError(t, err)
 
@@ -165,7 +165,7 @@ func TestWriteFileWithDomain(t *testing.T) {
 	m, err := hex.DecodeString(merkle)
 	require.NoError(t, err)
 
-	size, _, err := f.WriteFile(buf, m, "file_owner", 0, "myself", 1024, 0)
+	size, _, err := f.WriteFile(buf, m, "file_owner", 0, 1024, 0, nil)
 
 	require.NoError(t, err)
 
@@ -228,7 +228,7 @@ func TestWriteAndProveFiles(t *testing.T) {
 	owner := "file_owner"
 	var start int64 = 0
 
-	_, _, err = f.WriteFile(b2, root, owner, start, "myself", chunkSize, 0)
+	_, _, err = f.WriteFile(b2, root, owner, start, chunkSize, 0, nil)
 	require.NoError(t, err)
 
 	ms, _, _, err := f.ListFiles()
