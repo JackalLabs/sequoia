@@ -5,21 +5,60 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dgraph-io/badger/v4"
+	crypto "github.com/libp2p/go-libp2p/core/crypto"
+
 	"github.com/libp2p/go-libp2p"
+
 	"github.com/libp2p/go-libp2p/core/host"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/boxo/blockstore"
 	"github.com/ipfs/go-datastore"
-	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
 )
 
-func MakeIPFS(ctx context.Context, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
-	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
-	if err != nil {
-		return nil, nil, err
+var PrivateKeyKey = []byte("IPFS_KEYS_PRIVATE")
+
+func MakeIPFS(ctx context.Context, db *badger.DB, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
+	var key crypto.PrivKey
+	_ = db.View(func(txn *badger.Txn) error {
+		k, err := txn.Get(PrivateKeyKey)
+		if err != nil {
+			return err
+		}
+		_ = k.Value(func(val []byte) error {
+			kk, err := crypto.UnmarshalPrivateKey(val)
+			if err != nil {
+				return err
+			}
+
+			key = kk
+			return nil
+		})
+		return nil
+	})
+
+	if key == nil {
+		priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		privOut, err := priv.Raw()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		err = db.Update(func(txn *badger.Txn) error {
+			return txn.Set(PrivateKeyKey, privOut)
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		key = priv
 	}
 
 	defaultPort, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/4001")
@@ -56,7 +95,7 @@ func MakeIPFS(ctx context.Context, ds datastore.Batching, bs blockstore.Blocksto
 
 	h, dht, err := ipfslite.SetupLibp2p(
 		ctx,
-		priv,
+		key,
 		nil,
 		m,
 		ds,
