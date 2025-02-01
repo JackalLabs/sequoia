@@ -23,7 +23,7 @@ var PrivateKeyKey = []byte("IPFS_KEYS_PRIVATE")
 
 func MakeIPFS(ctx context.Context, db *badger.DB, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
 	var key crypto.PrivKey
-	err := db.View(func(txn *badger.Txn) error {
+	_ = db.View(func(txn *badger.Txn) error {
 		k, err := txn.Get(PrivateKeyKey)
 		if err != nil {
 			return err
@@ -39,9 +39,6 @@ func MakeIPFS(ctx context.Context, db *badger.DB, ds datastore.Batching, bs bloc
 		})
 		return nil
 	})
-	if err != nil {
-		return nil, nil, err
-	}
 
 	if key == nil {
 		priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
