@@ -21,7 +21,7 @@ type FileSystem struct {
 }
 
 func NewFileSystem(ctx context.Context, db *badger.DB, ds datastore.Batching, bs blockstore.Blockstore, ipfsPort int, ipfsDomain string) (*FileSystem, error) {
-	ipfs, hh, err := ipfs2.MakeIPFS(ctx, ds, bs, ipfsPort, ipfsDomain)
+	ipfs, hh, err := ipfs2.MakeIPFS(ctx, db, ds, bs, ipfsPort, ipfsDomain)
 	if err != nil {
 		return nil, err
 	}
