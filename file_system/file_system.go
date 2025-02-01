@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 
+	ipfslite "github.com/hsanjuan/ipfs-lite"
+
 	"github.com/ipfs/boxo/ipld/merkledag"
 
 	"github.com/ipfs/boxo/ipld/unixfs"
@@ -75,7 +77,7 @@ func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 	return r, exportedTree, chunks, size, nil
 }
 
-func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, address string, chunkSize int64, proofType int64) (size int, cid string, err error) {
+func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) (size int, cid string, err error) {
 	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
 	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize)
 	if err != nil {
@@ -107,7 +109,7 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 		}
 		n = folderNode
 	} else {
-		n, err = f.ipfs.AddFile(context.Background(), buf, nil)
+		n, err = f.ipfs.AddFile(context.Background(), buf, ipfsParams)
 		if err != nil {
 			return 0, "", err
 		}
