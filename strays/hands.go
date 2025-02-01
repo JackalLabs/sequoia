@@ -3,6 +3,8 @@ package strays
 import (
 	"time"
 
+	"github.com/JackalLabs/sequoia/utils"
+
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/JackalLabs/sequoia/proofs"
 
@@ -39,7 +41,7 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, myUrl str
 		start := h.stray.Start
 		proofType := h.stray.ProofType
 
-		err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize, proofType)
+		err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize, proofType, utils.GetIPFSParams(h.stray))
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JackalLabs/sequoia/utils"
+
 	"github.com/cosmos/cosmos-sdk/types/query"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
@@ -206,8 +208,8 @@ func (r *RecycleDepot) activateFile(openFile types.UnifiedFile) (size int, cid s
 		openFile.Merkle,
 		openFile.Owner,
 		openFile.Start,
-		"",
-		r.chunkSize, 0)
+		r.chunkSize, 0,
+		utils.GetIPFSParams(&openFile))
 	if err != nil {
 		return 0, "", fmt.Errorf("could not write file | %w", err)
 	}

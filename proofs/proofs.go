@@ -276,7 +276,7 @@ func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height 
 			}
 		}
 		if err.Error() == ErrNotOurs { // if the file is not ours, delete it
-			log.Info().
+			log.Debug().
 				Hex("merkle", merkle).
 				Str("owner", owner).
 				Int64("start", start).
