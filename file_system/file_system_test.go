@@ -62,7 +62,7 @@ func BenchmarkFileWrites(b *testing.B) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(b, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	f, err := NewFileSystem(context.Background(), db, "yolo", ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(b, err)
 	defer db.Close()
 	server := &http.Server{
@@ -106,7 +106,7 @@ func TestWriteFile(t *testing.T) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(t, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	f, err := NewFileSystem(context.Background(), db, "swag", ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -156,7 +156,7 @@ func TestWriteFileWithDomain(t *testing.T) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(t, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "dns4/jackal-testnet-v4-storage.p2p.brocha.in/tcp/30506")
+	f, err := NewFileSystem(context.Background(), db, "yolo", ds, nil, 4005, "dns4/jackal-testnet-v4-storage.p2p.brocha.in/tcp/30506")
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -209,7 +209,7 @@ func TestWriteAndProveFiles(t *testing.T) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(t, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	f, err := NewFileSystem(context.Background(), db, "swag", ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(t, err)
 	size := 1024 * 255 // 255 kbs
 	var chunkSize int64 = 1024
@@ -275,7 +275,7 @@ func TestWriteFileWithParams(t *testing.T) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(t, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	f, err := NewFileSystem(context.Background(), db, "yolo", ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(t, err)
 	defer db.Close()
 

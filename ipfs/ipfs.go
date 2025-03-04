@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/dgraph-io/badger/v4"
 	crypto "github.com/libp2p/go-libp2p/core/crypto"
 
@@ -21,45 +23,25 @@ import (
 
 var PrivateKeyKey = []byte("IPFS_KEYS_PRIVATE")
 
-func MakeIPFS(ctx context.Context, db *badger.DB, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
-	var key crypto.PrivKey
-	_ = db.View(func(txn *badger.Txn) error {
-		k, err := txn.Get(PrivateKeyKey)
-		if err != nil {
-			return err
-		}
-		_ = k.Value(func(val []byte) error {
-			kk, err := crypto.UnmarshalPrivateKey(val)
-			if err != nil {
-				return err
-			}
-
-			key = kk
-			return nil
-		})
-		return nil
-	})
-
-	if key == nil {
-		priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		privOut, err := priv.Raw()
-		if err != nil {
-			return nil, nil, err
-		}
-
-		err = db.Update(func(txn *badger.Txn) error {
-			return txn.Set(PrivateKeyKey, privOut)
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		key = priv
+func MakeIPFS(ctx context.Context, db *badger.DB, seed string, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
+	log.Info().Msg("No key was found, generating a new IPFS key...")
+	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, strings.NewReader(seed))
+	if err != nil {
+		return nil, nil, err
 	}
+
+	privOut, err := priv.Raw()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = db.Update(func(txn *badger.Txn) error {
+		return txn.Set(PrivateKeyKey, privOut)
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	key := priv
 
 	defaultPort, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/4001")
 	if err != nil {
