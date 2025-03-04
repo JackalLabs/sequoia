@@ -27,7 +27,7 @@ func MakeIPFS(ctx context.Context, ipfsKey string, ds datastore.Batching, bs blo
 		if err != nil {
 			panic(err)
 		}
-		k, err := priv.Raw()
+		k, err := crypto.MarshalPrivateKey(priv)
 		if err != nil {
 			panic(err)
 		}
