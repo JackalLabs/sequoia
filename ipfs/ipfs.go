@@ -44,7 +44,6 @@ func MakeIPFS(ctx context.Context, ipfsKey string, ds datastore.Batching, bs blo
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot unmarshal IPFS key")
 	}
-	key := priv
 
 	defaultPort, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/4001")
 	if err != nil {
