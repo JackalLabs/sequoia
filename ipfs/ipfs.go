@@ -2,13 +2,13 @@ package ipfs
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
-	"hash/fnv"
-	"math/rand"
 	"strings"
 
-	"github.com/dgraph-io/badger/v4"
-	crypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/rs/zerolog/log"
+
+	"github.com/libp2p/go-libp2p/core/crypto"
 
 	"github.com/libp2p/go-libp2p"
 
@@ -21,33 +21,29 @@ import (
 	"github.com/multiformats/go-multiaddr"
 )
 
-var PrivateKeyKey = []byte("IPFS_KEYS_PRIVATE")
-
-func stringToSeed(s string) int64 {
-	h := fnv.New64a()
-	_, _ = h.Write([]byte(s))
-	return int64(h.Sum64())
-}
-
-func MakeIPFS(ctx context.Context, db *badger.DB, seed string, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
-	source := rand.NewSource(stringToSeed(seed))
-	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.New(source))
-	if err != nil {
-		return nil, nil, err
+func MakeIPFS(ctx context.Context, ipfsKey string, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
+	if ipfsKey == "" {
+		priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
+		if err != nil {
+			panic(err)
+		}
+		k, err := priv.Raw()
+		if err != nil {
+			panic(err)
+		}
+		ipfsKey = hex.EncodeToString(k)
+		log.Warn().Msgf("YOUR NEW KEY, SHOULD PROBABLY SAVE THIS: %s", ipfsKey)
 	}
 
-	privOut, err := priv.Raw()
+	k, err := hex.DecodeString(ipfsKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("cannot use IPFS key")
 	}
 
-	err = db.Update(func(txn *badger.Txn) error {
-		return txn.Set(PrivateKeyKey, privOut)
-	})
+	kk, err := crypto.UnmarshalPrivateKey(k)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("cannot unmarshal IPFS key")
 	}
-	key := priv
 
 	defaultPort, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/4001")
 	if err != nil {
@@ -83,7 +79,7 @@ func MakeIPFS(ctx context.Context, db *badger.DB, seed string, ds datastore.Batc
 
 	h, dht, err := ipfslite.SetupLibp2p(
 		ctx,
-		key,
+		kk,
 		nil,
 		m,
 		ds,
