@@ -37,12 +37,12 @@ func MakeIPFS(ctx context.Context, ipfsKey string, ds datastore.Batching, bs blo
 
 	k, err := hex.DecodeString(ipfsKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot use IPFS key")
+		return nil, nil, fmt.Errorf("cannot use IPFS key | %w", err)
 	}
 
 	kk, err := crypto.UnmarshalPrivateKey(k)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot unmarshal IPFS key")
+		return nil, nil, fmt.Errorf("cannot unmarshal IPFS key | %w", err)
 	}
 
 	defaultPort, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/4001")
