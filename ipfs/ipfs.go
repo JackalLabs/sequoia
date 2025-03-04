@@ -3,9 +3,9 @@ package ipfs
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
+	"math/rand"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/dgraph-io/badger/v4"
 	crypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -23,9 +23,15 @@ import (
 
 var PrivateKeyKey = []byte("IPFS_KEYS_PRIVATE")
 
+func stringToSeed(s string) int64 {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(s))
+	return int64(h.Sum64())
+}
+
 func MakeIPFS(ctx context.Context, db *badger.DB, seed string, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
-	log.Info().Msg("No key was found, generating a new IPFS key...")
-	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, strings.NewReader(seed))
+	source := rand.NewSource(stringToSeed(seed))
+	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.New(source))
 	if err != nil {
 		return nil, nil, err
 	}
