@@ -103,7 +103,7 @@ func NewApp(home string) (*App, error) {
 	}
 	log.Info().Str("provider_address", w.AccAddress()).Send()
 
-	f, err := file_system.NewFileSystem(ctx, db, w.AccAddress(), ds, bs, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
+	f, err := file_system.NewFileSystem(ctx, db, cfg.BlockStoreConfig.Key, ds, bs, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
 	if err != nil {
 		return nil, err
 	}
