@@ -20,8 +20,8 @@ type FileSystem struct {
 	ipfsHost host.Host
 }
 
-func NewFileSystem(ctx context.Context, db *badger.DB, ds datastore.Batching, bs blockstore.Blockstore, ipfsPort int, ipfsDomain string) (*FileSystem, error) {
-	ipfs, hh, err := ipfs2.MakeIPFS(ctx, db, ds, bs, ipfsPort, ipfsDomain)
+func NewFileSystem(ctx context.Context, db *badger.DB, seed string, ds datastore.Batching, bs blockstore.Blockstore, ipfsPort int, ipfsDomain string) (*FileSystem, error) {
+	ipfs, hh, err := ipfs2.MakeIPFS(ctx, db, seed, ds, bs, ipfsPort, ipfsDomain)
 	if err != nil {
 		return nil, err
 	}
