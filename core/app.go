@@ -15,7 +15,6 @@ import (
 	"time"
 
 	apiTypes "github.com/JackalLabs/sequoia/api/types"
-	"github.com/desmos-labs/cosmos-go-wallet/client"
 	"github.com/libp2p/go-libp2p/core/peer"
 
 	"github.com/JackalLabs/sequoia/file_system"
@@ -50,6 +49,7 @@ type App struct {
 	home         string
 	monitor      *monitoring.Monitor
 	fileSystem   *file_system.FileSystem
+	wallet       *wallet.Wallet
 }
 
 func NewApp(home string) (*App, error) {
@@ -97,7 +97,13 @@ func NewApp(home string) (*App, error) {
 
 	apiServer := api.NewAPI(cfg.APICfg.Port)
 
-	f, err := file_system.NewFileSystem(ctx, db, ds, bs, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
+	w, err := config.InitWallet(home)
+	if err != nil {
+		return nil, err
+	}
+	log.Info().Str("provider_address", w.AccAddress()).Send()
+
+	f, err := file_system.NewFileSystem(ctx, db, cfg.BlockStoreConfig.Key, ds, bs, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +111,7 @@ func NewApp(home string) (*App, error) {
 		fileSystem: f,
 		api:        apiServer,
 		home:       home,
+		wallet:     w,
 	}, nil
 }
 
@@ -194,26 +201,20 @@ func (a *App) Start() error {
 	}
 	log.Debug().Object("config", cfg).Msg("sequoia config")
 
-	w, err := config.InitWallet(a.home)
-	if err != nil {
-		return err
-	}
-	log.Info().Str("provider_address", w.AccAddress()).Send()
-
-	myAddress := w.AccAddress()
+	myAddress := a.wallet.AccAddress()
 
 	queryParams := &storageTypes.QueryProvider{
 		Address: myAddress,
 	}
 
-	cl := storageTypes.NewQueryClient(w.Client.GRPCConn)
+	cl := storageTypes.NewQueryClient(a.wallet.Client.GRPCConn)
 
 	claimers := make([]string, 0)
 
 	res, err := cl.Provider(context.Background(), queryParams)
 	if err != nil {
 		log.Info().Err(err).Msg("Provider does not exist on network or is not connected...")
-		err := initProviderOnChain(w, cfg.Ip, cfg.TotalSpace)
+		err := initProviderOnChain(a.wallet, cfg.Ip, cfg.TotalSpace)
 		if err != nil {
 			return err
 		}
@@ -232,28 +233,28 @@ func (a *App) Start() error {
 			return err
 		}
 		if totalSpace != cfg.TotalSpace {
-			err := updateSpace(w, cfg.TotalSpace)
+			err := updateSpace(a.wallet, cfg.TotalSpace)
 			if err != nil {
 				return err
 			}
 		}
 		if res.Provider.Ip != cfg.Ip {
-			err := updateIp(w, cfg.Ip)
+			err := updateIp(a.wallet, cfg.Ip)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	params, err := a.GetStorageParams(w.Client.GRPCConn)
+	params, err := a.GetStorageParams(a.wallet.Client.GRPCConn)
 	if err != nil {
 		return err
 	}
 
-	a.q = queue.NewQueue(w, cfg.QueueInterval)
+	a.q = queue.NewQueue(a.wallet, cfg.QueueInterval)
 	go a.q.Listen()
 
-	prover := proofs.NewProver(w, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+	prover := proofs.NewProver(a.wallet, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
 
 	recycleDepot, err := recycle.NewRecycleDepot(
 		a.home,
@@ -261,7 +262,7 @@ func (a *App) Start() error {
 		params.ChunkSize,
 		a.fileSystem,
 		prover,
-		types.NewQueryClient(w.Client.GRPCConn),
+		types.NewQueryClient(a.wallet.Client.GRPCConn),
 	)
 	if err != nil {
 		return err
@@ -272,13 +273,13 @@ func (a *App) Start() error {
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
 	a.prover = prover
-	a.strayManager = strays.NewStrayManager(w, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
-	a.monitor = monitoring.NewMonitor(w)
+	a.strayManager = strays.NewStrayManager(a.wallet, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
+	a.monitor = monitoring.NewMonitor(a.wallet)
 
 	// Starting the 4 concurrent services
 	// nolint:all
-	go a.ConnectPeers(w.Client)
-	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, w, params.ChunkSize)
+	go a.ConnectPeers()
+	go a.api.Serve(recycleDepot, a.fileSystem, a.prover, a.wallet, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
 	go a.monitor.Start()
@@ -305,10 +306,10 @@ func (a *App) Start() error {
 	return nil
 }
 
-func (a *App) ConnectPeers(cl *client.Client) {
+func (a *App) ConnectPeers() {
 	log.Info().Msg("Starting IPFS Peering cycle...")
 	ctx := context.Background()
-	queryClient := storageTypes.NewQueryClient(cl.GRPCConn)
+	queryClient := storageTypes.NewQueryClient(a.wallet.Client.GRPCConn)
 
 	activeProviders, err := queryClient.ActiveProviders(ctx, &storageTypes.QueryActiveProviders{})
 	if err != nil {

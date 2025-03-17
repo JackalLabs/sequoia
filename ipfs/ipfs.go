@@ -2,11 +2,13 @@ package ipfs
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
-	"github.com/dgraph-io/badger/v4"
-	crypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/rs/zerolog/log"
+
+	"github.com/libp2p/go-libp2p/core/crypto"
 
 	"github.com/libp2p/go-libp2p"
 
@@ -19,46 +21,28 @@ import (
 	"github.com/multiformats/go-multiaddr"
 )
 
-var PrivateKeyKey = []byte("IPFS_KEYS_PRIVATE")
-
-func MakeIPFS(ctx context.Context, db *badger.DB, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
-	var key crypto.PrivKey
-	_ = db.View(func(txn *badger.Txn) error {
-		k, err := txn.Get(PrivateKeyKey)
-		if err != nil {
-			return err
-		}
-		_ = k.Value(func(val []byte) error {
-			kk, err := crypto.UnmarshalPrivateKey(val)
-			if err != nil {
-				return err
-			}
-
-			key = kk
-			return nil
-		})
-		return nil
-	})
-
-	if key == nil {
+func MakeIPFS(ctx context.Context, ipfsKey string, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
+	if ipfsKey == "" {
 		priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 		if err != nil {
-			return nil, nil, err
+			panic(err)
 		}
-
-		privOut, err := priv.Raw()
+		k, err := crypto.MarshalPrivateKey(priv)
 		if err != nil {
-			return nil, nil, err
+			panic(err)
 		}
+		ipfsKey = hex.EncodeToString(k)
+		log.Warn().Msgf("YOUR NEW KEY, SHOULD PROBABLY SAVE THIS: %s", ipfsKey)
+	}
 
-		err = db.Update(func(txn *badger.Txn) error {
-			return txn.Set(PrivateKeyKey, privOut)
-		})
-		if err != nil {
-			return nil, nil, err
-		}
+	k, err := hex.DecodeString(ipfsKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot use IPFS key | %w", err)
+	}
 
-		key = priv
+	kk, err := crypto.UnmarshalPrivateKey(k)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot unmarshal IPFS key | %w", err)
 	}
 
 	defaultPort, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/4001")
@@ -95,7 +79,7 @@ func MakeIPFS(ctx context.Context, db *badger.DB, ds datastore.Batching, bs bloc
 
 	h, dht, err := ipfslite.SetupLibp2p(
 		ctx,
-		key,
+		kk,
 		nil,
 		m,
 		ds,
