@@ -355,15 +355,16 @@ func (a *App) ConnectPeers() {
 
 		for _, h := range hosts.Hosts {
 			host := h
+			if strings.Contains(host, "127.0.0.1") || strings.Contains(host, "ip6/") || strings.HasPrefix(host, "/ip4/10") || strings.HasPrefix(host, "/ip4/172") || strings.HasPrefix(host, "/ip4/192") {
+				continue
+			}
+			adr, err := peer.AddrInfoFromString(host)
+			if err != nil {
+				log.Warn().Msgf("Could not parse host %s from %s", adr, ip)
+				continue
+			}
+
 			go func() {
-				if strings.Contains(host, "127.0.0.1") || strings.Contains(host, "ip6/") {
-					return
-				}
-				adr, err := peer.AddrInfoFromString(host)
-				if err != nil {
-					log.Warn().Msgf("Could not parse host %s from %s", adr, ip)
-					return
-				}
 				a.fileSystem.Connect(adr)
 			}()
 		}
