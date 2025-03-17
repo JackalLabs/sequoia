@@ -2,6 +2,7 @@ package file_system
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -13,16 +14,29 @@ func (f *FileSystem) ListPeers() peer.IDSlice {
 
 func (f *FileSystem) GetHosts() []string {
 	peerId := f.ipfsHost.ID()
-
 	peerString := peerId.String()
 
-	s := make([]string, len(f.ipfsHost.Addrs()))
+	// Get addresses from the host
+	addrs := f.ipfsHost.Addrs()
+	results := make([]string, 0, len(addrs)+1) // +1 for possible custom domain
 
-	for i, multiaddr := range f.ipfsHost.Addrs() {
-		s[i] = fmt.Sprintf("%s/ipfs/%s", multiaddr.String(), peerString)
+	// Add all bound addresses
+	for _, multiaddr := range addrs {
+		results = append(results, fmt.Sprintf("%s/ipfs/%s", multiaddr.String(), peerString))
 	}
 
-	return s
+	ipfsDomain := f.ipfsDomain
+
+	if !strings.Contains(ipfsDomain, "example.com") && len(ipfsDomain) > 2 {
+		if !strings.HasPrefix(ipfsDomain, "/") {
+			ipfsDomain = fmt.Sprintf("/%s", ipfsDomain)
+		}
+
+		// Add the custom domain to the results
+		results = append(results, fmt.Sprintf("%s/ipfs/%s", ipfsDomain, peerString))
+	}
+
+	return results
 }
 
 func (f *FileSystem) GetCIDFromMerkle(merkle []byte) (cid string, err error) {
