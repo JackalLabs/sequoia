@@ -15,9 +15,10 @@ import (
 )
 
 type FileSystem struct {
-	db       *badger.DB
-	ipfs     *ipfslite.Peer
-	ipfsHost host.Host
+	db         *badger.DB
+	ipfs       *ipfslite.Peer
+	ipfsHost   host.Host
+	ipfsDomain string
 }
 
 func NewFileSystem(ctx context.Context, db *badger.DB, seed string, ds datastore.Batching, bs blockstore.Blockstore, ipfsPort int, ipfsDomain string) (*FileSystem, error) {
@@ -25,7 +26,7 @@ func NewFileSystem(ctx context.Context, db *badger.DB, seed string, ds datastore
 	if err != nil {
 		return nil, err
 	}
-	return &FileSystem{db: db, ipfs: ipfs, ipfsHost: hh}, nil
+	return &FileSystem{db: db, ipfs: ipfs, ipfsHost: hh, ipfsDomain: ipfsDomain}, nil
 }
 
 func (f *FileSystem) Close() {
