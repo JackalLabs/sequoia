@@ -171,46 +171,80 @@ func (f *FileSystem) GenIPFSFolderData(childCIDs map[string]cid.Cid) (node ipldF
 }
 
 func (f *FileSystem) DeleteFile(merkle []byte, owner string, start int64) error {
+	if err := f.removeContract(merkle, owner, start); err != nil {
+		return err
+	}
+
+	return f.deleteFile(merkle)
+}
+
+func (f *FileSystem) removeContract(merkle []byte, owner string, start int64) error {
+	err := f.db.Update(func(txn *badger.Txn) error {
+		err := txn.Delete(treeKey(merkle, owner, start))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	found := false
+	// check for other contracts with same file
+	err = f.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.IteratorOptions{Prefix: merkle})
+		defer it.Close()
+		it.Rewind()
+
+		found = it.Valid()
+		return nil
+	})
+
+	if !found {
+		log.Debug().Hex("merkle", merkle).Msg("zero contracts tied to the file")
+		return f.deleteFile(merkle)
+	}
+
 	return nil
-	//log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
-	//fileCount.Dec()
-	//err := f.db.Update(func(txn *badger.Txn) error {
-	//	err := txn.Delete(treeKey(merkle, owner, start))
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	return nil
-	//})
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//fcid := ""
-	//_ = f.db.View(func(txn *badger.Txn) error {
-	//	b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	_ = b.Value(func(val []byte) error {
-	//		fcid = string(val)
-	//		return nil
-	//	})
-	//	return nil
-	//})
-	//
-	//c, err := cid.Decode(fcid)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//err = f.ipfs.Remove(context.Background(), c)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//return nil
+}
+
+func (f *FileSystem) deleteFile(merkle []byte) error {
+	log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
+	fileCount.Dec()
+
+	// find ipfs cid
+	fcid := ""
+	err := f.db.View(func(txn *badger.Txn) error {
+		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
+		if err != nil {
+			return err
+		}
+
+		return b.Value(func(val []byte) error {
+			fcid = string(val)
+			return nil
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	err = f.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete([]byte(fmt.Sprintf("cid/%x", merkle)))
+	})
+	if err != nil {
+		return err
+	}
+
+	c, err := cid.Decode(fcid)
+	if err != nil {
+		return err
+	}
+
+	return f.ipfs.Remove(context.Background(), c)
 }
 
 func (f *FileSystem) ListFiles() ([][]byte, []string, []int64, error) {
