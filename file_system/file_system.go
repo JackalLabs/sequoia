@@ -175,7 +175,7 @@ func (f *FileSystem) DeleteFile(merkle []byte, owner string, start int64) error 
 		return err
 	}
 
-	return f.deleteFile(merkle)
+	return nil
 }
 
 func (f *FileSystem) removeContract(merkle []byte, owner string, start int64) error {
@@ -187,7 +187,7 @@ func (f *FileSystem) removeContract(merkle []byte, owner string, start int64) er
 		return nil
 	})
 	if err != nil {
-		return err
+		log.Warn().Err(err)
 	}
 
 	found := false
@@ -201,7 +201,7 @@ func (f *FileSystem) removeContract(merkle []byte, owner string, start int64) er
 		return nil
 	})
 	if err != nil {
-		return err
+		log.Warn().Err(err)
 	}
 
 	if !found {
@@ -231,14 +231,14 @@ func (f *FileSystem) deleteFile(merkle []byte) error {
 		})
 	})
 	if err != nil {
-		return err
+		log.Warn().Err(err)
 	}
 
 	err = f.db.Update(func(txn *badger.Txn) error {
 		return txn.Delete([]byte(fmt.Sprintf("cid/%x", merkle)))
 	})
 	if err != nil {
-		return err
+		log.Warn().Err(err)
 	}
 
 	c, err := cid.Decode(fcid)
