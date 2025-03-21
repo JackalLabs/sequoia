@@ -200,7 +200,7 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			}
 			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(v)
-
+			return
 		}
 
 		file, err := f.GetFileData(merkle)
@@ -210,7 +210,7 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			}
 			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(v)
-
+			return
 		}
 		rs := bytes.NewReader(file)
 		http.ServeContent(w, req, merkleString, time.Time{}, rs)

@@ -1,6 +1,9 @@
 package config
 
 import (
+	"encoding/hex"
+
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
@@ -95,12 +98,24 @@ type BlockStoreConfig struct {
 	Directory string `yaml:"directory" mapstructure:"directory"`
 	// data store options: flatfs, badgerdb
 	Type string `yaml:"type" mapstructure:"type"`
+
+	Key string `yaml:"key" mapstructure:"key"`
 }
 
 func DefaultBlockStoreConfig() BlockStoreConfig {
+	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
+	if err != nil {
+		panic(err)
+	}
+	k, err := priv.Raw()
+	if err != nil {
+		panic(err)
+	}
+
 	return BlockStoreConfig{
 		Directory: "$HOME/.sequoia/blockstore",
 		Type:      OptFlatFS,
+		Key:       hex.EncodeToString(k),
 	}
 }
 

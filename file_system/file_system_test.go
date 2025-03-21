@@ -50,7 +50,7 @@ func BenchmarkFileWrites(b *testing.B) {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: ioutil.Discard})
 	log.Logger = log.With().Caller().Logger()
 
-	options := badger.DefaultOptions("/tmp/badger")
+	options := badger.DefaultOptions("/tmp/badger/k")
 	options.Logger = &logger.SequoiaLogger{}
 
 	db, err := badger.Open(options)
@@ -62,7 +62,7 @@ func BenchmarkFileWrites(b *testing.B) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(b, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	f, err := NewFileSystem(context.Background(), db, "", ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(b, err)
 	defer db.Close()
 	server := &http.Server{
@@ -97,7 +97,7 @@ func BenchmarkFileWrites(b *testing.B) {
 
 func TestWriteFile(t *testing.T) {
 	t.Logf("Starting test: TestWriteFile")
-	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
+	db, err := badger.Open(badger.DefaultOptions("/tmp/badger/h"))
 	require.NoError(t, err)
 
 	err = db.DropAll()
@@ -106,7 +106,7 @@ func TestWriteFile(t *testing.T) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(t, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	f, err := NewFileSystem(context.Background(), db, "", ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -147,7 +147,7 @@ func TestWriteFile(t *testing.T) {
 
 func TestWriteFileWithDomain(t *testing.T) {
 	t.Logf("Starting test: TestWriteFileWithDomain")
-	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
+	db, err := badger.Open(badger.DefaultOptions("/tmp/badger/g"))
 	require.NoError(t, err)
 
 	err = db.DropAll()
@@ -156,7 +156,7 @@ func TestWriteFileWithDomain(t *testing.T) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(t, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "dns4/jackal-testnet-v4-storage.p2p.brocha.in/tcp/30506")
+	f, err := NewFileSystem(context.Background(), db, "", ds, nil, 4005, "dns4/jackal-testnet-v4-storage.p2p.brocha.in/tcp/30506")
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -197,7 +197,7 @@ func TestWriteFileWithDomain(t *testing.T) {
 
 func TestWriteAndProveFiles(t *testing.T) {
 	t.Logf("Starting test: TestWriteAndProveFiles")
-	opts := badger.DefaultOptions("/tmp/badger")
+	opts := badger.DefaultOptions("/tmp/badger/f")
 	opts.Logger = nil
 	db, err := badger.Open(opts)
 	require.NoError(t, err)
@@ -209,7 +209,7 @@ func TestWriteAndProveFiles(t *testing.T) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(t, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	f, err := NewFileSystem(context.Background(), db, "", ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(t, err)
 	size := 1024 * 255 // 255 kbs
 	var chunkSize int64 = 1024
@@ -266,7 +266,7 @@ func TestWriteAndProveFiles(t *testing.T) {
 
 func TestWriteFileWithParams(t *testing.T) {
 	t.Logf("Starting test: TestWriteFileWithParams")
-	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
+	db, err := badger.Open(badger.DefaultOptions("/tmp/badger/e"))
 	require.NoError(t, err)
 
 	err = db.DropAll()
@@ -275,7 +275,7 @@ func TestWriteFileWithParams(t *testing.T) {
 	ds, err := ipfs.NewBadgerDataStore(db)
 	require.NoError(t, err)
 
-	f, err := NewFileSystem(context.Background(), db, ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
+	f, err := NewFileSystem(context.Background(), db, "", ds, nil, 4005, "/dns4/ipfs.example.com/tcp/4001")
 	require.NoError(t, err)
 	defer db.Close()
 

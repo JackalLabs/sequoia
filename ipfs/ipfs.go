@@ -2,24 +2,47 @@ package ipfs
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
+	"github.com/libp2p/go-libp2p/core/crypto"
+
 	"github.com/libp2p/go-libp2p"
+
 	"github.com/libp2p/go-libp2p/core/host"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/boxo/blockstore"
 	"github.com/ipfs/go-datastore"
-	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
 )
 
-func MakeIPFS(ctx context.Context, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
-	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
+func MakeIPFS(ctx context.Context, ipfsKey string, ds datastore.Batching, bs blockstore.Blockstore, port int, customDomain string) (*ipfslite.Peer, host.Host, error) {
+	if ipfsKey == "" {
+		priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
+		if err != nil {
+			panic(err)
+		}
+		k, err := crypto.MarshalPrivateKey(priv)
+		if err != nil {
+			panic(err)
+		}
+		ipfsKey = hex.EncodeToString(k)
+		log.Warn().Msgf("YOUR NEW KEY, SHOULD PROBABLY SAVE THIS: %s", ipfsKey)
+	}
+
+	k, err := hex.DecodeString(ipfsKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("cannot use IPFS key | %w", err)
+	}
+
+	kk, err := crypto.UnmarshalPrivateKey(k)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot unmarshal IPFS key | %w", err)
 	}
 
 	defaultPort, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/4001")
@@ -56,7 +79,7 @@ func MakeIPFS(ctx context.Context, ds datastore.Batching, bs blockstore.Blocksto
 
 	h, dht, err := ipfslite.SetupLibp2p(
 		ctx,
-		priv,
+		kk,
 		nil,
 		m,
 		ds,
