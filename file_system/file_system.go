@@ -213,6 +213,7 @@ func (f *FileSystem) removeContract(merkle []byte, owner string, start int64) er
 }
 
 func (f *FileSystem) deleteFile(merkle []byte) error {
+	ctx := context.Background()
 	log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
 	fileCount.Dec()
 
@@ -245,7 +246,59 @@ func (f *FileSystem) deleteFile(merkle []byte) error {
 		return err
 	}
 
-	return f.ipfs.Remove(context.Background(), c)
+	return removeDAGNode(ctx, f.ipfs, c)
+}
+
+func collectDAGNodes(ctx context.Context, dagService *ipfslite.Peer, rootCid cid.Cid) (map[cid.Cid]struct{}, error) {
+	nodesToVisit := []cid.Cid{rootCid}
+	visitedNodes := make(map[cid.Cid]struct{})
+
+	for len(nodesToVisit) > 0 {
+		// Pop the next CID to process
+		currentCid := nodesToVisit[0]
+		nodesToVisit = nodesToVisit[1:]
+
+		// Skip if already visited
+		if _, alreadyVisited := visitedNodes[currentCid]; alreadyVisited {
+			continue
+		}
+
+		// Mark as visited
+		visitedNodes[currentCid] = struct{}{}
+
+		// Get the node
+		node, err := dagService.Get(ctx, currentCid)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add all links to the queue
+		for _, link := range node.Links() {
+			if _, alreadyVisited := visitedNodes[link.Cid]; !alreadyVisited {
+				nodesToVisit = append(nodesToVisit, link.Cid)
+			}
+		}
+	}
+
+	return visitedNodes, nil
+}
+
+func removeDAGNode(ctx context.Context, dagService *ipfslite.Peer, c cid.Cid) error {
+	// Collect all nodes in the DAG using the non-recursive function
+	nodesToRemove, err := collectDAGNodes(ctx, dagService, c)
+	if err != nil {
+		return err
+	}
+
+	bstore := dagService.BlockStore()
+
+	for cidToRemove := range nodesToRemove {
+		if err := bstore.DeleteBlock(ctx, cidToRemove); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (f *FileSystem) ListFiles() ([][]byte, []string, []int64, error) {
