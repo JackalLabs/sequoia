@@ -186,7 +186,6 @@ func (f *FileSystem) removeContract(merkle []byte, owner string, start int64) er
 		}
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -201,6 +200,9 @@ func (f *FileSystem) removeContract(merkle []byte, owner string, start int64) er
 		found = it.Valid()
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	if !found {
 		log.Debug().Hex("merkle", merkle).Msg("zero contracts tied to the file")
@@ -227,7 +229,6 @@ func (f *FileSystem) deleteFile(merkle []byte) error {
 			return nil
 		})
 	})
-
 	if err != nil {
 		return err
 	}
