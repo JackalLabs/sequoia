@@ -11,8 +11,6 @@ import (
 	"github.com/rs/cors"
 
 	"github.com/JackalLabs/sequoia/file_system"
-	"github.com/JackalLabs/sequoia/recycle"
-
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/JackalLabs/sequoia/proofs"
@@ -44,7 +42,7 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) {
+func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) {
 	defer log.Info().Msg("API module stopped")
 	r := mux.NewRouter()
 
@@ -71,8 +69,6 @@ func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proo
 	outline.RegisterGetRoute(r, "/version", VersionHandler(wallet))
 	outline.RegisterGetRoute(r, "/network", NetworkHandler(wallet))
 
-	outline.RegisterGetRoute(r, "/recycle/salvage", RecycleSalvageHandler(rd))
-
 	outline.RegisterGetRoute(r, "/api", outline.OutlineHandler())
 
 	r.Handle("/metrics", promhttp.Handler())
@@ -84,8 +80,9 @@ func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proo
 		Handler: handler,
 		Addr:    fmt.Sprintf("0.0.0.0:%d", a.port),
 		// Good practice: enforce timeouts for servers you create!
-		WriteTimeout: 0,
-		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 300 * time.Second, // Add this (5 minutes)
+		ReadTimeout:  600 * time.Second, // Increase this (10 minutes)
+		IdleTimeout:  120 * time.Second, // Add this (2 minutes)
 	}
 
 	log.Logger.Info().Msg(fmt.Sprintf("Sequoia API now listening on %s", a.srv.Addr))

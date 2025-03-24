@@ -22,6 +22,7 @@ func createIfNotExists(directory string, fileName string, contents []byte) (bool
 		if err != nil {
 			return false, err
 		}
+		//nolint:errcheck
 		defer f.Close()
 
 		_, err = f.Write(contents)

@@ -36,11 +36,12 @@ func StartCmd() *cobra.Command {
 				maxRestartAttempt = 0
 			}
 
-			if logLevel == "info" {
+			switch logLevel {
+			case "info":
 				log.Logger = log.Level(zerolog.InfoLevel)
-			} else if logLevel == "debug" {
+			case "debug":
 				log.Logger = log.Level(zerolog.DebugLevel)
-			} else if logLevel == "error" {
+			case "error":
 				log.Logger = log.Level(zerolog.ErrorLevel)
 			}
 

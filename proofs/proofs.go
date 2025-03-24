@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	canine "github.com/jackalLabs/canine-chain/v4/app"
 
@@ -17,8 +20,9 @@ import (
 	"github.com/rs/zerolog/log"
 	merkletree "github.com/wealdtech/go-merkletree/v2"
 	"github.com/wealdtech/go-merkletree/v2/sha3"
+
+	jsoniter "github.com/json-iterator/go"
 )
-import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -31,7 +35,7 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (b
 	log.Debug().Msg(fmt.Sprintf("Generating Merkle proof for %d", index))
 
 	h := sha256.New()
-	_, err := h.Write([]byte(fmt.Sprintf("%d%x", index, item)))
+	_, err := fmt.Fprintf(h, "%d%x", index, item)
 	if err != nil {
 		return false, nil, err
 	}
@@ -260,7 +264,18 @@ func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height 
 			Int64("height", height).
 			Msg("proof error")
 
-		if err.Error() == "rpc error: code = NotFound desc = not found" { // if the file is not found on the network, delete it
+		if code := status.Code(err); code > codes.NotFound {
+			log.Error().
+				Hex("merkle", merkle).
+				Str("owner", owner).
+				Int64("start", start).
+				Int64("height", height).
+				Time("startedAt", startedAt).
+				Err(err).
+				Msg("problem with rpc node")
+			return
+		}
+		if code := status.Code(err); code == codes.NotFound {
 			log.Debug().
 				Hex("merkle", merkle).
 				Str("owner", owner).
