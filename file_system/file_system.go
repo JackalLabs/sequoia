@@ -50,7 +50,11 @@ func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 		chunks = append(chunks, b)
 
 		hash := sha256.New()
-		hash.Write([]byte(fmt.Sprintf("%d%x", index, b))) // appending the index and the data
+		_, err := fmt.Fprintf(hash, "%d%x", index, b) // appending the index and the data
+		if err != nil {
+			log.Warn().Msg("failed to write to hash")
+			break
+		}
 		hashName := hash.Sum(nil)
 
 		data = append(data, hashName)
@@ -171,46 +175,134 @@ func (f *FileSystem) GenIPFSFolderData(childCIDs map[string]cid.Cid) (node ipldF
 }
 
 func (f *FileSystem) DeleteFile(merkle []byte, owner string, start int64) error {
+	if err := f.removeContract(merkle, owner, start); err != nil {
+		return err
+	}
+
 	return nil
-	//log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
-	//fileCount.Dec()
-	//err := f.db.Update(func(txn *badger.Txn) error {
-	//	err := txn.Delete(treeKey(merkle, owner, start))
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	return nil
-	//})
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//fcid := ""
-	//_ = f.db.View(func(txn *badger.Txn) error {
-	//	b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	_ = b.Value(func(val []byte) error {
-	//		fcid = string(val)
-	//		return nil
-	//	})
-	//	return nil
-	//})
-	//
-	//c, err := cid.Decode(fcid)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//err = f.ipfs.Remove(context.Background(), c)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//return nil
+}
+
+func (f *FileSystem) removeContract(merkle []byte, owner string, start int64) error {
+	err := f.db.Update(func(txn *badger.Txn) error {
+		err := txn.Delete(treeKey(merkle, owner, start))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		log.Warn().Err(err)
+	}
+
+	found := false
+	// check for other contracts with same file
+	err = f.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.IteratorOptions{Prefix: merkle})
+		defer it.Close()
+		it.Rewind()
+
+		found = it.Valid()
+		return nil
+	})
+	if err != nil {
+		log.Warn().Err(err)
+	}
+
+	if !found {
+		log.Debug().Hex("merkle", merkle).Msg("zero contracts tied to the file")
+		return f.deleteFile(merkle)
+	}
+
+	return nil
+}
+
+func (f *FileSystem) deleteFile(merkle []byte) error {
+	ctx := context.Background()
+	log.Info().Msg(fmt.Sprintf("Removing %x from disk...", merkle))
+	fileCount.Dec()
+
+	// find ipfs cid
+	fcid := ""
+	err := f.db.View(func(txn *badger.Txn) error {
+		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
+		if err != nil {
+			return err
+		}
+
+		return b.Value(func(val []byte) error {
+			fcid = string(val)
+			return nil
+		})
+	})
+	if err != nil {
+		log.Warn().Err(err)
+	}
+
+	err = f.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete([]byte(fmt.Sprintf("cid/%x", merkle)))
+	})
+	if err != nil {
+		log.Warn().Err(err)
+	}
+
+	c, err := cid.Decode(fcid)
+	if err != nil {
+		return err
+	}
+
+	return removeDAGNode(ctx, f.ipfs, c)
+}
+
+func collectDAGNodes(ctx context.Context, dagService *ipfslite.Peer, rootCid cid.Cid) (map[cid.Cid]struct{}, error) {
+	nodesToVisit := []cid.Cid{rootCid}
+	visitedNodes := make(map[cid.Cid]struct{})
+
+	for len(nodesToVisit) > 0 {
+		// Pop the next CID to process
+		currentCid := nodesToVisit[0]
+		nodesToVisit = nodesToVisit[1:]
+
+		// Skip if already visited
+		if _, alreadyVisited := visitedNodes[currentCid]; alreadyVisited {
+			continue
+		}
+
+		// Mark as visited
+		visitedNodes[currentCid] = struct{}{}
+
+		// Get the node
+		node, err := dagService.Get(ctx, currentCid)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add all links to the queue
+		for _, link := range node.Links() {
+			if _, alreadyVisited := visitedNodes[link.Cid]; !alreadyVisited {
+				nodesToVisit = append(nodesToVisit, link.Cid)
+			}
+		}
+	}
+
+	return visitedNodes, nil
+}
+
+func removeDAGNode(ctx context.Context, dagService *ipfslite.Peer, c cid.Cid) error {
+	// Collect all nodes in the DAG using the non-recursive function
+	nodesToRemove, err := collectDAGNodes(ctx, dagService, c)
+	if err != nil {
+		return err
+	}
+
+	bstore := dagService.BlockStore()
+
+	for cidToRemove := range nodesToRemove {
+		if err := bstore.DeleteBlock(ctx, cidToRemove); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (f *FileSystem) ListFiles() ([][]byte, []string, []int64, error) {
@@ -409,6 +501,7 @@ func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot get file for cid '%s': %w", c.String(), err)
 	}
+	//nolint:errcheck
 	defer rsc.Close()
 	fileData, err := io.ReadAll(rsc)
 	if err != nil {
