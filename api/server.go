@@ -84,8 +84,9 @@ func (a *API) Serve(rd *recycle.RecycleDepot, f *file_system.FileSystem, p *proo
 		Handler: handler,
 		Addr:    fmt.Sprintf("0.0.0.0:%d", a.port),
 		// Good practice: enforce timeouts for servers you create!
-		WriteTimeout: 0,
-		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 300 * time.Second, // Add this (5 minutes)
+		ReadTimeout:  600 * time.Second, // Increase this (10 minutes)
+		IdleTimeout:  120 * time.Second, // Add this (2 minutes)
 	}
 
 	log.Logger.Info().Msg(fmt.Sprintf("Sequoia API now listening on %s", a.srv.Addr))
