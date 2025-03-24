@@ -67,9 +67,12 @@ func askForConfirmation(s string) bool {
 
 		response = strings.ToLower(strings.TrimSpace(response))
 
-		if response == "y" || response == "yes" {
+		switch response {
+		case "y":
+		case "yes":
 			return true
-		} else if response == "n" || response == "no" {
+		case "n":
+		case "no":
 			return false
 		}
 	}
@@ -173,7 +176,7 @@ func RootCmd() *cobra.Command {
 		panic(err)
 	}
 
-	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), SalvageCmd(), ShutdownCmd())
+	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), ShutdownCmd())
 
 	return r
 }

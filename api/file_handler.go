@@ -148,6 +148,7 @@ func PostIPFSFolder(f *file_system.FileSystem) func(http.ResponseWriter, *http.R
 			http.Error(w, "Error reading request body", http.StatusInternalServerError)
 			return
 		}
+		//nolint:errcheck
 		defer req.Body.Close()
 
 		var cidList map[string]string

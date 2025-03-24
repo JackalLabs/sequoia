@@ -35,7 +35,7 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (b
 	log.Debug().Msg(fmt.Sprintf("Generating Merkle proof for %d", index))
 
 	h := sha256.New()
-	_, err := h.Write([]byte(fmt.Sprintf("%d%x", index, item)))
+	_, err := fmt.Fprintf(h, "%d%x", index, item)
 	if err != nil {
 		return false, nil, err
 	}
