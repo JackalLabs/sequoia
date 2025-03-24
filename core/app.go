@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -353,9 +354,14 @@ func (a *App) ConnectPeers() {
 			continue
 		}
 
+		r, err := regexp.Compile("/ip4/(127\\.|10\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.|192\\.168\\.)[0-9.]+/")
+		if err != nil {
+			continue
+		}
+
 		for _, h := range hosts.Hosts {
 			host := h
-			if strings.Contains(host, "127.0.0.1") || strings.Contains(host, "ip6/") || strings.HasPrefix(host, "/ip4/10") || strings.HasPrefix(host, "/ip4/172") || strings.HasPrefix(host, "/ip4/192") {
+			if strings.Contains(host, "/ip6/") || r.MatchString(host) {
 				continue
 			}
 			adr, err := peer.AddrInfoFromString(host)
