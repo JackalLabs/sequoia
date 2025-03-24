@@ -173,7 +173,7 @@ func RootCmd() *cobra.Command {
 		panic(err)
 	}
 
-	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), SalvageCmd(), ShutdownCmd())
+	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), ShutdownCmd())
 
 	return r
 }
