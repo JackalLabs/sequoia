@@ -67,9 +67,12 @@ func askForConfirmation(s string) bool {
 
 		response = strings.ToLower(strings.TrimSpace(response))
 
-		if response == "y" || response == "yes" {
+		switch response {
+		case "y":
+		case "yes":
 			return true
-		} else if response == "n" || response == "no" {
+		case "n":
+		case "no":
 			return false
 		}
 	}

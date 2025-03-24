@@ -326,6 +326,7 @@ func (a *App) ConnectPeers() {
 			log.Warn().Msgf("Could not get hosts from %s", ipfsHostAddress)
 			continue
 		}
+		//nolint:errcheck
 		defer res.Body.Close()
 
 		var hosts apiTypes.HostResponse
