@@ -50,7 +50,11 @@ func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 		chunks = append(chunks, b)
 
 		hash := sha256.New()
-		hash.Write([]byte(fmt.Sprintf("%d%x", index, b))) // appending the index and the data
+		_, err := fmt.Fprintf(hash, "%d%x", index, b) // appending the index and the data
+		if err != nil {
+			log.Warn().Msg("failed to write to hash")
+			break
+		}
 		hashName := hash.Sum(nil)
 
 		data = append(data, hashName)
@@ -497,6 +501,7 @@ func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot get file for cid '%s': %w", c.String(), err)
 	}
+	//nolint:errcheck
 	defer rsc.Close()
 	fileData, err := io.ReadAll(rsc)
 	if err != nil {

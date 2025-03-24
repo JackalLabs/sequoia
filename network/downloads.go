@@ -85,6 +85,7 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	if resp.StatusCode != 200 {
 		return 0, fmt.Errorf("failed to find file on network")
 	}
+	//nolint:errcheck
 	defer resp.Body.Close()
 
 	buff := bytes.NewBuffer([]byte{})
