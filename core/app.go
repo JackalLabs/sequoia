@@ -338,7 +338,7 @@ func (a *App) ConnectPeers() {
 			continue
 		}
 
-		r, err := regexp.Compile("/ip4/(127\\.|10\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.|192\\.168\\.)[0-9.]+/")
+		r, err := regexp.Compile(`/ip4/(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)[0-9.]+/`)
 		if err != nil {
 			continue
 		}
