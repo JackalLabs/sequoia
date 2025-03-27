@@ -254,7 +254,6 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 			return
 		}
 		up.CID = c
-		JobMap.Store(jobId, &up)
 
 		if int64(size) != f.FileSize {
 			log.Error().Err(fmt.Errorf("cannot accept file that doesn't match the chain data %d != %d", int64(size), f.FileSize))
@@ -263,7 +262,57 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 
 		_ = prover.PostProof(merkle, sender, startBlock, startBlock, time.Now())
 
-		JobMap.Delete(jobId)
+		go func() {
+			time.Sleep(10 * time.Minute)
+			log.Info().Str("jobId", jobId).Msg("Deleting job after 10-minute retention period")
+			JobMap.Delete(jobId)
+		}()
+	}
+}
+
+func ListJobsHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		// Set response headers
+		w.Header().Set("Content-Type", "application/json")
+
+		// Create a slice to store all jobs
+		type JobInfo struct {
+			ID  string                  `json:"id"`
+			Job *types.UploadResponseV2 `json:"job"`
+		}
+
+		jobsList := make([]JobInfo, 0)
+
+		// Iterate through all items in the JobMap
+		JobMap.Range(func(key, value interface{}) bool {
+			jobID := key.(string)
+			jobData := value.(*types.UploadResponseV2)
+
+			// Add to our list
+			jobsList = append(jobsList, JobInfo{
+				ID:  jobID,
+				Job: jobData,
+			})
+
+			return true // continue iteration
+		})
+
+		// Create response object
+		response := struct {
+			Count int       `json:"count"`
+			Jobs  []JobInfo `json:"jobs"`
+		}{
+			Count: len(jobsList),
+			Jobs:  jobsList,
+		}
+
+		// Encode and return the response
+		err := json.NewEncoder(w).Encode(response)
+		if err != nil {
+			log.Error().Err(fmt.Errorf("can't encode json: %w", err))
+			handleErr(err, w, http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
