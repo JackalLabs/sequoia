@@ -156,15 +156,12 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	p.Dec()
 	filesProving.Dec()
 	if err != nil {
-
 		log.Error().Msgf("Failed to generate proof for %x at %d", merkle, index)
 		log.Error().Msg(err.Error())
 		return err
 	}
 
 	if proof == nil || item == nil {
-		p.Dec()
-		filesProving.Dec()
 		log.Debug().Msg("generated proof was nil but no error was thrown")
 		return nil
 	}
