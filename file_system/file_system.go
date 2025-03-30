@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/JackalLabs/sequoia/api/types"
+
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 
 	"github.com/ipfs/boxo/ipld/merkledag"
@@ -136,6 +138,66 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 	}
 
 	fileCount.Inc()
+	return size, n.Cid().String(), nil
+}
+
+func (f *FileSystem) WriteFileWithProgress(reader io.Reader, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams, tracker *types.UploadResponseV2) (size int, cid string, err error) {
+	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
+	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("cannot build tree | %w", err))
+		return 0, "", err
+	}
+	size = s
+	if hex.EncodeToString(merkle) != hex.EncodeToString(root) {
+		return 0, "", fmt.Errorf("merkle does not match %x != %x", merkle, root)
+	}
+	tracker.Progress = 60
+
+	b := make([]byte, 0)
+	for _, chunk := range chunks {
+		b = append(b, chunk...)
+	}
+	buf := bytes.NewBuffer(b)
+	tracker.Progress = 70
+	var n ipldFormat.Node
+	if proofType == 1 {
+		folderNode := unixfs.EmptyDirNode()
+		err := folderNode.UnmarshalJSON(buf.Bytes())
+		if err != nil {
+			return 0, "", err
+		}
+
+		err = f.ipfs.Add(context.Background(), folderNode)
+		if err != nil {
+			return 0, "", err
+		}
+		n = folderNode
+	} else {
+		n, err = f.ipfs.AddFile(context.Background(), buf, ipfsParams)
+		if err != nil {
+			return 0, "", err
+		}
+	}
+	tracker.Progress = 90
+	err = f.db.Update(func(txn *badger.Txn) error {
+		err = txn.Set(treeKey(merkle, owner, start), exportedTree)
+		if err != nil {
+			e := fmt.Errorf("cannot set tree %x | %w", merkle, err)
+			log.Error().Err(e)
+			return e
+		}
+
+		err = txn.Set([]byte(fmt.Sprintf("cid/%x", merkle)), []byte(n.Cid().String()))
+
+		return nil
+	})
+	if err != nil {
+		return 0, "", err
+	}
+
+	fileCount.Inc()
+	tracker.Progress = 100
 	return size, n.Cid().String(), nil
 }
 

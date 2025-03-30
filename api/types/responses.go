@@ -12,6 +12,18 @@ type UploadResponse struct {
 	CID    string `json:"cid"`
 }
 
+type UploadResponseV2 struct {
+	Merkle   []byte  `json:"merkle"`
+	Owner    string  `json:"owner"`
+	Start    int64   `json:"start"`
+	CID      string  `json:"cid"`
+	Progress float64 `json:"progress"`
+}
+
+type AcceptedUploadResponse struct {
+	JobID string `json:"job_id"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
