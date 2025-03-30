@@ -77,6 +77,7 @@ type APIConfig struct {
 	Port       int64  `yaml:"port" mapstructure:"port"`
 	IPFSPort   int    `yaml:"ipfs_port" mapstructure:"ipfs_port"`
 	IPFSDomain string `yaml:"ipfs_domain" mapstructure:"ipfs_domain"`
+	IPFSSearch bool   `yaml:"ipfs_search" mapstructure:"ipfs_search"`
 }
 
 func DefaultAPIConfig() APIConfig {
@@ -84,6 +85,7 @@ func DefaultAPIConfig() APIConfig {
 		Port:       3333,
 		IPFSPort:   4005,
 		IPFSDomain: "dns4/ipfs.example.com/tcp/4001",
+		IPFSSearch: true,
 	}
 }
 

@@ -165,6 +165,7 @@ func RootCmd() *cobra.Command {
 	r.PersistentFlags().Int64("api_config.port", 3333, "port to serve api requests")
 	r.PersistentFlags().Int("api_config.ipfs_port", 4005, "port for IPFS")
 	r.PersistentFlags().String("api_config.ipfs_domain", "dns4/ipfs.example.com/tcp/4001", "IPFS domain")
+	r.PersistentFlags().Bool("api_config.ipfs_search", true, "Search for IPFS connections on Jackal on startup")
 	r.PersistentFlags().Int64("proof_threads", 1000, "maximum threads for proofs")
 	r.PersistentFlags().String("data_directory", "$HOME/.sequoia/data", "directory to store database files")
 	r.PersistentFlags().Int64("queue_interval", 10, "seconds to wait until next cycle to flush the transaction queue")

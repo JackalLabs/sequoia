@@ -263,8 +263,10 @@ func (a *App) Start() error {
 	a.monitor = monitoring.NewMonitor(a.wallet)
 
 	// Starting the 4 concurrent services
-	// nolint:all
-	go a.ConnectPeers()
+	if cfg.APICfg.IPFSSearch {
+		// nolint:all
+		go a.ConnectPeers()
+	}
 	go a.api.Serve(a.fileSystem, a.prover, a.wallet, params.ChunkSize)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
