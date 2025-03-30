@@ -153,6 +153,8 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight int64, startedAt time.Time) error {
 	proof, item, index, err := p.GenerateProof(merkle, owner, start, blockHeight, startedAt)
+	p.Dec()
+	filesProving.Dec()
 	if err != nil {
 		log.Error().Msgf("Failed to generate proof for %x at %d", merkle, index)
 		log.Error().Msg(err.Error())
@@ -167,9 +169,6 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	log.Debug().Msg("Successfully generated proof")
 
 	msg := types.NewMsgPostProof(p.wallet.AccAddress(), merkle, owner, start, item, proof, index)
-
-	p.Dec()
-	filesProving.Dec()
 
 	m, wg := p.q.Add(msg)
 
