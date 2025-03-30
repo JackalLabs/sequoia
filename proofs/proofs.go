@@ -168,6 +168,9 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 
 	msg := types.NewMsgPostProof(p.wallet.AccAddress(), merkle, owner, start, item, proof, index)
 
+	p.Dec()
+	filesProving.Dec()
+
 	m, wg := p.q.Add(msg)
 
 	wg.Wait()
@@ -235,7 +238,9 @@ func (p *Prover) Start() {
 
 		err = p.io.ProcessFiles(func(merkle []byte, owner string, start int64) {
 			for p.Full() {
-				time.Sleep(time.Second)
+				log.Debug().Msg("Proving queue is full, waiting...")
+
+				time.Sleep(time.Second * 5)
 			}
 			log.Debug().Msg(fmt.Sprintf("proving: %x", merkle))
 			filesProving.Inc()
@@ -252,8 +257,6 @@ func (p *Prover) Start() {
 }
 
 func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height int64, startedAt time.Time) {
-	defer filesProving.Dec()
-	defer p.Dec()
 	err := p.PostProof(merkle, owner, start, height, startedAt)
 	if err != nil {
 		log.Warn().

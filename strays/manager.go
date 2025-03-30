@@ -176,6 +176,7 @@ func (s *StrayManager) RefreshList() error {
 	if err != nil {
 		return err
 	}
+	log.Info().Msg("Got updated list of strays")
 
 	for _, stray := range res.Files {
 		newStray := stray
