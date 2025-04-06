@@ -5,11 +5,20 @@ import (
 	"strings"
 
 	"github.com/dgraph-io/badger/v4"
-	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-func (f *FileSystem) ListPeers() peer.IDSlice {
-	return f.ipfsHost.Peerstore().PeersWithAddrs()
+func (f *FileSystem) ListPeers() []string {
+	results := make([]string, 0)
+
+	ids := f.ipfsHost.Peerstore().PeersWithAddrs()
+	for _, id := range ids {
+		addrs := f.ipfsHost.Peerstore().Addrs(id)
+		for _, multiaddr := range addrs {
+			results = append(results, fmt.Sprintf("%s/ipfs/%s", multiaddr.String(), id.String()))
+		}
+	}
+
+	return results
 }
 
 func (f *FileSystem) GetHosts() []string {
