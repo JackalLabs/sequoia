@@ -1,7 +1,6 @@
 package types
 
 import (
-	"github.com/libp2p/go-libp2p/core/peer"
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 )
 
@@ -65,7 +64,7 @@ type LegacyAPIListResponse struct {
 }
 
 type PeersResponse struct {
-	Peers peer.IDSlice `json:"peers"`
+	Peers []string `json:"peers"`
 }
 
 type HostResponse struct {
