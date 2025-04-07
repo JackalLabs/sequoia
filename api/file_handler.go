@@ -81,6 +81,10 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			handleErr(fmt.Errorf("cannot get file from form: %w", err), w, http.StatusBadRequest)
 			return
 		}
+		//nolint:errcheck
+		defer file.Close()
+		//nolint:errcheck
+		defer req.MultipartForm.RemoveAll()
 
 		readSize := fh.Size
 		if readSize == 0 {
@@ -183,6 +187,10 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 			handleErr(fmt.Errorf("cannot get file from form: %w", err), w, http.StatusBadRequest)
 			return
 		}
+		//nolint:errcheck
+		defer file.Close()
+		//nolint:errcheck
+		defer req.MultipartForm.RemoveAll()
 
 		readSize := fh.Size
 		if readSize == 0 {
