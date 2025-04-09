@@ -8,12 +8,19 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 )
 
+type TxWorker struct {
+	id     int8
+	wallet *wallet.Wallet
+	msg    *Message
+}
+
 type Queue struct {
-	wallet    *wallet.Wallet
-	messages  []*Message
-	processed time.Time
-	running   bool
-	interval  int64
+	txWorkers       []*TxWorker
+	wallet          *wallet.Wallet
+	refreshInterval time.Duration
+	msgPool         []*Message
+	processed       time.Time
+	running         bool
 }
 
 type Message struct {
