@@ -92,7 +92,6 @@ func (q *Queue) Stop() {
 
 // fcfs
 func (q *Queue) popFront() *Message {
-
 	if len(q.msgPool) == 0 {
 		return nil
 	}

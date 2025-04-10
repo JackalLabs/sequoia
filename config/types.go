@@ -24,6 +24,7 @@ type ChainConfig struct {
 
 type Config struct {
 	QueueInterval    int64              `yaml:"queue_interval" mapstructure:"queue_interval"`
+	QueueThreads     int8               `yaml:"queue_threads" mapstructure:"queue_threads"`
 	ProofInterval    int64              `yaml:"proof_interval" mapstructure:"proof_interval"`
 	StrayManagerCfg  StrayManagerConfig `yaml:"stray_manager" mapstructure:"stray_manager"`
 	ChainCfg         ChainConfig        `yaml:"chain_config" mapstructure:"chain_config"`
@@ -37,6 +38,10 @@ type Config struct {
 
 func DefaultQueueInterval() int64 {
 	return 10
+}
+
+func DefaultQueueThreads() int8 {
+	return 5
 }
 
 func DefaultProofInterval() int64 {
@@ -143,6 +148,7 @@ func DefaultChainConfig() ChainConfig {
 func DefaultConfig() *Config {
 	return &Config{
 		QueueInterval:    DefaultQueueInterval(),
+		QueueThreads:     DefaultQueueThreads(),
 		ProofInterval:    DefaultProofInterval(),
 		StrayManagerCfg:  DefaultStrayManagerConfig(),
 		ChainCfg:         DefaultChainConfig(),
