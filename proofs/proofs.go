@@ -32,7 +32,7 @@ const (
 )
 
 func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (bool, *merkletree.Proof, error) {
-	log.Debug().Msg(fmt.Sprintf("Generating Merkle proof for %d", index))
+	log.Debug().Msg(fmt.Sprintf("Generating Merkle proof for index: %d", index))
 
 	h := sha256.New()
 	_, err := fmt.Fprintf(h, "%d%x", index, item)
@@ -56,14 +56,14 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (b
 //
 // returns proof, item and error
 func GenProof(io FileSystem, merkle []byte, owner string, start int64, block int, chunkSize int, proofType int64) ([]byte, []byte, error) {
+	log.Debug().Msg(fmt.Sprintf("About to generate merkle proof for file: %x", merkle))
+
 	tree, chunk, err := io.GetFileTreeByChunk(merkle, owner, start, block, chunkSize, proofType)
 	if err != nil {
 		e := fmt.Errorf("cannot get chunk for %x at %d | %w", merkle, block, err)
 		log.Error().Err(e)
 		return nil, nil, e
 	}
-
-	log.Debug().Msg(fmt.Sprintf("About to generate merkle proof for %x", merkle))
 
 	valid, proof, err := GenerateMerkleProof(tree, block, chunk)
 	if err != nil {
@@ -220,11 +220,12 @@ func (p *Prover) Start() {
 		}
 
 		time.Sleep(time.Millisecond * 1000) // pauses for one third of a second
+		// sleep until next proving cycle
 		if !p.processed.Add(time.Second * time.Duration(p.interval)).Before(time.Now()) {
 			continue
 		}
 
-		log.Debug().Msg("Starting proof cycle...")
+		log.Debug().Time("start at", p.processed).Msg("Starting proof cycle...")
 
 		abciInfo, err := p.wallet.Client.RPCClient.ABCIInfo(context.Background())
 		if err != nil {
@@ -241,15 +242,16 @@ func (p *Prover) Start() {
 
 				time.Sleep(time.Second * 5)
 			}
-			log.Debug().Msg(fmt.Sprintf("proving: %x", merkle))
+			log.Debug().Hex("merkle", merkle).Str("owner", owner).Int64("start", start).Msg("proving file")
 			filesProving.Inc()
 			p.Inc()
 			go p.wrapPostProof(merkle, owner, start, height, t)
 		})
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("something went wrong while processing files in this proving cycle")
 		}
 
+		log.Debug().Time("finish at", time.Now()).TimeDiff("duration", time.Now(), p.processed).Msg("End of proof cycle")
 		p.processed = time.Now()
 	}
 	log.Info().Msg("Prover module stopped")
