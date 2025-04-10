@@ -9,9 +9,13 @@ import (
 )
 
 type TxWorker struct {
-	id     int8
-	wallet *wallet.Wallet
-	msg    *Message
+	id            int8
+	wallet        *wallet.Wallet
+	msg           *Message
+	msgBucketSize int16
+	msgBucket     []*Message
+	msgBatchSize  int8
+	retryAttempt  int8
 }
 
 type Queue struct {

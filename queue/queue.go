@@ -14,7 +14,7 @@ import (
 // does it really need to sleep less than 0.1 second?
 const minSleepDuration = time.Millisecond * 500
 
-// There must be at least 1 thread
+// NewQueue creates a new queue. There must be at least 1 thread
 // For every thread, TxWorker is assigned its own wallet with an offset
 // Each TxWorker uses its wallet to sign and broadcast messages
 // Queue sleeps for refreshInterval after Queue distributes messages to the workers
@@ -44,7 +44,7 @@ func NewQueue(w *wallet.Wallet, refreshInterval time.Duration, thread int8) (*Qu
 			return nil, errors.New("failed to create offset wallet for txWorker")
 		}
 
-		worker := NewTxWorker(int8(i), w)
+		worker := NewTxWorker(int8(i), w) // need defaults here
 		q.txWorkers = append(q.txWorkers, worker)
 	}
 
@@ -110,12 +110,11 @@ func (q *Queue) distributeMsg() int {
 
 	count := 0
 	for _, w := range q.txWorkers {
-		if w.busy() {
-			continue
-		}
 
-		w.assign(q.popFront())
-		go w.broadCast()
+		grabbed := w.assign(q.msgPool)
+		q.msgPool = q.msgPool[grabbed:]
+
+		go w.broadCast() // we should probably give each worker its own loop instead of calling this over and over again
 		count++
 	}
 	return count
