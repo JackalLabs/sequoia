@@ -361,10 +361,8 @@ func PostIPFSFolder(f *file_system.FileSystem) func(http.ResponseWriter, *http.R
 
 		err = json.Unmarshal(body, &cidList)
 		if err != nil {
-			if err != nil {
-				http.Error(w, "Error parsing request body", http.StatusInternalServerError)
-				return
-			}
+			http.Error(w, "Error parsing request body", http.StatusInternalServerError)
+			return
 		}
 
 		childCIDs := make(map[string]cid.Cid)
