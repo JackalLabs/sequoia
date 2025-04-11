@@ -93,8 +93,6 @@ github.com/DataDog/zstd v1.5.0/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwS
 github.com/DataDog/zstd v1.5.2 h1:vUG4lAyuPCXO0TLbXvPv7EB7cNK1QV/luu55UHLrrn8=
 github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2/go.mod h1:yDgFjdqOqDEKOvasDdhWNXYg9BVp4O+o5f6V/ehm6Oo=
-github.com/JackalLabs/canine-provider v1.2.0 h1:RlGWKZuH/rCVs5ndy4jDdtcl36YVrxO+x4+Ux3Byl8s=
-github.com/JackalLabs/canine-provider v1.2.0/go.mod h1:QUQfgZcpkHyzXH1nBSvRnFTD2f9p3WtkjYLk0nX5ESA=
 github.com/JackalLabs/cosmos-sdk-new v0.45.17-0.20230525190516-b9142076b70c h1:Ju0uBSyOi03+kCC7gMth8s9m4/QSfd+1IaBe2o6l5ZM=
 github.com/JackalLabs/cosmos-sdk-new v0.45.17-0.20230525190516-b9142076b70c/go.mod h1:bScuNwWAP0TZJpUf+SHXRU3xGoUPp+X9nAzfeIXts40=
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=
@@ -117,8 +115,6 @@ github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20240605140035-368812a1d4
 github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20240605140035-368812a1d4d5/go.mod h1:1Qv2CAWgjKx/h/yA3xP/3losGFRxxKbxFDjGIqwhvvc=
 github.com/TheMarstonConnell/go-ds-badger2 v0.0.0-20240304191516-af5ee03005fc h1:Zm5BYljo+2iwfgKyPKHXt/k5GDAa7vQhB3OZxIrjeKc=
 github.com/TheMarstonConnell/go-ds-badger2 v0.0.0-20240304191516-af5ee03005fc/go.mod h1:66WAKUovf4tFU+Yp6LnG3JQAonJyFxjVQNbz1TTncj0=
-github.com/TheMarstonConnell/go-merkletree v0.0.0-20230328183338-b5d590ab1aaf h1:K8hLTtjPxDCIjb/YNncNWHTWDpubfPFbXWGE8vAQC4g=
-github.com/TheMarstonConnell/go-merkletree v0.0.0-20230328183338-b5d590ab1aaf/go.mod h1:Dpt5BLOsKmHAA6gAs3lyo9EKaLq2glBsEoHj3RqfN+Q=
 github.com/TheMarstonConnell/ipfs-lite v0.0.0-20240304191454-94283a9ad1c9 h1:3id6BxQQZYwneoqlCATEy7nVB+gpDqoa4cGaPJ4kriE=
 github.com/TheMarstonConnell/ipfs-lite v0.0.0-20240304191454-94283a9ad1c9/go.mod h1:0lWPYieZQOWwFaK3g9jZyFWb5mjn/0DFSlpfCx6A8F0=
 github.com/VictoriaMetrics/fastcache v1.6.0/go.mod h1:0qHz5QP0GMX4pfmMA/zt5RgfNuXJrTP0zS7DqpHGGTw=
@@ -880,7 +876,6 @@ github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfC
 github.com/jmhodges/levigo v1.0.0 h1:q5EC36kV79HWeTBWsod3mG11EgStG3qArTKcvlksN1U=
 github.com/jmhodges/levigo v1.0.0/go.mod h1:Q6Qx+uH3RAqyK4rFQroq9RL7mdkABMcfhEI+nNuzMJQ=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
-github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
 github.com/jrick/logrotate v1.0.0/go.mod h1:LNinyqDIJnpAur+b8yyulnQw/wDuN1+BYKlTRt3OuAQ=
@@ -1026,7 +1021,6 @@ github.com/mailgun/raymond/v2 v2.0.46/go.mod h1:lsgvL50kgt1ylcFJYZiULi5fjPBkkhNf
 github.com/mailru/easyjson v0.0.0-20190312143242-1de009706dbe/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
-github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd h1:br0buuQ854V8u83wA0rVZ8ttrq5CpaPZdvrK0LP2lOk=
 github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd/go.mod h1:QuCEs1Nt24+FYQEqAAncTDPJIuGs+LxK1MCiFL25pMU=
