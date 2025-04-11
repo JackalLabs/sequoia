@@ -28,8 +28,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// const MaxFileSize = 32 << 30
-const MaxFileSize = 0
+const MaxFileSize = 32 << 30
 
 var JobMap sync.Map
 
