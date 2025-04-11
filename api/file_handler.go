@@ -28,8 +28,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// const MaxFileSize = 32 << 30
-const MaxFileSize = 0
+const MaxFileSize = 4 << 30 // 4gib
 
 var JobMap sync.Map
 
@@ -292,7 +291,7 @@ func ListJobsHandler() func(http.ResponseWriter, *http.Request) {
 		jobsList := make([]JobInfo, 0)
 
 		// Iterate through all items in the JobMap
-		JobMap.Range(func(key, value interface{}) bool {
+		JobMap.Range(func(key, value any) bool {
 			jobID := key.(string)
 			jobData := value.(*types.UploadResponseV2)
 
