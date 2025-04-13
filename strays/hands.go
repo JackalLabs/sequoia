@@ -69,13 +69,15 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, myUrl str
 			continue
 		}
 
-		msg := &types.MsgPostProof{
+		msg := &types.MsgPostProofFor{
 			Creator:  h.Address(),
 			Item:     chunk,
 			HashList: jproof,
 			Merkle:   merkle,
 			Owner:    signee,
 			Start:    start,
+			Provider: wallet.AccAddress(),
+			ToProve:  0,
 		}
 
 		data := walletTypes.NewTransactionData(
