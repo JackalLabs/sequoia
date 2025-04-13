@@ -34,7 +34,7 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 
 		h, err := s.NewHand(q)
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Int("index", i).Msg("Failed to create hand")
 			continue
 		}
 
