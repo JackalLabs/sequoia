@@ -269,7 +269,7 @@ func (a *App) Start() error {
 	}
 	go a.api.Serve(a.fileSystem, a.prover, a.wallet, params.ChunkSize)
 	go a.prover.Start()
-	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
+	go a.strayManager.Start(a.fileSystem, a.q, myUrl, params.ChunkSize)
 	go a.monitor.Start()
 
 	done := make(chan os.Signal, 1)
