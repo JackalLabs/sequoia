@@ -28,7 +28,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const MaxFileSize = 32 << 30
+const MaxFileSize = 32 << 30 // 32 gib
 
 var JobMap sync.Map
 
@@ -291,7 +291,7 @@ func ListJobsHandler() func(http.ResponseWriter, *http.Request) {
 		jobsList := make([]JobInfo, 0)
 
 		// Iterate through all items in the JobMap
-		JobMap.Range(func(key, value interface{}) bool {
+		JobMap.Range(func(key, value any) bool {
 			jobID := key.(string)
 			jobData := value.(*types.UploadResponseV2)
 
@@ -360,10 +360,8 @@ func PostIPFSFolder(f *file_system.FileSystem) func(http.ResponseWriter, *http.R
 
 		err = json.Unmarshal(body, &cidList)
 		if err != nil {
-			if err != nil {
-				http.Error(w, "Error parsing request body", http.StatusInternalServerError)
-				return
-			}
+			http.Error(w, "Error parsing request body", http.StatusInternalServerError)
+			return
 		}
 
 		childCIDs := make(map[string]cid.Cid)
