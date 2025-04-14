@@ -8,7 +8,7 @@ import (
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		log.Info().
+		log.Debug().
 			Str("method", req.Method).
 			Str("url", req.URL.RequestURI()).
 			Str("user_agent", req.UserAgent()).

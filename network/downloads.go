@@ -52,6 +52,7 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 		break
 	}
 	if !foundFile {
+		log.Debug().Msg(fmt.Sprintf("Could not find %x on any providers...", merkle))
 		return fmt.Errorf("failed to find file on network")
 	}
 
