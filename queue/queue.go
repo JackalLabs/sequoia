@@ -2,11 +2,16 @@ package queue
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/JackalLabs/sequoia/config"
+
+	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
+
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/rs/zerolog/log"
 )
@@ -18,40 +23,64 @@ const minSleepDuration = time.Millisecond * 500
 // For every thread, TxWorker is assigned its own wallet with an offset
 // Each TxWorker uses its wallet to sign and broadcast messages
 // Queue sleeps for refreshInterval after Queue distributes messages to the workers
-func NewQueue(w *wallet.Wallet, refreshInterval time.Duration, thread int8) (*Queue, error) {
-	if thread < 1 {
+func NewQueue(w *wallet.Wallet, config config.QueueConfig, authedClaimers []string) (*Queue, error) {
+	if config.QueueThreads < 1 {
 		return nil, errors.New("thread must be at least 1")
 	}
 
-	if refreshInterval < time.Second {
-		return nil, errors.New("refresh interval cannot be shorter than 1 second")
+	refreshInterval := time.Duration(config.QueueInterval) * time.Second
+	if refreshInterval < minSleepDuration {
+		return nil, errors.New("refresh interval is too short") // TODO: improve this
 	}
 
 	q := &Queue{
 		wallet:          w,
-		txWorkers:       make([]*TxWorker, 0),
-		msgPool:         make([]*Message, 0),
+		txWorkers:       make([]*TxWorker, config.QueueThreads),
+		pool:            make([]*Message, 0),
+		poolLock:        &sync.Mutex{},
 		refreshInterval: refreshInterval,
 		processed:       time.Now(),
 		running:         false,
 	}
 
-	for i := 0; i < int(thread); i++ {
+	// temp tx worker to init children workers
+	parent := NewTxWorker(
+		q,
+		0,
+		config.WorkerQueueSize,
+		config.TxBatchSize,
+		config.MaxRetryAttempt,
+		w)
+
+	for i := 0; i < int(config.QueueThreads); i++ {
 		offset := byte(i + 1)
 		w, err := w.CloneWalletOffset(offset)
 		if err != nil {
 			// should be debugged if this happens
-			return nil, errors.New("failed to create offset wallet for txWorker")
+			return nil, errors.Join(err, errors.New("failed to create offset wallet for txWorker"))
 		}
 
-		worker := NewTxWorker(int8(i), w) // need defaults here
+		// TODO: batch all auth claim tx into one tx
+		err = q.authNewClaimer(parent, w, authedClaimers)
+		if err != nil {
+			return nil, err // don't want partial amount of threads
+		}
+
+		worker := NewTxWorker(
+			q,
+			int8(i),
+			config.WorkerQueueSize,
+			config.TxBatchSize,
+			config.MaxRetryAttempt,
+			w)
+
 		q.txWorkers = append(q.txWorkers, worker)
 	}
 
 	return q, nil
 }
 
-func (q *Queue) Add(msg types.Msg) (*Message, *sync.WaitGroup) {
+func (q *Queue) Add(msg sdk.Msg) (*Message, *sync.WaitGroup) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -72,17 +101,16 @@ func (q *Queue) Listen() {
 	defer log.Info().Msg("Queue module stopped")
 
 	log.Info().Msg("Queue module started")
-
 	for q.running {
-		q.sleep()
-
-		if len(q.msgPool) == 0 {
-			continue
+		for _, w := range q.txWorkers {
+			w.start()
 		}
 
-		before := len(q.msgPool)
-		count := q.distributeMsg()
-		log.Info().Msg(fmt.Sprintf("assigned %d out of %d messages", count, before))
+		time.Sleep(q.refreshInterval)
+
+		for _, w := range q.txWorkers {
+			w.stop()
+		}
 	}
 }
 
@@ -90,48 +118,75 @@ func (q *Queue) Stop() {
 	q.running = false
 }
 
-// fcfs
-func (q *Queue) popFront() *Message {
-	if len(q.msgPool) == 0 {
-		return nil
-	}
+func (q *Queue) addLast(msgs *Message) {
+	q.poolLock.Lock()
+	defer q.poolLock.Unlock()
 
-	msg := q.msgPool[0]
-	q.msgPool = q.msgPool[1:]
-	return msg
+	q.pool = append(q.pool, msgs)
+	return
 }
 
-// assign message to free workers from msg pool
-// returns number of messages assigned
-func (q *Queue) distributeMsg() int {
-	if len(q.msgPool) == 0 {
-		return 0
-	}
+func (q *Queue) request(count int) []*Message {
+	q.poolLock.Lock()
+	defer q.poolLock.Unlock()
 
-	count := 0
-	for _, w := range q.txWorkers {
+	size := min(len(q.pool), count)
+	msgs := q.pool[:size]
 
-		grabbed := w.assign(q.msgPool)
-		q.msgPool = q.msgPool[grabbed:]
-
-		go w.broadCast() // we should probably give each worker its own loop instead of calling this over and over again
-		count++
-	}
-	return count
+	q.pool = q.pool[size:]
+	return msgs
 }
 
-// sleep until next interval
-// if slept duration is too small consider increasing interval or threads
-func (q *Queue) sleep() (slept time.Duration) {
-	wakeUpTime := q.processed.Add(q.refreshInterval)
-	sleep := wakeUpTime.Sub(time.Now())
-	if sleep > minSleepDuration {
-		time.Sleep(sleep)
+func (q *Queue) authNewClaimer(worker *TxWorker, w *wallet.Wallet, authedClaimers []string) error {
+	for _, authed := range authedClaimers {
+		if w.AccAddress() == authed {
+			return nil
+		}
 	}
 
-	return sleep
-}
+	msg := types.NewMsgAddClaimer(q.wallet.AccAddress(), w.AccAddress())
 
-func (q *Queue) addLast(msg *Message) {
-	q.msgPool = append(q.msgPool, msg)
+	allowance := feegrant.BasicAllowance{
+		SpendLimit: nil,
+		Expiration: nil,
+	}
+
+	wadd, err := sdk.AccAddressFromBech32(w.AccAddress())
+	if err != nil {
+		panic(err)
+	}
+
+	hadd, err := sdk.AccAddressFromBech32(q.wallet.AccAddress())
+	if err != nil {
+		panic(err)
+	}
+
+	grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, wadd, hadd)
+	if nerr != nil {
+		panic(nerr)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	addClaimerMsg := &Message{
+		msg: msg,
+		wg:  &wg,
+		err: nil,
+	}
+
+	feeGrantMsg := &Message{
+		msg: grantMsg,
+		wg:  &wg,
+		err: nil,
+	}
+
+	err = worker.processBatch([]*Message{addClaimerMsg, feeGrantMsg})
+
+	wg.Wait()
+	if errs := errors.Join(err, addClaimerMsg.err, feeGrantMsg.err); errs != nil {
+		return errs
+	}
+
+	return nil
 }

@@ -1,6 +1,8 @@
 package queue
 
 import (
+	"time"
+
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
@@ -8,16 +10,21 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/rs/zerolog/log"
 )
 
-func NewTxWorker(id int8, bucketSize int16, msgBatchSize int8, retryAttempt int8, offsetWallet *wallet.Wallet) *TxWorker {
+// offsetWallet must be registered as authorized claimer on chain
+func NewTxWorker(pool *Queue, id int8, bufferSize int16, batchSize int8, maxRetryAttempt int8, offsetWallet *wallet.Wallet) *TxWorker {
 	return &TxWorker{
-		id:            id,
-		wallet:        offsetWallet,
-		msgBucketSize: bucketSize,
-		msgBucket:     make([]*Message, 0, bucketSize),
-		msgBatchSize:  msgBatchSize,
-		retryAttempt:  retryAttempt,
+		pool:            pool,
+		id:              id,
+		wallet:          offsetWallet,
+		buffer:          make([]*Message, 0, bufferSize),
+		bufferSize:      bufferSize,
+		batchSize:       batchSize,
+		maxRetryAttempt: maxRetryAttempt,
+		running:         false,
 	}
 }
 
@@ -26,59 +33,80 @@ func (t *TxWorker) Address() string {
 }
 
 func (t *TxWorker) available() int {
-	return int(t.msgBucketSize) - len(t.msgBucket)
+	return int(t.bufferSize) - len(t.buffer)
 }
 
-func (t *TxWorker) assign(msgs []*Message) int {
-	if msgs == nil {
-		return 0
-	}
-
-	// take whatever it can to fill the bucket
-	// required for the sanity check
-	fillCount := min(int(t.msgBucketSize)-len(t.msgBucket), len(msgs))
-	m := msgs[:fillCount]
-
-	t.msgBucket = append(t.msgBucket, m...)
-	return fillCount
+func (t *TxWorker) getWork() {
+	msgs := t.pool.request(t.available())
+	t.buffer = append(t.buffer, msgs...)
 }
 
-func (t *TxWorker) grabNextBatch() []*Message {
-	total := min(len(t.msgBucket), int(t.msgBatchSize))
-	msgs := t.msgBucket[:total]
-	t.msgBucket = t.msgBucket[total:]
-
+func (t *TxWorker) getBatch() []*Message {
+	size := min(len(t.buffer), int(t.batchSize))
+	msgs := t.buffer[:size]
+	t.buffer = t.buffer[size:]
 	return msgs
 }
 
-func (t *TxWorker) broadCast() {
-	batchMessage := t.grabNextBatch()
-
-	batch := make([]types.Msg, len(batchMessage))
-	for i, m := range batchMessage {
-		batch[i] = m.msg
+func (t *TxWorker) processBatch(b []*Message) error {
+	msgs := make([]types.Msg, len(b))
+	for i, m := range b {
+		msgs[i] = m.msg
 	}
-	data := walletTypes.NewTransactionData(batch...).WithGasAuto().WithFeeAuto()
+	data := walletTypes.NewTransactionData(msgs...).WithGasAuto().WithFeeAuto()
 
 	var resp *types.TxResponse
 	var err error
-	for attempt := 0; attempt < int(t.retryAttempt); attempt++ {
-		resp, err = t.wallet.BroadcastTxCommit(data)
-		if err != nil {
-			// retry if network is not responding
-			if code := status.Code(err); code == codes.DeadlineExceeded {
-				err = nil
-			} else {
-				break
-			}
-		} else {
-			break
-		}
 
+	a := 0
+Retry:
+	for a := 0; a < int(t.maxRetryAttempt); a++ {
+		resp, err = t.wallet.BroadcastTxCommit(data)
+		switch code := status.Code(err); code {
+		case codes.AlreadyExists, codes.NotFound, codes.OK:
+			break Retry
+		}
 	}
-	for _, m := range batchMessage {
-		m.wg.Done()
+
+	if a == int(t.maxRetryAttempt) {
+		log.Error().
+			Int8("id", t.id).
+			Int8("max attempt", t.maxRetryAttempt).
+			Int("msg size", len(b)).
+			Msg("queue worker batch msg broadcast exceeded max retry attempts")
+	}
+
+	for _, m := range b {
 		m.res = resp
 		m.err = err
+		m.wg.Done()
 	}
+	return err
+}
+
+func (t *TxWorker) start() {
+	t.running = true
+	defer t.stop()
+	for t.running {
+		if len(t.buffer) == 0 {
+			t.getWork() // blocks the loop
+		}
+
+		batch := t.getBatch()
+		start := time.Now()
+		err := t.processBatch(batch) // blocks until tx goes through or exceeds retry attempts
+		if err != nil {
+			log.Error().
+				Err(err).
+				Int8("id", t.id).
+				Time("started at", start).
+				Time("finished at", time.Now()).
+				Int("batchSize", len(batch)).
+				Msg("error while processing messages")
+		}
+	}
+}
+
+func (t *TxWorker) stop() {
+	t.running = false
 }
