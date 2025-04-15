@@ -2,6 +2,7 @@ package queue
 
 import (
 	"errors"
+	"slices"
 	"sync"
 	"time"
 
@@ -98,24 +99,19 @@ func (q *Queue) Add(msg sdk.Msg) (*Message, *sync.WaitGroup) {
 
 func (q *Queue) Listen() {
 	q.running = true
-	defer log.Info().Msg("Queue module stopped")
 
-	log.Info().Msg("Queue module started")
-	for q.running {
-		for _, w := range q.txWorkers {
-			w.start()
-		}
-
-		time.Sleep(q.refreshInterval)
-
-		for _, w := range q.txWorkers {
-			w.stop()
-		}
+	for _, w := range q.txWorkers {
+		w.start()
 	}
+	log.Info().Msg("Queue module started")
 }
 
 func (q *Queue) Stop() {
 	q.running = false
+	for _, w := range q.txWorkers {
+		w.stop()
+	}
+	log.Info().Msg("Queue module stopped")
 }
 
 func (q *Queue) addLast(msgs *Message) {
@@ -123,12 +119,14 @@ func (q *Queue) addLast(msgs *Message) {
 	defer q.poolLock.Unlock()
 
 	q.pool = append(q.pool, msgs)
-	return
 }
 
 func (q *Queue) request(count int) []*Message {
 	q.poolLock.Lock()
 	defer q.poolLock.Unlock()
+	if len(q.pool) == 0 {
+		return nil
+	}
 
 	size := min(len(q.pool), count)
 	msgs := q.pool[:size]
@@ -138,10 +136,8 @@ func (q *Queue) request(count int) []*Message {
 }
 
 func (q *Queue) authNewClaimer(worker *TxWorker, w *wallet.Wallet, authedClaimers []string) error {
-	for _, authed := range authedClaimers {
-		if w.AccAddress() == authed {
-			return nil
-		}
+	if slices.Contains(authedClaimers, w.AccAddress()) {
+		return nil
 	}
 
 	msg := types.NewMsgAddClaimer(q.wallet.AccAddress(), w.AccAddress())

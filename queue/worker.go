@@ -38,6 +38,9 @@ func (t *TxWorker) available() int {
 
 func (t *TxWorker) getWork() {
 	msgs := t.pool.request(t.available())
+	if msgs == nil {
+		time.Sleep(t.pool.refreshInterval)
+	}
 	t.buffer = append(t.buffer, msgs...)
 }
 
