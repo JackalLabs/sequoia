@@ -24,8 +24,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/wealdtech/go-merkletree/v2/sha3"
+
+	jsoniter "github.com/json-iterator/go"
 )
-import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -129,7 +130,12 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 			return e
 		}
 
-		err = txn.Set([]byte(fmt.Sprintf("cid/%x", merkle)), []byte(n.Cid().String()))
+		err = txn.Set(fmt.Appendf(nil, "cid/%x", merkle), []byte(n.Cid().String()))
+		if err != nil {
+			e := fmt.Errorf("cannot set cid %x | %w", merkle, err)
+			log.Error().Err(e)
+			return e
+		}
 
 		return nil
 	})
@@ -188,7 +194,7 @@ func (f *FileSystem) WriteFileWithProgress(reader io.Reader, merkle []byte, owne
 			return e
 		}
 
-		err = txn.Set([]byte(fmt.Sprintf("cid/%x", merkle)), []byte(n.Cid().String()))
+		err = txn.Set(fmt.Appendf(nil, "cid/%x", merkle), []byte(n.Cid().String()))
 
 		return nil
 	})
@@ -286,7 +292,7 @@ func (f *FileSystem) deleteFile(merkle []byte) error {
 	// find ipfs cid
 	fcid := ""
 	err := f.db.View(func(txn *badger.Txn) error {
-		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
+		b, err := txn.Get(fmt.Appendf(nil, "cid/%x", merkle))
 		if err != nil {
 			return err
 		}
@@ -301,7 +307,7 @@ func (f *FileSystem) deleteFile(merkle []byte) error {
 	}
 
 	err = f.db.Update(func(txn *badger.Txn) error {
-		return txn.Delete([]byte(fmt.Sprintf("cid/%x", merkle)))
+		return txn.Delete(fmt.Appendf(nil, "cid/%x", merkle))
 	})
 	if err != nil {
 		log.Warn().Err(err)
@@ -491,7 +497,7 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 
 	fcid := ""
 	err = f.db.View(func(txn *badger.Txn) error {
-		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
+		b, err := txn.Get(fmt.Appendf(nil, "cid/%x", merkle))
 		if err != nil {
 			return err
 		}
@@ -539,7 +545,7 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 	fcid := ""
 	err := f.db.View(func(txn *badger.Txn) error {
-		b, err := txn.Get([]byte(fmt.Sprintf("cid/%x", merkle)))
+		b, err := txn.Get(fmt.Appendf(nil, "cid/%x", merkle))
 		if err != nil {
 			return err
 		}
