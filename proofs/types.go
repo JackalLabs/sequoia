@@ -12,7 +12,7 @@ import (
 type Prover struct {
 	running        bool
 	wallet         *wallet.Wallet
-	q              *queue.Queue
+	q              queue.Queue
 	processed      time.Time
 	interval       int64
 	io             FileSystem
