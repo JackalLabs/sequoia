@@ -83,11 +83,8 @@ func ShutdownCmd() *cobra.Command {
 		Long:  "Permanently remove provider from network and get deposit back.",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			if !askForConfirmation("Terminate Provider Permanently?") {
-				return nil
-			}
-
-			if !askForConfirmation("You're absolutely sure?") {
+			if !askForConfirmation("Terminate Provider Permanently?") || !askForConfirmation("You're absolutely sure?") {
+				fmt.Println("Provider termination cancelled")
 				return nil
 			}
 
@@ -142,7 +139,6 @@ func VersionCmd() *cobra.Command {
 		Short: "checks the version of sequoia",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Version: %s\nCommit: %s\n", config.Version(), config.Commit())
-
 			return nil
 		},
 	}

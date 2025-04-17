@@ -49,7 +49,7 @@ func (m *Monitor) updateBalance() {
 }
 
 func (m *Monitor) Start() {
-	defer log.Info().Msg("Monitor moduel stopped")
+	defer log.Info().Msg("Monitor module stopped")
 	m.running = true
 
 	for m.running {

@@ -182,14 +182,14 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	var postRes types.MsgPostProofResponse
 	data, err := hex.DecodeString(m.Res().Data)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	encodingCfg := canine.MakeEncodingConfig()
 	var txMsgData sdk.TxMsgData
 	err = encodingCfg.Marshaler.Unmarshal(data, &txMsgData)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if len(txMsgData.Data) == 0 {
@@ -198,7 +198,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 
 	err = postRes.Unmarshal(txMsgData.Data[m.Index()].Data)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if !postRes.Success {
