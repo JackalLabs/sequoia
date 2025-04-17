@@ -1,7 +1,9 @@
 package queue
 
 import (
+	"bytes"
 	"fmt"
+	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"sync"
 	"time"
 
@@ -29,13 +31,29 @@ func NewQueue(w *wallet.Wallet, interval int64) *Queue {
 func (q *Queue) Add(msg types.Msg) (*Message, *sync.WaitGroup) {
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-
 	m := &Message{
 		msg: msg,
 		wg:  &wg,
 		err: nil,
 	}
+
+	proofMessage, ok := msg.(*storageTypes.MsgPostProof)
+	if ok {
+		for _, message := range q.messages {
+			queueMessage, ok := message.msg.(*storageTypes.MsgPostProof)
+			if !ok {
+				continue
+			}
+			if bytes.Equal(
+				queueMessage.Merkle, proofMessage.Merkle) &&
+				queueMessage.Start == proofMessage.Start &&
+				queueMessage.Owner == proofMessage.Owner {
+				return m, &wg
+			}
+		}
+	}
+
+	wg.Add(1)
 
 	q.messages = append(q.messages, m) // adding the message to the end of the list
 
