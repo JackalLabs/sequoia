@@ -3,7 +3,9 @@ package network
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	apiTypes "github.com/JackalLabs/sequoia/api/types"
 	"io"
 	"net/http"
 
@@ -41,7 +43,7 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 
 		size, err := DownloadFileFromURL(f, url, merkle, owner, start, chunkSize, proofType, ipfsParams)
 		if err != nil {
-			log.Info().Msg(fmt.Sprintf("Couldn't get %x from %s, trying again...", merkle, url))
+			log.Info().Msg(fmt.Sprintf("Couldn't get %x from %s, trying again... | %s", merkle, url, err.Error()))
 			continue
 		}
 		if fileSize != int64(size) {
@@ -84,7 +86,18 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	}
 
 	if resp.StatusCode != 200 {
-		return 0, fmt.Errorf("failed to find file on network")
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return 0, fmt.Errorf("could not read body, %w | code: %d", err, resp.StatusCode)
+		}
+		var e apiTypes.ErrorResponse
+		err = json.Unmarshal(data, &e)
+		if err != nil {
+			return 0, fmt.Errorf("could not read json body, %w | code: %d", err, resp.StatusCode)
+		}
+
+		return 0, fmt.Errorf("could not get file, code: %d | msg: %s", resp.StatusCode, e.Error)
 	}
 	//nolint:errcheck
 	defer resp.Body.Close()
@@ -92,14 +105,14 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	buff := bytes.NewBuffer([]byte{})
 	_, err = io.Copy(buff, resp.Body)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to save file %w", err)
 	}
 
 	reader := bytes.NewReader(buff.Bytes())
 
 	size, _, err := f.WriteFile(reader, merkle, owner, start, chunkSize, proofType, ipfsParams)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to write file data %w", err)
 	}
 
 	return size, nil

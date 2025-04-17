@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/dgraph-io/badger/v4"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -156,8 +157,22 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	p.Dec()
 	filesProving.Dec()
 	if err != nil {
-		log.Error().Msgf("Failed to generate proof for %x at %d", merkle, index)
-		log.Error().Msg(err.Error())
+		log.Error().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(err).
+			Msg("Proof generation failed")
+
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			if removeErr := p.io.DeleteFile(merkle, owner, start); removeErr != nil { // delete the key upon failure?
+				log.Error().
+					Err(removeErr).
+					Msg("Failed to cleanup orphaned file entry")
+			}
+
+		}
+
 		return err
 	}
 
