@@ -116,14 +116,17 @@ func (q *Queue) Listen() {
 		for !complete && i < 10 {
 			i++
 			res, err = q.wallet.BroadcastTxCommit(data)
-			if res.Code != 0 {
-				if strings.Contains(res.RawLog, "account sequence mismatch") {
-					if data.Sequence != nil {
-						data = data.WithSequence(*data.Sequence + 1)
-						continue
+			if res != nil {
+				if res.Code != 0 {
+					if strings.Contains(res.RawLog, "account sequence mismatch") {
+						if data.Sequence != nil {
+							data = data.WithSequence(*data.Sequence + 1)
+							continue
+						}
 					}
 				}
 			}
+
 			complete = true
 
 			if err != nil {
