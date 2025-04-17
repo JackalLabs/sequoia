@@ -3,7 +3,9 @@ package network
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	apiTypes "github.com/JackalLabs/sequoia/api/types"
 	"io"
 	"net/http"
 
@@ -84,7 +86,18 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	}
 
 	if resp.StatusCode != 200 {
-		return 0, fmt.Errorf("could not get file, code: %d", resp.StatusCode)
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return 0, fmt.Errorf("could not read body, %w | code: %d", err, resp.StatusCode)
+		}
+		var e apiTypes.ErrorResponse
+		err = json.Unmarshal(data, &e)
+		if err != nil {
+			return 0, fmt.Errorf("could not read json body, %w | code: %d", err, resp.StatusCode)
+		}
+
+		return 0, fmt.Errorf("could not get file, code: %d | msg: %s", resp.StatusCode, e.Error)
 	}
 	//nolint:errcheck
 	defer resp.Body.Close()
