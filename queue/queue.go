@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	"strings"
 	"sync"
 	"time"
 
@@ -108,9 +109,26 @@ func (q *Queue) Listen() {
 			allMsgs...,
 		).WithGasAuto().WithFeeAuto()
 
-		res, err := q.wallet.BroadcastTxCommit(data)
-		if err != nil {
-			log.Warn().Err(err).Msg("tx broadcast failed from queue")
+		complete := false
+		var res *types.TxResponse
+		var err error
+		var i int
+		for !complete && i < 10 {
+			i++
+			res, err = q.wallet.BroadcastTxCommit(data)
+			if res.Code != 0 {
+				if strings.Contains(res.RawLog, "account sequence mismatch") {
+					if data.Sequence != nil {
+						data = data.WithSequence(*data.Sequence + 1)
+						continue
+					}
+				}
+			}
+			complete = true
+
+			if err != nil {
+				log.Warn().Err(err).Msg("tx broadcast failed from queue")
+			}
 		}
 
 		for i, process := range toProcess {
