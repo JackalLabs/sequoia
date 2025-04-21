@@ -55,6 +55,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	outline.RegisterPostRoute(r, "/v2/status/{id}", CheckUploadStatus())
 	outline.RegisterPostRoute(r, "/api/jobs", ListJobsHandler())
 	outline.RegisterGetRoute(r, "/download/{merkle}", DownloadFileHandler(f))
+	outline.RegisterGetRoute(r, "/get/{merkle}", FindFileHandler(wallet))
 
 	outline.RegisterGetRoute(r, "/list", ListFilesHandler(f))
 	outline.RegisterGetRoute(r, "/api/client/list", ListFilesHandler(f))

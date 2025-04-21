@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -418,5 +419,72 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 		}
 		rs := bytes.NewReader(file)
 		http.ServeContent(w, req, merkleString, time.Time{}, rs)
+	}
+}
+
+func FindFileHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+
+		merkleString := vars["merkle"]
+		merkle, err := hex.DecodeString(merkleString)
+		if err != nil {
+			v := types.ErrorResponse{
+				Error: err.Error(),
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(v)
+			return
+		}
+
+		queryParams := &storageTypes.QueryFindFile{
+			Merkle: merkle,
+		}
+
+		cl := storageTypes.NewQueryClient(wallet.Client.GRPCConn)
+
+		res, err := cl.FindFile(context.Background(), queryParams)
+		if err != nil {
+			v := types.ErrorResponse{
+				Error: err.Error(),
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(v)
+			return
+		}
+
+		ips := res.ProviderIps
+
+		for _, ip := range ips {
+			u, err := url.Parse(ip)
+			if err != nil {
+				continue // skipping bad url
+			}
+
+			u = u.JoinPath("download", merkleString)
+
+			r, err := http.Get(u.String())
+			if err != nil {
+				continue // skipping bad url
+			}
+
+			if r.StatusCode != http.StatusOK {
+				continue
+			}
+
+			_, err = io.Copy(w, r.Body)
+			if err != nil {
+				continue // skipping bad url
+			}
+			return
+		}
+
+		v := types.ErrorResponse{
+			Error: "could not find any files",
+		}
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(v)
+		return
+
 	}
 }
