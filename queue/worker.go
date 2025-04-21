@@ -7,7 +7,9 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
 	"github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/rs/zerolog/log"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -20,43 +22,47 @@ type worker struct {
 	id              int8
 	wallet          *wallet.Wallet // offset wallet
 	maxRetryAttempt int8
-	stop            chan struct{}
+	msgIn           <-chan *Message // worker stop if this closes
 	batch           []*Message
 }
 
-func newWorker(id int8, wallet *wallet.Wallet, maxRetryAttempt int8) *worker {
+func newWorker(id int8, wallet *wallet.Wallet, maxRetryAttempt int8, msgIn <-chan *Message) *worker {
 	return &worker{
 		id:              id,
 		wallet:          wallet,
 		maxRetryAttempt: int8(maxRetryAttempt),
-		stop:            make(chan struct{}),
+		msgIn:           msgIn,
 	}
 }
 
-func (w *worker) Stop() {
-	close(w.stop)
-}
-
-func (w *worker) start(msg <-chan *Message) {
+func (w *worker) start() {
 	timer := time.NewTimer(timerDuration) // if no msg comes for 5 seconds, broadcast tx
 run:
 	for {
 		select {
-		case <-w.stop:
-			timer.Stop()
-			break run
-
-		case m := <-msg:
+		case m, ok := <-w.msgIn:
+			if !ok {
+				break run
+			}
 			if len(w.batch) >= batchSize {
 				w.send()
+				timer.Stop()
 			}
 			w.add(m)
 			timer.Reset(timerDuration)
 
 		case <-timer.C:
-			w.send()
+			if len(w.batch) > 0 {
+				w.send()
+			}
 			timer.Stop()
 		}
+	}
+
+	log.Info().Int8("id", w.id).Msg("queue worker stopped")
+	if len(w.batch) > 0 { // send the remaining messages
+		log.Info().Int8("id", w.id).Int("messages", len(w.batch)).Msg("sending remaining messages")
+		w.send()
 	}
 }
 
@@ -70,10 +76,14 @@ func (w *worker) add(msg *Message) {
 }
 
 func (w *worker) send() {
-	msg := make([]types.Msg, 0, len(w.batch))
-	for _, m := range w.batch {
+	toProcess := w.batch
+	w.batch = nil
+
+	msg := make([]types.Msg, 0, len(toProcess))
+	for _, m := range toProcess {
 		msg = append(msg, m.msg)
 	}
+
 	txData := walletTypes.NewTransactionData(msg...).WithFeeAuto().WithGasAuto()
 
 	var resp *types.TxResponse
@@ -101,7 +111,7 @@ retry:
 			Msg("queue worker batch msg broadcast exceeded max retry attempts")
 	}
 
-	for _, m := range w.batch {
+	for _, m := range toProcess {
 		m.res = resp
 		m.err = err
 		m.wg.Done()
