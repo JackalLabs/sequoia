@@ -267,7 +267,7 @@ func (a *App) Start() error {
 		// nolint:all
 		go a.ConnectPeers()
 	}
-	go a.api.Serve(a.fileSystem, a.prover, a.wallet, params.ChunkSize)
+	go a.api.Serve(a.fileSystem, a.prover, a.wallet, params.ChunkSize, myUrl)
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, a.q, myUrl, params.ChunkSize)
 	go a.monitor.Start()

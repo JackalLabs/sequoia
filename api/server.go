@@ -42,7 +42,7 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64) {
+func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64, myIp string) {
 	defer log.Info().Msg("API module stopped")
 	r := mux.NewRouter()
 
@@ -55,7 +55,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	outline.RegisterPostRoute(r, "/v2/status/{id}", CheckUploadStatus())
 	outline.RegisterPostRoute(r, "/api/jobs", ListJobsHandler())
 	outline.RegisterGetRoute(r, "/download/{merkle}", DownloadFileHandler(f))
-	outline.RegisterGetRoute(r, "/get/{merkle}", FindFileHandler(wallet))
+	outline.RegisterGetRoute(r, "/get/{merkle}", FindFileHandler(f, wallet, myIp))
 
 	outline.RegisterGetRoute(r, "/list", ListFilesHandler(f))
 	outline.RegisterGetRoute(r, "/api/client/list", ListFilesHandler(f))

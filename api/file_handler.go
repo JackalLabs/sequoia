@@ -422,7 +422,7 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 	}
 }
 
-func FindFileHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Request) {
+func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 
@@ -434,6 +434,13 @@ func FindFileHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Requ
 			}
 			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(v)
+			return
+		}
+
+		file, err := f.GetFileData(merkle)
+		if err == nil {
+			rs := bytes.NewReader(file)
+			http.ServeContent(w, req, merkleString, time.Time{}, rs)
 			return
 		}
 
@@ -456,6 +463,9 @@ func FindFileHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Requ
 		ips := res.ProviderIps
 
 		for _, ip := range ips {
+			if ip == myIp {
+				continue // skipping me
+			}
 			u, err := url.Parse(ip)
 			if err != nil {
 				continue // skipping bad url
