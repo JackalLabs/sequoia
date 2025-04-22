@@ -41,7 +41,7 @@ run:
 	for {
 		select {
 		case m, ok := <-w.msgIn:
-			if !ok {
+			if !ok { // pool closed the channel, stop worker
 				break run
 			}
 			if len(w.batch) >= batchSize {

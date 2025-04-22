@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"errors"
+	"reflect"
 	"slices"
 	"sync"
 
@@ -20,43 +21,46 @@ import (
 var _ Queue = &Pool{}
 
 type Pool struct {
-	workers   []*worker
-	wallet    *wallet.Wallet
-	msgInput  chan *Message
-	bufferIn  chan<- *Message
-	bufferOut <-chan *Message
+	workers        []*worker
+	workerChannels []chan *Message // worker id should correspond to index of this
+	wallet         *wallet.Wallet
 }
 
 func NewPool(wallet *wallet.Wallet, config config.QueueConfig) (*Pool, error) {
-	msgChannel := make(chan *Message)
-	bufferIn := make(chan *Message)
-	bufferOut := newBuffer(bufferIn)
-	pool := &Pool{
-		wallet:    wallet,
-		msgInput:  msgChannel,
-		bufferIn:  bufferIn,
-		bufferOut: bufferOut,
-	}
-
 	workerWallets, err := initAuthClaimers(wallet, config.QueueThreads)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to initialize auth claimers"), err)
 	}
 
-	workers := createWorkers(workerWallets, config.MaxRetryAttempt)
-	pool.workers = workers
+	workers, workerChannels := createWorkers(workerWallets, config.MaxRetryAttempt)
+	if workers == nil {
+		panic("no workers created")
+	}
+	if workerChannels == nil {
+		panic("no worker channels created")
+	}
+	if len(workerChannels) != len(workers) {
+		panic("size of workers does not match size of worker channels")
+	}
+
+	pool := &Pool{
+		wallet:         wallet,
+		workers:        workers,
+		workerChannels: workerChannels,
+	}
 
 	return pool, nil
 }
 
 func (p *Pool) Stop() {
-	close(p.msgInput)
-	close(p.bufferIn)
+	for _, c := range p.workerChannels {
+		close(c)
+	}
 }
 
 func (p *Pool) Listen() {
-	for m := range p.msgInput {
-		p.bufferIn <- m
+	for _, w := range p.workers {
+		go w.start()
 	}
 }
 
@@ -68,22 +72,42 @@ func (p *Pool) Add(msg types.Msg) (*Message, *sync.WaitGroup) {
 		wg:       &wg,
 		err:      nil,
 		res:      nil,
-		msgIndex: -1,
+		msgIndex: -1, // no longer relevant(?)
 	}
 
-	p.msgInput <- m
+	_ = p.sendToAny(m)
 
 	return m, &wg
 }
 
-func createWorkers(workerWallets []*wallet.Wallet, maxRetryAttempt int8) []*worker {
+func (p *Pool) sendToAny(msg *Message) (workerId int) {
+	set := make([]reflect.SelectCase, 0, len(p.workerChannels))
+	for _, ch := range p.workerChannels {
+		set = append(set, reflect.SelectCase{
+			Dir:  reflect.SelectSend,
+			Chan: reflect.ValueOf(ch),
+			Send: reflect.ValueOf(msg),
+		})
+	}
+
+	// blocks until a worker is free
+	to, _, _ := reflect.Select(set)
+	return to
+}
+
+func createWorkers(workerWallets []*wallet.Wallet, maxRetryAttempt int8) ([]*worker, []chan *Message) {
+	wChannels := make([]chan *Message, 0, len(workerWallets))
+	for _ = range len(workerWallets) {
+		wChannels = append(wChannels, make(chan *Message))
+	}
+
 	workers := make([]*worker, 0, len(workerWallets))
 	for i, w := range workerWallets {
-		worker := newWorker(int8(i), w, maxRetryAttempt)
+		worker := newWorker(int8(i), w, maxRetryAttempt, wChannels[i])
 		workers = append(workers, worker)
 	}
 
-	return workers
+	return workers, wChannels
 }
 
 func initAuthClaimers(wallet *wallet.Wallet, count int8) (workerWallets []*wallet.Wallet, err error) {
