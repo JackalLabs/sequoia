@@ -5,13 +5,18 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
-	"html/template"
-
 	"github.com/JackalLabs/sequoia/types"
+	"html/template"
 )
 
 //go:embed folderView.html
 var tmpl string
+
+// TemplateData is a struct to hold both the folder data and the current path
+type TemplateData struct {
+	Folder      *types.FolderData
+	CurrentPath string
+}
 
 // formatSize formats file size to a human-readable format
 func formatSize(size uint) string {
@@ -48,12 +53,18 @@ func truncateMerkleHex(merkle []byte) string {
 }
 
 // GenerateHTML generates HTML content for the given folder data and returns it as a byte slice
-func GenerateHTML(folder *types.FolderData) ([]byte, error) {
+func GenerateHTML(folder *types.FolderData, currentPath string) ([]byte, error) {
 	// Create template functions
 	funcMap := template.FuncMap{
 		"formatSize":     formatSize,
 		"encodeMerkle":   encodeMerkleHex,   // Changed to use hex encoding
 		"truncateMerkle": truncateMerkleHex, // Changed to use hex encoding
+	}
+
+	// Create template data that includes both folder and current path
+	data := TemplateData{
+		Folder:      folder,
+		CurrentPath: currentPath,
 	}
 
 	// Parse template with functions
@@ -66,7 +77,7 @@ func GenerateHTML(folder *types.FolderData) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// Execute template writing to the buffer
-	if err := t.Execute(&buf, folder); err != nil {
+	if err := t.Execute(&buf, data); err != nil {
 		return nil, fmt.Errorf("error executing template: %v", err)
 	}
 

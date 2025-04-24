@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Index of {{.Name}}</title>
+    <title>Index of {{.Folder.Name}}</title>
     <style>
         :root {
             --jkl-lbeige: #DDDCCF;
@@ -110,9 +110,9 @@
 
 <div class="container">
     <div class="folder-info">
-        <h2>Index of '{{.Name}}'</h2>
-        <span class="folder-merkle">{{encodeMerkle .Merkle}}</span>
-        <span class="folder-version"><strong>Version:</strong> {{.Version}}</span>
+        <h2>Index of '{{.Folder.Name}}'</h2>
+        <span class="folder-merkle">{{encodeMerkle .Folder.Merkle}}</span>
+        <span class="folder-version"><strong>Version:</strong> {{.Folder.Version}}</span>
     </div>
 
     <table>
@@ -124,11 +124,11 @@
         </tr>
         </thead>
         <tbody>
-        {{range .Children}}
+        {{range .Folder.Children}}
         <tr>
             <td>
                 <span class="file-icon">📄</span>
-                <a href="./{{.Name}}">{{.Name}}</a>
+                <a href="{{$.CurrentPath}}/{{.Name}}">{{.Name}}</a>
             </td>
             <td class="merkle-hash">{{truncateMerkle .Merkle}}</td>
             <td class="size-column">{{formatSize .Size}}</td>

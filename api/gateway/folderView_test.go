@@ -35,7 +35,7 @@ func TestFolderView(t *testing.T) {
 	}
 
 	// Generate HTML bytes
-	htmlBytes, err := gateway.GenerateHTML(exampleFolder)
+	htmlBytes, err := gateway.GenerateHTML(exampleFolder, "/5eefd1c2857aad83e27e6e6fdef552dddfab38d78b1566673cf69298388a5466822814dc2a401bd80bb9ec875e104e3cdd774290272c274a8470f129f4bcd89b")
 	req.NoError(err)
 
 	// Method 1: Use a test server (preferred for unit tests)
