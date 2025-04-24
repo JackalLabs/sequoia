@@ -561,7 +561,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 		}
 
 		pathString, pathExists := vars["path"] // handling pathing data
-		_, raw := vars["raw"]                  // handling raw data
+		_, raw := req.URL.Query()["raw"]
 
 		// Only process path if it actually exists and isn't empty
 		if pathExists && pathString != "" {
@@ -605,13 +605,13 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 
 		if !raw {
 			folder, isFolder := getFolderData(fileData)
-			if !isFolder {
+			if isFolder {
+				folder.Merkle = merkle
 				htmlData, err := gateway.GenerateHTML(folder, req.URL.Path)
 				if err == nil {
 					fileData = htmlData
 				}
 			}
-			folder.Merkle = merkle
 		}
 
 		rs := bytes.NewReader(fileData)
