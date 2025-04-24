@@ -21,7 +21,7 @@ type worker struct {
 	msgIn           <-chan *Message // worker stop if this closes
 	batch           []*Message
 	batchSize       int
-	txTimer         int
+	txTimer         time.Duration
 }
 
 func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRetryAttempt int8, msgIn <-chan *Message) *worker {
@@ -31,12 +31,12 @@ func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRe
 		maxRetryAttempt: int8(maxRetryAttempt),
 		msgIn:           msgIn,
 		batchSize:       batchSize,
-		txTimer:         txTimer,
+		txTimer:         time.Duration(txTimer) * time.Second,
 	}
 }
 
 func (w *worker) start() {
-	timer := time.NewTimer(timerDuration) // if no msg comes for 5 seconds, broadcast tx
+	timer := time.NewTimer(w.txTimer) // if no msg comes for 5 seconds, broadcast tx
 run:
 	for {
 		select {
@@ -49,7 +49,7 @@ run:
 				timer.Stop()
 			}
 			w.add(m)
-			timer.Reset(time.Second * time.Duration(w.txTimer))
+			timer.Reset(w.txTimer)
 
 		case <-timer.C:
 			if len(w.batch) > 0 {
