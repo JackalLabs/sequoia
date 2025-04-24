@@ -532,6 +532,8 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 		return fileData, fileName, err
 	}
 
+	folder.Merkle = currentRoot
+
 	htmlData, err := gateway.GenerateHTML(folder, currentPath)
 	if err != nil {
 		return nil, fileName, err
@@ -609,6 +611,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 					fileData = htmlData
 				}
 			}
+			folder.Merkle = merkle
 		}
 
 		rs := bytes.NewReader(fileData)
