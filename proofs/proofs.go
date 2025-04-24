@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/dgraph-io/badger/v4"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"

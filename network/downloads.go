@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	apiTypes "github.com/JackalLabs/sequoia/api/types"
 	"io"
 	"net/http"
 

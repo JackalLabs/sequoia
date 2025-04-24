@@ -2,3 +2,4 @@ data
 /.idea/
 /coverage.txt
 *.log
+sequoia
