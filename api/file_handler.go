@@ -397,7 +397,13 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 
+		fileName := req.URL.Query().Get("filename")
+
 		merkleString := vars["merkle"]
+		if len(fileName) == 0 {
+			fileName = merkleString
+		}
+
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
 			v := types.ErrorResponse{
@@ -418,15 +424,20 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			return
 		}
 		rs := bytes.NewReader(file)
-		http.ServeContent(w, req, merkleString, time.Time{}, rs)
+
+		http.ServeContent(w, req, fileName, time.Time{}, rs)
 	}
 }
 
 func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-
+		fileName := req.URL.Query().Get("filename")
 		merkleString := vars["merkle"]
+		if len(fileName) == 0 {
+			fileName = merkleString
+		}
+
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
 			v := types.ErrorResponse{
@@ -440,7 +451,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 		file, err := f.GetFileData(merkle)
 		if err == nil {
 			rs := bytes.NewReader(file)
-			http.ServeContent(w, req, merkleString, time.Time{}, rs)
+			http.ServeContent(w, req, fileName, time.Time{}, rs)
 			return
 		}
 
@@ -472,6 +483,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			}
 
 			u = u.JoinPath("download", merkleString)
+			u.Query().Set("filename", fileName)
 
 			r, err := http.Get(u.String())
 			if err != nil {
