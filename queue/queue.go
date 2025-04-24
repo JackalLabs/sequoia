@@ -3,10 +3,11 @@ package queue
 import (
 	"bytes"
 	"fmt"
-	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"strings"
 	"sync"
 	"time"
+
+	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"

@@ -11,8 +11,12 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/JackalLabs/sequoia/api/gateway"
+	sequoiaTypes "github.com/JackalLabs/sequoia/types"
 
 	"github.com/JackalLabs/sequoia/utils"
 
@@ -429,6 +433,110 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 	}
 }
 
+func getFolderData(data []byte) (*sequoiaTypes.FolderData, bool) {
+	var folder sequoiaTypes.FolderData
+	err := json.Unmarshal(data, &folder)
+	if err != nil {
+		return nil, false
+	}
+	return &folder, true
+}
+
+func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) ([]byte, error) {
+	file, err := f.GetFileData(merkle)
+	if err == nil {
+		return file, nil
+	}
+
+	merkleString := hex.EncodeToString(merkle)
+
+	queryParams := &storageTypes.QueryFindFile{
+		Merkle: merkle,
+	}
+
+	cl := storageTypes.NewQueryClient(wallet.Client.GRPCConn)
+
+	res, err := cl.FindFile(context.Background(), queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	ips := res.ProviderIps
+
+	for _, ip := range ips {
+		if ip == myIp {
+			continue // skipping me
+		}
+		u, err := url.Parse(ip)
+		if err != nil {
+			continue // skipping bad url
+		}
+
+		u = u.JoinPath("download", merkleString)
+		u.Query().Set("filename", fileName)
+
+		r, err := http.Get(u.String())
+		if err != nil {
+			continue // skipping bad url
+		}
+
+		if r.StatusCode != http.StatusOK {
+			continue
+		}
+
+		fileData, err := io.ReadAll(r.Body)
+		if err != nil {
+			continue
+		}
+
+		return fileData, nil
+	}
+
+	return nil, errors.New("could not find file data on network")
+}
+
+func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) ([]byte, string, error) {
+	currentRoot := root
+
+	fileData, err := getMerkleData(currentRoot, fileName, f, wallet, myIp)
+	if err != nil {
+		return nil, fileName, err
+	}
+
+	if len(path) > 0 {
+		var folder sequoiaTypes.FolderData // must be folder because there are more children
+		err = json.Unmarshal(fileData, &folder)
+		if err != nil {
+			return nil, fileName, err
+		}
+
+		children := folder.Children
+
+		p := path[0] // next item in path list
+
+		for _, child := range children {
+			if child.Name == p {
+				return GetMerklePathData(child.Merkle, path[1:], child.Name, f, wallet, myIp) // check the next item in the list
+			}
+		}
+		// did not find child
+		return nil, fileName, errors.New("path not valid")
+	}
+
+	var folder sequoiaTypes.FolderData
+	err = json.Unmarshal(fileData, &folder)
+	if err != nil {
+		return fileData, fileName, nil
+	}
+
+	htmlData, err := gateway.GenerateHTML(&folder)
+	if err != nil {
+		return nil, fileName, err
+	}
+
+	return htmlData, fmt.Sprintf("%s.html", fileName), err
+}
+
 func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
@@ -437,7 +545,6 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 		if len(fileName) == 0 {
 			fileName = merkleString
 		}
-
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
 			v := types.ErrorResponse{
@@ -448,20 +555,26 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			return
 		}
 
-		file, err := f.GetFileData(merkle)
-		if err == nil {
-			rs := bytes.NewReader(file)
-			http.ServeContent(w, req, fileName, time.Time{}, rs)
-			return
+		pathString := vars["path"] // handling pathing data
+		paths := strings.Split(pathString, "/")
+
+		if len(paths) > 0 { // if we have paths, use the path system
+			data, name, err := GetMerklePathData(merkle, paths, fileName, f, wallet, myIp)
+			if err != nil {
+				v := types.ErrorResponse{
+					Error: err.Error(),
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+				_ = json.NewEncoder(w).Encode(v)
+				return
+			}
+
+			rs := bytes.NewReader(data)
+			http.ServeContent(w, req, name, time.Time{}, rs)
 		}
+		// otherwise we just get the raw merkle data
 
-		queryParams := &storageTypes.QueryFindFile{
-			Merkle: merkle,
-		}
-
-		cl := storageTypes.NewQueryClient(wallet.Client.GRPCConn)
-
-		res, err := cl.FindFile(context.Background(), queryParams)
+		fileData, err := getMerkleData(merkle, fileName, f, wallet, myIp)
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),
@@ -471,42 +584,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			return
 		}
 
-		ips := res.ProviderIps
-
-		for _, ip := range ips {
-			if ip == myIp {
-				continue // skipping me
-			}
-			u, err := url.Parse(ip)
-			if err != nil {
-				continue // skipping bad url
-			}
-
-			u = u.JoinPath("download", merkleString)
-			u.Query().Set("filename", fileName)
-
-			r, err := http.Get(u.String())
-			if err != nil {
-				continue // skipping bad url
-			}
-
-			if r.StatusCode != http.StatusOK {
-				continue
-			}
-
-			_, err = io.Copy(w, r.Body)
-			if err != nil {
-				continue // skipping bad url
-			}
-			return
-		}
-
-		v := types.ErrorResponse{
-			Error: "could not find any files",
-		}
-		w.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(w).Encode(v)
-		return
-
+		rs := bytes.NewReader(fileData)
+		http.ServeContent(w, req, fileName, time.Time{}, rs)
 	}
 }

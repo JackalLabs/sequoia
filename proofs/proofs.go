@@ -6,8 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/dgraph-io/badger/v4"
 	"time"
+
+	"github.com/dgraph-io/badger/v4"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -170,7 +171,6 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 					Err(removeErr).
 					Msg("Failed to cleanup orphaned file entry")
 			}
-
 		}
 
 		return err
@@ -223,9 +223,9 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 		log.Error().Msg(postRes.ErrorMessage)
 	}
 
-	//log.Debug().Msg(fmt.Sprintf("%x was successfully proven", merkle))
+	// log.Debug().Msg(fmt.Sprintf("%x was successfully proven", merkle))
 
-	//log.Debug().Msg(fmt.Sprintf("TX Hash: %s", m.Hash()))
+	// log.Debug().Msg(fmt.Sprintf("TX Hash: %s", m.Hash()))
 
 	return nil
 }

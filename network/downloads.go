@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	apiTypes "github.com/JackalLabs/sequoia/api/types"
 	"io"
 	"net/http"
+
+	apiTypes "github.com/JackalLabs/sequoia/api/types"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 
