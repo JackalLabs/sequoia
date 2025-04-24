@@ -130,7 +130,9 @@
                 <span class="file-icon">📄</span>
                 <a href="{{$.CurrentPath}}/{{.Name}}">{{.Name}}</a>
             </td>
-            <td class="merkle-hash">{{truncateMerkle .Merkle}}</td>
+            <td >
+                <a class="merkle-hash" href="/get/{{encodeMerkle .Merkle}}?filename={{.Name}}">{{truncateMerkle .Merkle}}</a>
+            </td>
             <td class="size-column">{{formatSize .Size}}</td>
         </tr>
         {{end}}
