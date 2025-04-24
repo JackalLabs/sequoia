@@ -14,24 +14,24 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// TODO: change these to a config
-const batchSize = 42
-const timerDuration = time.Second * 5
-
 type worker struct {
 	id              int8
 	wallet          *wallet.Wallet // offset wallet
 	maxRetryAttempt int8
 	msgIn           <-chan *Message // worker stop if this closes
 	batch           []*Message
+	batchSize       int
+	txTimer         int
 }
 
-func newWorker(id int8, wallet *wallet.Wallet, maxRetryAttempt int8, msgIn <-chan *Message) *worker {
+func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRetryAttempt int8, msgIn <-chan *Message) *worker {
 	return &worker{
 		id:              id,
 		wallet:          wallet,
 		maxRetryAttempt: int8(maxRetryAttempt),
 		msgIn:           msgIn,
+		batchSize:       batchSize,
+		txTimer:         txTimer,
 	}
 }
 
@@ -44,12 +44,12 @@ run:
 			if !ok { // pool closed the channel, stop worker
 				break run
 			}
-			if len(w.batch) >= batchSize {
+			if len(w.batch) >= w.batchSize {
 				w.send()
 				timer.Stop()
 			}
 			w.add(m)
-			timer.Reset(timerDuration)
+			timer.Reset(time.Second * time.Duration(w.txTimer))
 
 		case <-timer.C:
 			if len(w.batch) > 0 {

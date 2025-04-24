@@ -139,13 +139,13 @@ func DefaultChainConfig() ChainConfig {
 type QueueConfig struct {
 	// seconds
 	QueueInterval int64 `yaml:"queue_interval" mapstructure:"queue_interval"`
-	QueueThreads  int8  `yaml:"queue_threads" mapstructure:"queue_threads"`
+	// seconds
+	TxTimer      int16 `yaml:"tx_timer" mapstructure:"tx_timer"`
+	QueueThreads int8  `yaml:"queue_threads" mapstructure:"queue_threads"`
 	// resend tx if network isn't responding
 	MaxRetryAttempt int8 `yaml:"max_retry_attempt" mapstructure:"max_retry_attempt"`
 	// group individual messages into one tx
 	TxBatchSize int8 `yaml:"tx_batch_size" mapstructure:"tx_batch_size"`
-	// worker's own message pool, set this value > TxBatchSize
-	WorkerQueueSize int16 `yaml:"worker_queue_size" mapstructure:"worker_queue_size"`
 }
 
 func DefaultQueueConfig() QueueConfig {
@@ -154,7 +154,7 @@ func DefaultQueueConfig() QueueConfig {
 		QueueThreads:    5,
 		MaxRetryAttempt: 100,
 		TxBatchSize:     45,
-		WorkerQueueSize: 100,
+		TxTimer:         3,
 	}
 }
 

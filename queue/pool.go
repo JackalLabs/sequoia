@@ -32,7 +32,7 @@ func NewPool(wallet *wallet.Wallet, config config.QueueConfig) (*Pool, error) {
 		return nil, errors.Join(errors.New("failed to initialize auth claimers"), err)
 	}
 
-	workers, workerChannels := createWorkers(workerWallets, config.MaxRetryAttempt)
+	workers, workerChannels := createWorkers(workerWallets, int(config.TxTimer), int(config.TxBatchSize), config.MaxRetryAttempt)
 	if workers == nil {
 		panic("no workers created")
 	}
@@ -95,7 +95,7 @@ func (p *Pool) sendToAny(msg *Message) (workerId int) {
 	return to
 }
 
-func createWorkers(workerWallets []*wallet.Wallet, maxRetryAttempt int8) ([]*worker, []chan *Message) {
+func createWorkers(workerWallets []*wallet.Wallet, txTimer int, batchSize int, maxRetryAttempt int8) ([]*worker, []chan *Message) {
 	wChannels := make([]chan *Message, 0, len(workerWallets))
 	for _ = range len(workerWallets) {
 		wChannels = append(wChannels, make(chan *Message))
@@ -103,7 +103,7 @@ func createWorkers(workerWallets []*wallet.Wallet, maxRetryAttempt int8) ([]*wor
 
 	workers := make([]*worker, 0, len(workerWallets))
 	for i, w := range workerWallets {
-		worker := newWorker(int8(i), w, maxRetryAttempt, wChannels[i])
+		worker := newWorker(int8(i), w, txTimer, batchSize, maxRetryAttempt, wChannels[i])
 		workers = append(workers, worker)
 	}
 
