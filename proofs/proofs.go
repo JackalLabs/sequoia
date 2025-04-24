@@ -219,8 +219,7 @@ func (p *Prover) Start() {
 			return
 		}
 
-		time.Sleep(time.Millisecond * 1000) // pauses for one third of a second
-		// sleep until next proving cycle
+		time.Sleep(time.Millisecond * 1000) // pauses for one second
 		if !p.processed.Add(time.Second * time.Duration(p.interval)).Before(time.Now()) {
 			continue
 		}

@@ -67,7 +67,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	outline.RegisterGetRoute(r, "/ipfs/cid_map", IPFSMapCids(f))
 	outline.RegisterPostRoute(r, "/ipfs/make_folder", PostIPFSFolder(f))
 
-	outline.RegisterGetRoute(r, "/dump", DumpDBHandler(f))
+	// outline.RegisterGetRoute(r, "/dump", DumpDBHandler(f))
 
 	outline.RegisterGetRoute(r, "/version", VersionHandler(wallet))
 	outline.RegisterGetRoute(r, "/network", NetworkHandler(wallet))
