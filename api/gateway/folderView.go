@@ -5,8 +5,9 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
-	"github.com/JackalLabs/sequoia/types"
 	"html/template"
+
+	"github.com/JackalLabs/sequoia/types"
 )
 
 //go:embed folderView.html

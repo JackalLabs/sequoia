@@ -473,7 +473,9 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 		}
 
 		u = u.JoinPath("download", merkleString)
-		u.Query().Set("filename", fileName)
+		uq := u.Query()
+		uq.Set("filename", fileName)
+		u.RawQuery = uq.Encode()
 
 		r, err := http.Get(u.String())
 		if err != nil {
@@ -504,12 +506,10 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 	}
 
 	if len(path) > 0 {
-		var folder sequoiaTypes.FolderData // must be folder because there are more children
-		err = json.Unmarshal(fileData, &folder)
-		if err != nil {
-			return nil, fileName, err
+		folder, isFolder := getFolderData(fileData)
+		if !isFolder {
+			return nil, fileName, errors.New("this is not a folder")
 		}
-
 		children := folder.Children
 
 		p := path[0] // next item in path list
@@ -527,13 +527,12 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 		return fileData, fileName, err
 	}
 
-	var folder sequoiaTypes.FolderData
-	err = json.Unmarshal(fileData, &folder)
-	if err != nil {
-		return fileData, fileName, nil
+	folder, isFolder := getFolderData(fileData)
+	if !isFolder {
+		return nil, fileName, errors.New("this is not a folder")
 	}
 
-	htmlData, err := gateway.GenerateHTML(&folder, currentPath)
+	htmlData, err := gateway.GenerateHTML(folder, currentPath)
 	if err != nil {
 		return nil, fileName, err
 	}
@@ -543,7 +542,6 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 
 func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-
 		vars := mux.Vars(req)
 		fileName := req.URL.Query().Get("filename")
 		merkleString := vars["merkle"]
@@ -604,10 +602,9 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 		}
 
 		if !raw {
-			var folder sequoiaTypes.FolderData
-			err = json.Unmarshal(fileData, &folder)
-			if err == nil {
-				htmlData, err := gateway.GenerateHTML(&folder, req.URL.Path)
+			folder, isFolder := getFolderData(fileData)
+			if !isFolder {
+				htmlData, err := gateway.GenerateHTML(folder, req.URL.Path)
 				if err == nil {
 					fileData = htmlData
 				}

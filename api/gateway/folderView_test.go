@@ -48,6 +48,7 @@ func TestFolderView(t *testing.T) {
 	// Make a request to the test server
 	resp, err := http.Get(ts.URL)
 	req.NoError(err)
+	//nolint:all
 	defer resp.Body.Close()
 
 	// Verify response

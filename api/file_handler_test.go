@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/JackalLabs/sequoia/ipfs"
@@ -11,8 +14,6 @@ import (
 	"github.com/JackalLabs/sequoia/types"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
 )
 
 const owner = "jkl15w9zm873n0femu8egv7hyj9l7jfqtqvwyrqk73"
@@ -84,7 +85,7 @@ func TestPathing(t *testing.T) {
 
 	outerFolderData, err := json.Marshal(outerFolderNode)
 	r.NoError(err)
-	outerFolderId, folderSize, err := writeFile(f, outerFolderData)
+	outerFolderId, _, err := writeFile(f, outerFolderData)
 	r.NoError(err)
 
 	pathData, _, err := api.GetMerklePathData(folderId, []string{"HappyBirthday.txt"}, folder.Name, f, nil, "", "/", false)
