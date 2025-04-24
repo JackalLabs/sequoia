@@ -9,8 +9,6 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"time"
 
-	"github.com/dgraph-io/badger/v4"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
