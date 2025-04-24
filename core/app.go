@@ -93,7 +93,7 @@ func NewApp(home string) (*App, error) {
 		}
 	}
 
-	apiServer := api.NewAPI(cfg.APICfg.Port)
+	apiServer := api.NewAPI(&cfg.APICfg)
 
 	w, err := config.InitWallet(home)
 	if err != nil {
