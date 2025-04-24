@@ -495,7 +495,7 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 	return nil, errors.New("could not find file data on network")
 }
 
-func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string, currentPath string) ([]byte, string, error) {
+func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string, currentPath string, raw bool) ([]byte, string, error) {
 	currentRoot := root
 
 	fileData, err := getMerkleData(currentRoot, fileName, f, wallet, myIp)
@@ -516,11 +516,15 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 
 		for _, child := range children {
 			if child.Name == p {
-				return GetMerklePathData(child.Merkle, path[1:], child.Name, f, wallet, myIp, currentPath) // check the next item in the list
+				return GetMerklePathData(child.Merkle, path[1:], child.Name, f, wallet, myIp, currentPath, raw) // check the next item in the list
 			}
 		}
 		// did not find child
 		return nil, fileName, errors.New("path not valid")
+	}
+
+	if raw {
+		return fileData, fileName, err
 	}
 
 	var folder sequoiaTypes.FolderData
@@ -557,6 +561,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 		}
 
 		pathString, pathExists := vars["path"] // handling pathing data
+		_, raw := vars["raw"]                  // handling raw data
 
 		// Only process path if it actually exists and isn't empty
 		if pathExists && pathString != "" {
@@ -570,7 +575,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			}
 
 			if len(filteredPaths) > 0 {
-				data, name, err := GetMerklePathData(merkle, filteredPaths, fileName, f, wallet, myIp, req.URL.Path)
+				data, name, err := GetMerklePathData(merkle, filteredPaths, fileName, f, wallet, myIp, req.URL.Path, raw)
 				if err != nil {
 					v := types.ErrorResponse{
 						Error: err.Error(),
@@ -598,12 +603,14 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			return
 		}
 
-		var folder sequoiaTypes.FolderData
-		err = json.Unmarshal(fileData, &folder)
-		if err == nil {
-			htmlData, err := gateway.GenerateHTML(&folder, req.URL.Path)
+		if !raw {
+			var folder sequoiaTypes.FolderData
+			err = json.Unmarshal(fileData, &folder)
 			if err == nil {
-				fileData = htmlData
+				htmlData, err := gateway.GenerateHTML(&folder, req.URL.Path)
+				if err == nil {
+					fileData = htmlData
+				}
 			}
 		}
 
