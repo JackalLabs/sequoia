@@ -41,7 +41,7 @@ import (
 
 type App struct {
 	api          *api.API
-	q            *queue.Queue
+	q            queue.Queue
 	prover       *proofs.Prover
 	strayManager *strays.StrayManager
 	home         string
@@ -249,8 +249,7 @@ func (a *App) Start() error {
 		return err
 	}
 
-	refreshInterval := time.Second * time.Duration(cfg.QueueInterval)
-	a.q, err = queue.NewQueue(a.wallet, refreshInterval, cfg.QueueThreads)
+	a.q, err = queue.NewPool(a.wallet, cfg.QueueConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize Queue module")
 		return err

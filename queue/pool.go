@@ -157,26 +157,3 @@ func newOffsetWallet(main *wallet.Wallet, index int) *wallet.Wallet {
 	}
 	return w
 }
-
-func newBuffer(in <-chan *Message) <-chan *Message {
-	// From: https://blogtitle.github.io/go-advanced-concurrency-patterns-part-4-unlimited-buffer-channels/
-	var buf []*Message
-	out := make(chan *Message)
-
-	go func() {
-		defer close(out)
-		for msg := range in {
-			select {
-			case out <- msg:
-			default:
-				buf = append(buf, msg)
-			}
-		}
-
-		for _, v := range buf {
-			out <- v
-		}
-	}()
-
-	return out
-}

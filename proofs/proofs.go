@@ -316,7 +316,7 @@ func (p *Prover) Stop() {
 	p.running = false
 }
 
-func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval int64, threads int16, chunkSize int) *Prover {
+func NewProver(wallet *wallet.Wallet, q queue.Queue, io FileSystem, interval int64, threads int16, chunkSize int) *Prover {
 	p := Prover{
 		running:   false,
 		wallet:    wallet,
