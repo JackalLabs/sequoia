@@ -529,7 +529,7 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 
 	folder, isFolder := getFolderData(fileData)
 	if !isFolder {
-		return nil, fileName, errors.New("this is not a folder")
+		return fileData, fileName, err
 	}
 
 	htmlData, err := gateway.GenerateHTML(folder, currentPath)
