@@ -555,24 +555,37 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			return
 		}
 
-		pathString := vars["path"] // handling pathing data
-		paths := strings.Split(pathString, "/")
+		pathString, pathExists := vars["path"] // handling pathing data
 
-		if len(paths) > 0 { // if we have paths, use the path system
-			data, name, err := GetMerklePathData(merkle, paths, fileName, f, wallet, myIp)
-			if err != nil {
-				v := types.ErrorResponse{
-					Error: err.Error(),
+		// Only process path if it actually exists and isn't empty
+		if pathExists && pathString != "" {
+			paths := strings.Split(pathString, "/")
+			// Remove empty path elements (this handles cases with leading/trailing slashes)
+			var filteredPaths []string
+			for _, p := range paths {
+				if p != "" {
+					filteredPaths = append(filteredPaths, p)
 				}
-				w.WriteHeader(http.StatusInternalServerError)
-				_ = json.NewEncoder(w).Encode(v)
-				return
 			}
 
-			rs := bytes.NewReader(data)
-			http.ServeContent(w, req, name, time.Time{}, rs)
+			if len(filteredPaths) > 0 {
+				data, name, err := GetMerklePathData(merkle, filteredPaths, fileName, f, wallet, myIp)
+				if err != nil {
+					v := types.ErrorResponse{
+						Error: err.Error(),
+					}
+					w.WriteHeader(http.StatusInternalServerError)
+					_ = json.NewEncoder(w).Encode(v)
+					return
+				}
+
+				rs := bytes.NewReader(data)
+				http.ServeContent(w, req, name, time.Time{}, rs)
+				return // Add this return to prevent executing the code below
+			}
 		}
-		// otherwise we just get the raw merkle data
+
+		// This code will only run if there's no path or the path is empty
 
 		fileData, err := getMerkleData(merkle, fileName, f, wallet, myIp)
 		if err != nil {
