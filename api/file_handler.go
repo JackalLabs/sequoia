@@ -584,6 +584,15 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			return
 		}
 
+		var folder sequoiaTypes.FolderData
+		err = json.Unmarshal(fileData, &folder)
+		if err == nil {
+			htmlData, err := gateway.GenerateHTML(&folder)
+			if err == nil {
+				fileData = htmlData
+			}
+		}
+
 		rs := bytes.NewReader(fileData)
 		http.ServeContent(w, req, fileName, time.Time{}, rs)
 	}
