@@ -87,17 +87,16 @@ func TestPathing(t *testing.T) {
 	outerFolderId, folderSize, err := writeFile(f, outerFolderData)
 	r.NoError(err)
 
-	pathData, _, err := api.GetMerklePathData(folderId, []string{"HappyBirthday.txt"}, folder.Name, f, nil, "")
+	pathData, _, err := api.GetMerklePathData(folderId, []string{"HappyBirthday.txt"}, folder.Name, f, nil, "", "/")
 	r.NoError(err)
 	r.Equal(file, pathData)
 
-	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer", "HappyBirthday.txt"}, folder.Name, f, nil, "")
+	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer", "HappyBirthday.txt"}, folder.Name, f, nil, "", "/")
 	r.NoError(err)
 	r.Equal(file, pathData)
 
-	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer"}, folder.Name, f, nil, "")
+	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer"}, folder.Name, f, nil, "", "/")
 	r.NoError(err)
 	htmlData := string(pathData)
-	t.Log(htmlData)
 	r.True(strings.Contains(htmlData, "</html>"))
 }
