@@ -472,12 +472,16 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 			continue // skipping bad url
 		}
 
+		client := &http.Client{
+			Timeout: 15 * time.Second, // 15 second timeout
+		}
+
 		u = u.JoinPath("download", merkleString)
 		uq := u.Query()
 		uq.Set("filename", fileName)
 		u.RawQuery = uq.Encode()
 
-		r, err := http.Get(u.String())
+		r, err := client.Get(u.String())
 		if err != nil {
 			continue // skipping bad url
 		}
