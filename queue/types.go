@@ -1,9 +1,14 @@
 package queue
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/cosmos/cosmos-sdk/types"
+)
+
+var (
+	ReachedMaxRetry = errors.New("send retry attempt reached max retry")
 )
 
 type Message struct {

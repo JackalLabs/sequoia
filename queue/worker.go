@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"errors"
 	"time"
 
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
@@ -109,6 +110,7 @@ retry:
 			Int("msg size", len(msg)).
 			Err(err).
 			Msg("queue worker batch msg broadcast exceeded max retry attempts")
+		err = errors.Join(ReachedMaxRetry, err)
 	}
 
 	for _, m := range toProcess {
