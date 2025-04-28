@@ -81,7 +81,6 @@ func (f *FileSystem) ListCids() ([]string, error) {
 			item := it.Item()
 			err := item.Value(func(v []byte) error {
 				cids = append(cids, string(v))
-
 				return nil
 			})
 			if err != nil {
@@ -107,7 +106,6 @@ func (f *FileSystem) MapCids() (map[string][]byte, error) {
 			merkle := k[len(prefix):]
 			err := item.Value(func(v []byte) error {
 				cidMap[string(v)] = merkle
-
 				return nil
 			})
 			if err != nil {
