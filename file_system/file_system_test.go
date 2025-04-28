@@ -2,16 +2,6 @@ package file_system
 
 //nolint:all
 import (
-	"io/ioutil"
-
-	"github.com/JackalLabs/sequoia/utils"
-	ipfslite "github.com/hsanjuan/ipfs-lite"
-	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
-
-	"github.com/JackalLabs/sequoia/ipfs"
-)
-
-import (
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -22,19 +12,22 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/JackalLabs/sequoia/utils"
+	ipfslite "github.com/hsanjuan/ipfs-lite"
+	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+
+	"github.com/JackalLabs/sequoia/ipfs"
+	"github.com/JackalLabs/sequoia/logger"
 	"github.com/JackalLabs/sequoia/proofs"
+	"github.com/dgraph-io/badger/v4"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/require"
 	"github.com/wealdtech/go-merkletree/v2"
 	"github.com/wealdtech/go-merkletree/v2/sha3"
 
-	"github.com/JackalLabs/sequoia/logger"
-	"github.com/rs/zerolog"
-
-	"github.com/dgraph-io/badger/v4"
-	"github.com/rs/zerolog/log"
-	"github.com/stretchr/testify/require"
+	_ "net/http/pprof"
 )
-
-import _ "net/http/pprof"
 
 var table = []struct {
 	input int
@@ -47,7 +40,7 @@ var table = []struct {
 }
 
 func BenchmarkFileWrites(b *testing.B) {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: ioutil.Discard})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: io.Discard})
 	log.Logger = log.With().Caller().Logger()
 
 	options := badger.DefaultOptions("/tmp/badger/k")
