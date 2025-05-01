@@ -10,6 +10,8 @@ import (
 	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 	wtypes "github.com/desmos-labs/cosmos-go-wallet/types"
 
+	"github.com/JackalLabs/sequoia/testutils"
+
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
 )
 
@@ -31,6 +33,7 @@ func TestWorkerSendMaxRetry(t *testing.T) {
 
 	wallet, err := sequoiaWallet.CreateWallet(s.SeedPhrase, s.DerivationPath, chainCfg)
 	r.NoError(err)
+	wallet.Client.RPCClient = &testutils.MockRPCClient{}
 
 	chMsg := make(chan *Message)
 	w := newWorker(0, wallet, 1, 10, 3, chMsg)
