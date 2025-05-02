@@ -5,14 +5,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
 	"github.com/JackalLabs/sequoia/config"
 	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 	wtypes "github.com/desmos-labs/cosmos-go-wallet/types"
 
-	"github.com/JackalLabs/sequoia/testutils"
+	"github.com/JackalLabs/sequoia/testutil/mocks"
 
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdkTypes "github.com/cosmos/cosmos-sdk/types"
+	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
 func TestWorkerSendMaxRetry(t *testing.T) {
@@ -33,7 +38,20 @@ func TestWorkerSendMaxRetry(t *testing.T) {
 
 	wallet, err := sequoiaWallet.CreateWallet(s.SeedPhrase, s.DerivationPath, chainCfg)
 	r.NoError(err)
-	wallet.Client.RPCClient = &testutils.MockRPCClient{}
+
+	queryClient := mocks.SetupAuthClient(t)
+
+	baseAcc := authTypes.ProtoBaseAccount()
+	err = baseAcc.SetAddress(sdkTypes.AccAddress(wallet.AccAddress()))
+	r.NoError(err)
+	any, err := codectypes.NewAnyWithValue(baseAcc)
+	r.NoError(err)
+	queryResp := &authTypes.QueryAccountResponse{
+		Account: any,
+	}
+	queryClient.EXPECT().Account(gomock.Any(), &authTypes.QueryAccountRequest{Address: wallet.AccAddress()}).Return(queryResp, nil).AnyTimes()
+
+	wallet.Client.AuthClient = queryClient
 
 	chMsg := make(chan *Message)
 	w := newWorker(0, wallet, 1, 10, 3, chMsg)
