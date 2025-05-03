@@ -97,7 +97,7 @@ func (p *Pool) sendToAny(msg *Message) (workerId int) {
 
 func createWorkers(workerWallets []*wallet.Wallet, txTimer int, batchSize int, maxRetryAttempt int8) ([]*worker, []chan *Message) {
 	wChannels := make([]chan *Message, 0, len(workerWallets))
-	for _ = range len(workerWallets) {
+	for range len(workerWallets) {
 		wChannels = append(wChannels, make(chan *Message))
 	}
 

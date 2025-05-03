@@ -94,5 +94,5 @@ func TestWorkerSendMaxRetry(t *testing.T) {
 	w.send()
 
 	wg.Wait()
-	r.ErrorIs(m.err, ReachedMaxRetry)
+	r.ErrorIs(m.err, ErrReachedMaxRetry)
 }

@@ -110,7 +110,7 @@ retry:
 			Int("msg size", len(msg)).
 			Err(err).
 			Msg("queue worker batch msg broadcast exceeded max retry attempts")
-		err = errors.Join(ReachedMaxRetry, err)
+		err = errors.Join(ErrReachedMaxRetry, err)
 	}
 
 	for _, m := range toProcess {

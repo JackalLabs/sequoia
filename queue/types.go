@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	ReachedMaxRetry = errors.New("send retry attempt reached max retry")
+	ErrReachedMaxRetry = errors.New("send retry attempt reached max retry")
 )
 
 type Message struct {
