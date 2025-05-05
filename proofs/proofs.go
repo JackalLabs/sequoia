@@ -189,17 +189,33 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	wg.Wait()
 
 	if m.Error() != nil {
-		log.Error().Err(m.Error())
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(err).
+			Msg("Proof posting failed, will try again")
 		return m.Error()
 	}
 
 	if m.Res() != nil {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Msg("Message response was nil")
 		return nil
 	}
 
 	var postRes types.MsgPostProofResponse
 	data, err := hex.DecodeString(m.Res().Data)
 	if err != nil {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(err).
+			Msg("Could not decode response body")
 		return nil
 	}
 
@@ -207,25 +223,43 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	var txMsgData sdk.TxMsgData
 	err = encodingCfg.Marshaler.Unmarshal(data, &txMsgData)
 	if err != nil {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(err).
+			Msg("Could not parse response body")
 		return nil
 	}
 
 	if len(txMsgData.Data) == 0 {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Msg("No response data")
 		return nil
 	}
 
 	err = postRes.Unmarshal(txMsgData.Data[m.Index()].Data)
 	if err != nil {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(err).
+			Msg("Could not unmarshal response body")
 		return nil
 	}
 
 	if !postRes.Success {
-		log.Error().Msg(postRes.ErrorMessage)
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(errors.New(postRes.ErrorMessage)).
+			Msg("Failed to prove file")
 	}
-
-	// log.Debug().Msg(fmt.Sprintf("%x was successfully proven", merkle))
-
-	// log.Debug().Msg(fmt.Sprintf("TX Hash: %s", m.Hash()))
 
 	return nil
 }
