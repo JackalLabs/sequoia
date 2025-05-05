@@ -216,7 +216,8 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 			Int64("start", start).
 			Err(err).
 			Msg("Could not decode response body")
-		return nil
+
+		return err
 	}
 
 	encodingCfg := canine.MakeEncodingConfig()
@@ -229,7 +230,9 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 			Int64("start", start).
 			Err(err).
 			Msg("Could not parse response body")
-		return nil
+
+		return err
+
 	}
 
 	if len(txMsgData.Data) == 0 {
@@ -249,7 +252,8 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 			Int64("start", start).
 			Err(err).
 			Msg("Could not unmarshal response body")
-		return nil
+
+		return err
 	}
 
 	if !postRes.Success {
