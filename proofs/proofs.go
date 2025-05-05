@@ -207,6 +207,16 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 		return nil
 	}
 
+	if m.Res().Code != 0 {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Uint32("code", m.Res().Code).
+			Int64("start", start).
+			Msgf("response was", m.Res().RawLog)
+		return nil
+	}
+
 	var postRes types.MsgPostProofResponse
 	data, err := hex.DecodeString(m.Res().Data)
 	if err != nil {

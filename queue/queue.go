@@ -2,6 +2,7 @@ package queue
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -117,6 +118,11 @@ func (q *Queue) Listen() {
 		for !complete && i < 10 {
 			i++
 			res, err = q.wallet.BroadcastTxCommit(data)
+			if err != nil {
+				log.Warn().Err(err).Msg("tx broadcast failed from queue")
+				continue
+			}
+
 			if res != nil {
 				if res.Code != 0 {
 					if strings.Contains(res.RawLog, "account sequence mismatch") {
@@ -126,13 +132,15 @@ func (q *Queue) Listen() {
 						}
 					}
 				}
+				complete = true
+			} else {
+				log.Warn().Msg("response is nil")
+				continue
 			}
+		}
 
-			complete = true
-
-			if err != nil {
-				log.Warn().Err(err).Msg("tx broadcast failed from queue")
-			}
+		if !complete {
+			err = errors.New("could not complete broadcast in 10 loops")
 		}
 
 		for i, process := range toProcess {
