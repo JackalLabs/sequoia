@@ -22,7 +22,7 @@ type worker struct {
 	msgIn           <-chan *Message // worker stop if this closes
 	batch           []*Message
 	batchSize       int
-	txTimer         time.Duration
+	txTimer         int
 }
 
 func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRetryAttempt int8, msgIn <-chan *Message) *worker {
@@ -32,12 +32,13 @@ func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRe
 		maxRetryAttempt: int8(maxRetryAttempt),
 		msgIn:           msgIn,
 		batchSize:       batchSize,
-		txTimer:         time.Duration(txTimer) * time.Second,
+		txTimer:         txTimer,
 	}
 }
 
 func (w *worker) start() {
-	timer := time.NewTimer(w.txTimer) // if no msg comes for 5 seconds, broadcast tx
+	d := time.Duration(w.txTimer) * time.Second
+	timer := time.NewTimer(d) // if no msg comes for 5 seconds, broadcast tx
 run:
 	for {
 		select {
@@ -45,12 +46,13 @@ run:
 			if !ok { // pool closed the channel, stop worker
 				break run
 			}
+
+			w.add(m)
 			if len(w.batch) >= w.batchSize {
 				w.send()
 				timer.Stop()
 			}
-			w.add(m)
-			timer.Reset(w.txTimer)
+			timer.Reset(d)
 
 		case <-timer.C:
 			if len(w.batch) > 0 {
@@ -93,7 +95,7 @@ func (w *worker) send() {
 	a := 0
 
 retry:
-	for ; a < int(w.maxRetryAttempt); a++ {
+	for ; a < int(w.maxRetryAttempt+1); a++ {
 		resp, err = w.wallet.BroadcastTxCommit(txData)
 		switch code := status.Code(err); code {
 		case codes.AlreadyExists, codes.NotFound, codes.OK:
@@ -103,7 +105,7 @@ retry:
 		time.Sleep(time.Second) // sleep for a bit before retrying
 	}
 
-	if a == int(w.maxRetryAttempt) {
+	if a == int(w.maxRetryAttempt+1) {
 		log.Error().
 			Int8("id", w.id).
 			Int8("max attempt", w.maxRetryAttempt).
