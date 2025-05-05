@@ -186,6 +186,10 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 
 	m, wg := p.q.Add(msg)
 
+	if m.Index() == -1 {
+		return nil
+	}
+
 	wg.Wait()
 
 	if m.Error() != nil {

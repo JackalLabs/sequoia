@@ -51,6 +51,7 @@ func (q *Queue) Add(msg types.Msg) (*Message, *sync.WaitGroup) {
 				queueMessage.Merkle, proofMessage.Merkle) &&
 				queueMessage.Start == proofMessage.Start &&
 				queueMessage.Owner == proofMessage.Owner {
+				m.msgIndex = -1
 				return m, &wg
 			}
 		}
