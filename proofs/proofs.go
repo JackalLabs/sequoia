@@ -142,7 +142,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 		log.Debug().Msg(fmt.Sprintf("%x was already proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
 		return nil, nil, 0, nil
 	}
-	log.Info().Msg(fmt.Sprintf("%x was not yet proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
+	log.Debug().Msg(fmt.Sprintf("%x was not yet proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
 
 	block := int(newProof.ChunkToProve)
 
