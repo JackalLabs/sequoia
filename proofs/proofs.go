@@ -137,7 +137,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 	t := time.Since(startedAt)
 
-	proven := file.ProvenThisBlock(blockHeight+int64(t.Seconds()/5.0), newProof.LastProven)
+	proven := file.ProvenThisBlock(blockHeight+int64(t.Seconds()/6.0), newProof.LastProven)
 	if proven {
 		log.Debug().Msg(fmt.Sprintf("%x was already proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
 		return nil, nil, 0, nil
