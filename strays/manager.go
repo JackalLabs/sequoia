@@ -154,14 +154,16 @@ func (s *StrayManager) RefreshList() error {
 	s.strays = make([]*types.UnifiedFile, 0)
 
 	var val uint64
+	reverse := false
 	if s.lastSize > 300 {
 		val = uint64(s.rand.Int63n(s.lastSize))
+		reverse = s.rand.Intn(2) == 0
 	}
 
 	page := &query.PageRequest{ // more randomly pick from the stray pile
 		Offset:     val,
 		Limit:      300,
-		Reverse:    s.rand.Intn(2) == 0,
+		Reverse:    reverse,
 		CountTotal: true,
 	}
 
@@ -176,7 +178,7 @@ func (s *StrayManager) RefreshList() error {
 	if err != nil {
 		return err
 	}
-	log.Info().Msg("Got updated list of strays")
+	log.Info().Msgf("Got updated list of strays of size %d", len(res.Files))
 
 	for _, stray := range res.Files {
 		newStray := stray

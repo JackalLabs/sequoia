@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	apiTypes "github.com/JackalLabs/sequoia/api/types"
 	"io"
 	"net/http"
+	"os"
+	"time"
+
+	apiTypes "github.com/JackalLabs/sequoia/api/types"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 
@@ -41,7 +45,7 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 			continue
 		}
 
-		size, err := DownloadFileFromURL(f, url, merkle, owner, start, chunkSize, proofType, ipfsParams)
+		size, err := DownloadFileFromURL(f, url, merkle, owner, start, chunkSize, proofType, ipfsParams, fileSize)
 		if err != nil {
 			log.Info().Msg(fmt.Sprintf("Couldn't get %x from %s, trying again... | %s", merkle, url, err.Error()))
 			continue
@@ -63,9 +67,37 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 	return nil
 }
 
-func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) (int, error) {
+func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams, fileSize int64) (int, error) {
 	log.Info().Msg(fmt.Sprintf("Downloading %x from %s...", merkle, url))
-	cli := http.Client{}
+
+	// Calculate timeout based on file size
+	// Base timeout + additional time for large files
+	baseTimeout := 30 * time.Second
+	bytesPerSecond := int64(1024 * 1024 * 10) // 10MB/s as a conservative estimate
+
+	var timeout time.Duration
+	// Add 1 second per MB with an upper limit
+	additionalTime := time.Duration(fileSize/bytesPerSecond) * time.Second
+	maxTimeout := 30 * time.Minute
+	timeout = baseTimeout + additionalTime
+	if timeout > maxTimeout {
+		timeout = maxTimeout
+	}
+	log.Debug().Msg(fmt.Sprintf("Using timeout of %v for %d bytes", timeout, fileSize))
+
+	// Create a client with timeout
+	transport := &http.Transport{
+		ResponseHeaderTimeout: timeout,
+		ExpectContinueTimeout: 5 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		IdleConnTimeout:       90 * time.Second,
+	}
+
+	cli := &http.Client{
+		Timeout:   timeout,
+		Transport: transport,
+	}
+
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%x", url, merkle), nil)
 	if err != nil {
 		return 0, err
@@ -80,13 +112,21 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		"Connection":                {"keep-alive"},
 	}
 
+	// Add context with timeout for more control
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	req = req.WithContext(ctx)
+
 	resp, err := cli.Do(req)
 	if err != nil {
+		// Check if the error is a timeout
+		if os.IsTimeout(err) || errors.Is(err, context.DeadlineExceeded) {
+			return 0, fmt.Errorf("download timed out after %v: %w", timeout, err)
+		}
 		return 0, err
 	}
 
 	if resp.StatusCode != 200 {
-
 		data, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return 0, fmt.Errorf("could not read body, %w | code: %d", err, resp.StatusCode)
@@ -103,16 +143,34 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	defer resp.Body.Close()
 
 	buff := bytes.NewBuffer([]byte{})
-	_, err = io.Copy(buff, resp.Body)
-	if err != nil {
-		return 0, fmt.Errorf("failed to save file %w", err)
+
+	// Use TeeReader to monitor for context cancellation while copying
+	doneCh := make(chan struct{})
+	errCh := make(chan error, 1)
+
+	go func() {
+		_, err := io.Copy(buff, resp.Body)
+		if err != nil {
+			errCh <- err
+		}
+		close(doneCh)
+	}()
+
+	// Wait for either completion or timeout
+	select {
+	case <-ctx.Done():
+		return 0, fmt.Errorf("download timed out after %v", timeout)
+	case err := <-errCh:
+		return 0, fmt.Errorf("download error: %w", err)
+	case <-doneCh:
+		// Download completed successfully
 	}
 
 	reader := bytes.NewReader(buff.Bytes())
 
 	size, _, err := f.WriteFile(reader, merkle, owner, start, chunkSize, proofType, ipfsParams)
 	if err != nil {
-		return 0, fmt.Errorf("failed to write file data %w", err)
+		return 0, fmt.Errorf("failed to write file data: %w", err)
 	}
 
 	return size, nil

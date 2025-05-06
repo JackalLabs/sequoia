@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index of '{{.Folder.Name}}'</title>
+    <style>
+        :root {
+            --jkl-lbeige: #DDDCCF;
+            --jkl-beige: #DDDCCE;
+            --jkl-beige2: #D8D8C8;
+            --jkl-beige3: #D5D4C2;
+            --jkl-dbeige: #C6C5AD;
+            --jkl-brown: #1B1C16;
+            --jkl-yellow: #E9F451;
+            --jkl-disable: #575751;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--jkl-brown);
+            margin: 0;
+            padding: 0;
+            background-color: var(--jkl-lbeige);
+        }
+        .container {
+            max-width: 100dvw;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        h1, h2 {
+            margin: 0;
+        }
+        header {
+            background-color: var(--jkl-brown);
+            color: var(--jkl-beige);
+            padding: 1rem 1rem;
+        }
+        .folder-info {
+            background-color: var(--jkl-beige2);
+            padding: 0.8rem 1rem;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--jkl-dbeige);
+        }
+        .folder-merkle {
+            font-family: monospace;
+            word-break: break-all; /* Force break at any character */
+            max-width: 100%;
+            display: block; /* Make it a block to take full width */
+            margin-bottom: 5px;
+            color: var(--jkl-brown);
+        }
+        .folder-version {
+            display: block;
+            margin-top: 0.3rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--jkl-beige);
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(27, 28, 22, 0.2);
+        }
+        th, td {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--jkl-beige3);
+        }
+        tr:hover {
+            background-color: var(--jkl-beige2);
+        }
+        th {
+            background-color: var(--jkl-dbeige);
+            font-weight: 600;
+            color: var(--jkl-brown);
+        }
+        .file-icon {
+            color: var(--jkl-disable);
+            margin-right: 5px;
+        }
+        .merkle-hash {
+            font-family: monospace;
+            color: var(--jkl-disable);
+            word-break: break-all; /* Also allow breaking for table cells */
+        }
+        .size-column {
+            text-align: right;
+        }
+        a {
+            color: var(--jkl-brown);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        a:hover {
+            text-decoration: underline;
+            color: var(--jkl-disable);
+        }
+        strong {
+            color: var(--jkl-brown);
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Jackal</h1>
+</header>
+
+<div class="container">
+    <div class="folder-info">
+        <h2>Index of '{{.Folder.Name}}'</h2>
+        <span class="folder-merkle">{{encodeMerkle .Folder.Merkle}}</span>
+        <span class="folder-version"><strong>Version:</strong> {{.Folder.Version}}</span>
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th style="width: 50%;">Name</th>
+            <th style="width: 30%;">Merkle</th>
+            <th style="width: 20%;" class="size-column">Size</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{range .Folder.Children}}
+        <tr>
+            <td>
+                <span class="file-icon">📄</span>
+                <a href="{{$.CurrentPath}}/{{.Name}}">{{.Name}}</a>
+            </td>
+            <td >
+                <a class="merkle-hash" href="/get/{{encodeMerkle .Merkle}}?filename={{.Name}}">{{truncateMerkle .Merkle}}</a>
+            </td>
+            <td class="size-column">{{formatSize .Size}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
