@@ -186,7 +186,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 
 	m, wg := p.q.Add(msg)
 
-	if m.Index() == -1 {
+	if m.Index() == -1 { // message was skipped because it was a duplicate
 		return nil
 	}
 
@@ -202,7 +202,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 		return m.Error()
 	}
 
-	if m.Res() != nil {
+	if m.Res() == nil {
 		log.Warn().
 			Hex("merkle", merkle).
 			Str("owner", owner).

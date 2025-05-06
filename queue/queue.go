@@ -148,7 +148,7 @@ func (q *Queue) Listen() {
 			process.err = err
 			process.res = res
 			process.msgIndex = i
-			log.Debug().
+			log.Info().
 				Bool("res_nil", process.res == nil).
 				Bool("err_nil", process.err == nil).
 				Int("msg_index", i).
