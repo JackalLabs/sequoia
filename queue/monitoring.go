@@ -9,3 +9,5 @@ var queueSize = promauto.NewGauge(prometheus.GaugeOpts{
 	Name: "sequoia_queue_size",
 	Help: "The number of messages currently in the queue",
 })
+
+var _ = queueSize

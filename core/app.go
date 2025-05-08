@@ -41,7 +41,7 @@ import (
 
 type App struct {
 	api          *api.API
-	q            *queue.Queue
+	q            queue.Queue
 	prover       *proofs.Prover
 	strayManager *strays.StrayManager
 	home         string
@@ -249,7 +249,12 @@ func (a *App) Start() error {
 		return err
 	}
 
-	a.q = queue.NewQueue(a.wallet, cfg.QueueInterval)
+	a.q, err = queue.NewPool(a.wallet, cfg.QueueConfig)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to initialize Queue module")
+		return err
+	}
+
 	go a.q.Listen()
 
 	prover := proofs.NewProver(a.wallet, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
