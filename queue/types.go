@@ -7,9 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 )
 
-var (
-	ErrReachedMaxRetry = errors.New("send retry attempt reached max retry")
-)
+var ErrReachedMaxRetry = errors.New("send retry attempt reached max retry")
 
 type Message struct {
 	msg      types.Msg

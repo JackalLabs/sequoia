@@ -2,6 +2,7 @@ package queue
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
@@ -23,9 +24,10 @@ type worker struct {
 	batch           []*Message
 	batchSize       int
 	txTimer         int
+	running         *sync.WaitGroup
 }
 
-func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRetryAttempt int8, msgIn <-chan *Message) *worker {
+func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRetryAttempt int8, msgIn <-chan *Message, running *sync.WaitGroup) *worker {
 	return &worker{
 		id:              id,
 		wallet:          wallet,
@@ -33,10 +35,12 @@ func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRe
 		msgIn:           msgIn,
 		batchSize:       batchSize,
 		txTimer:         txTimer,
+		running:         running,
 	}
 }
 
 func (w *worker) start() {
+	defer w.running.Done()
 	d := time.Duration(w.txTimer) * time.Second
 	timer := time.NewTimer(d) // if no msg comes for 5 seconds, broadcast tx
 run:
@@ -50,7 +54,6 @@ run:
 			w.add(m)
 			if len(w.batch) >= w.batchSize {
 				w.send()
-				timer.Stop()
 			}
 			timer.Reset(d)
 
@@ -62,7 +65,7 @@ run:
 		}
 	}
 
-	log.Info().Int8("id", w.id).Msg("queue worker stopped")
+	log.Info().Int8("worker_id", w.id).Msg("queue worker stopped")
 	if len(w.batch) > 0 { // send the remaining messages
 		log.Info().Int8("id", w.id).Int("messages", len(w.batch)).Msg("sending remaining messages")
 		w.send()
@@ -78,6 +81,7 @@ func (w *worker) add(msg *Message) {
 	w.batch = append(w.batch, msg)
 }
 
+// TODO: make this dep inject
 func (w *worker) send() {
 	toProcess := w.batch
 	w.batch = nil
@@ -101,7 +105,6 @@ retry:
 		case codes.AlreadyExists, codes.NotFound, codes.OK:
 			break retry
 		}
-		// TODO: change this to a config
 		time.Sleep(time.Second) // sleep for a bit before retrying
 	}
 
