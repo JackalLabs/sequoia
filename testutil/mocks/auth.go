@@ -1,22 +1,20 @@
 package mocks
 
 import (
-	"testing"
-
 	"go.uber.org/mock/gomock"
 )
 
-func SetupAuthClient(t *testing.T) *MockAuthQueryClient {
+func SetupAuthClient(t gomock.TestReporter) *MockAuthQueryClient {
 	ctrl := gomock.NewController(t)
 	return NewMockAuthQueryClient(ctrl)
 }
 
-func SetupServiceClient(t *testing.T) *MockServiceClient {
+func SetupServiceClient(t gomock.TestReporter) *MockServiceClient {
 	ctrl := gomock.NewController(t)
 	return NewMockServiceClient(ctrl)
 }
 
-func SetupRPCClient(t *testing.T) *MockRPCClient {
+func SetupRPCClient(t gomock.TestReporter) *MockRPCClient {
 	ctrl := gomock.NewController(t)
 	return NewMockRPCClient(ctrl)
 }

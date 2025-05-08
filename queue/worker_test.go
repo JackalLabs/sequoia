@@ -29,9 +29,7 @@ import (
 	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
-func setupWalletClient(t *testing.T) (*wallet.Wallet, *mocks.MockAuthQueryClient, *mocks.MockServiceClient, *mocks.MockRPCClient) {
-	r := require.New(t)
-
+func setupWalletClient(t gomock.TestReporter) (*wallet.Wallet, *mocks.MockAuthQueryClient, *mocks.MockServiceClient, *mocks.MockRPCClient) {
 	chainCfg := wtypes.ChainConfig{
 		RPCAddr:       "http://localhost:26657",
 		GRPCAddr:      "localhost:9090",
@@ -46,15 +44,21 @@ func setupWalletClient(t *testing.T) (*wallet.Wallet, *mocks.MockAuthQueryClient
 	}
 
 	wallet, err := sequoiaWallet.CreateWallet(s.SeedPhrase, s.DerivationPath, chainCfg)
-	r.NoError(err)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 
 	queryClient := mocks.SetupAuthClient(t)
 
 	baseAcc := authTypes.ProtoBaseAccount()
 	err = baseAcc.SetAddress(sdkTypes.AccAddress(wallet.AccAddress()))
-	r.NoError(err)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	any, err := codectypes.NewAnyWithValue(baseAcc)
-	r.NoError(err)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	queryResp := &authTypes.QueryAccountResponse{
 		Account: any,
 	}
