@@ -91,7 +91,10 @@ func TestWorkerSendMaxRetry(t *testing.T) {
 	wallet.Client.RPCClient = rpcClient
 
 	chMsg := make(chan *Message)
-	w := newWorker(0, wallet, 1, 10, 3, chMsg)
+
+	workerRunning := sync.WaitGroup{} // not used
+
+	w := newWorker(0, wallet, 1, 10, 3, chMsg, &workerRunning)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -152,7 +155,11 @@ func TestBatchFullSend(t *testing.T) {
 	wallet.Client.RPCClient = rpcclient
 
 	chMsg := make(chan *Message)
-	w := newWorker(0, wallet, 3, 2, 2, chMsg)
+
+	workerRunning := sync.WaitGroup{}
+	workerRunning.Add(1)
+
+	w := newWorker(0, wallet, 3, 2, 2, chMsg, &workerRunning)
 	go w.start()
 
 	chMsg <- &m0
@@ -162,6 +169,7 @@ func TestBatchFullSend(t *testing.T) {
 
 	close(chMsg)
 	r.EqualValues(expectedSignedTx, actual)
+	workerRunning.Wait()
 }
 
 func TestBatchHalfFullSend(t *testing.T) {
@@ -203,7 +211,10 @@ func TestBatchHalfFullSend(t *testing.T) {
 		AnyTimes()
 
 	chMsg := make(chan *Message)
-	w := newWorker(0, wallet, 3, 5, 2, chMsg)
+
+	workerRunning := sync.WaitGroup{}
+	workerRunning.Add(1)
+	w := newWorker(0, wallet, 3, 5, 2, chMsg, &workerRunning)
 	go w.start()
 
 	chMsg <- &m0
@@ -213,4 +224,5 @@ func TestBatchHalfFullSend(t *testing.T) {
 
 	close(chMsg)
 	r.EqualValues(expectedSignedTx, actual)
+	workerRunning.Wait()
 }
