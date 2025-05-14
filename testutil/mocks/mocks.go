@@ -10,16 +10,17 @@
 package mocks
 
 import (
-	"github.com/tendermint/tendermint/libs/bytes"
 	context "context"
 	reflect "reflect"
 
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
 	types "github.com/cosmos/cosmos-sdk/x/auth/types"
+	types0 "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	bytes "github.com/tendermint/tendermint/libs/bytes"
 	log "github.com/tendermint/tendermint/libs/log"
 	client "github.com/tendermint/tendermint/rpc/client"
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
-	types0 "github.com/tendermint/tendermint/types"
+	types1 "github.com/tendermint/tendermint/types"
 	gomock "go.uber.org/mock/gomock"
 	grpc "google.golang.org/grpc"
 )
@@ -397,7 +398,7 @@ func (mr *MockRPCClientMockRecorder) BlockchainInfo(ctx, minHeight, maxHeight an
 }
 
 // BroadcastEvidence mocks base method.
-func (m *MockRPCClient) BroadcastEvidence(arg0 context.Context, arg1 types0.Evidence) (*coretypes.ResultBroadcastEvidence, error) {
+func (m *MockRPCClient) BroadcastEvidence(arg0 context.Context, arg1 types1.Evidence) (*coretypes.ResultBroadcastEvidence, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BroadcastEvidence", arg0, arg1)
 	ret0, _ := ret[0].(*coretypes.ResultBroadcastEvidence)
@@ -412,7 +413,7 @@ func (mr *MockRPCClientMockRecorder) BroadcastEvidence(arg0, arg1 any) *gomock.C
 }
 
 // BroadcastTxAsync mocks base method.
-func (m *MockRPCClient) BroadcastTxAsync(arg0 context.Context, arg1 types0.Tx) (*coretypes.ResultBroadcastTx, error) {
+func (m *MockRPCClient) BroadcastTxAsync(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTx, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BroadcastTxAsync", arg0, arg1)
 	ret0, _ := ret[0].(*coretypes.ResultBroadcastTx)
@@ -427,7 +428,7 @@ func (mr *MockRPCClientMockRecorder) BroadcastTxAsync(arg0, arg1 any) *gomock.Ca
 }
 
 // BroadcastTxCommit mocks base method.
-func (m *MockRPCClient) BroadcastTxCommit(arg0 context.Context, arg1 types0.Tx) (*coretypes.ResultBroadcastTxCommit, error) {
+func (m *MockRPCClient) BroadcastTxCommit(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTxCommit, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BroadcastTxCommit", arg0, arg1)
 	ret0, _ := ret[0].(*coretypes.ResultBroadcastTxCommit)
@@ -442,7 +443,7 @@ func (mr *MockRPCClientMockRecorder) BroadcastTxCommit(arg0, arg1 any) *gomock.C
 }
 
 // BroadcastTxSync mocks base method.
-func (m *MockRPCClient) BroadcastTxSync(arg0 context.Context, arg1 types0.Tx) (*coretypes.ResultBroadcastTx, error) {
+func (m *MockRPCClient) BroadcastTxSync(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTx, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BroadcastTxSync", arg0, arg1)
 	ret0, _ := ret[0].(*coretypes.ResultBroadcastTx)
@@ -457,7 +458,7 @@ func (mr *MockRPCClientMockRecorder) BroadcastTxSync(arg0, arg1 any) *gomock.Cal
 }
 
 // CheckTx mocks base method.
-func (m *MockRPCClient) CheckTx(arg0 context.Context, arg1 types0.Tx) (*coretypes.ResultCheckTx, error) {
+func (m *MockRPCClient) CheckTx(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultCheckTx, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckTx", arg0, arg1)
 	ret0, _ := ret[0].(*coretypes.ResultCheckTx)
@@ -863,4 +864,691 @@ func (m *MockRPCClient) Validators(ctx context.Context, height *int64, page, per
 func (mr *MockRPCClientMockRecorder) Validators(ctx, height, page, perPage any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validators", reflect.TypeOf((*MockRPCClient)(nil).Validators), ctx, height, page, perPage)
+}
+
+// MockGRPCConn is a mock of GRPCConn interface.
+type MockGRPCConn struct {
+	ctrl     *gomock.Controller
+	recorder *MockGRPCConnMockRecorder
+	isgomock struct{}
+}
+
+// MockGRPCConnMockRecorder is the mock recorder for MockGRPCConn.
+type MockGRPCConnMockRecorder struct {
+	mock *MockGRPCConn
+}
+
+// NewMockGRPCConn creates a new mock instance.
+func NewMockGRPCConn(ctrl *gomock.Controller) *MockGRPCConn {
+	mock := &MockGRPCConn{ctrl: ctrl}
+	mock.recorder = &MockGRPCConnMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockGRPCConn) EXPECT() *MockGRPCConnMockRecorder {
+	return m.recorder
+}
+
+// Invoke mocks base method.
+func (m *MockGRPCConn) Invoke(ctx context.Context, method string, args, reply any, opts ...grpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, method, args, reply}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Invoke", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Invoke indicates an expected call of Invoke.
+func (mr *MockGRPCConnMockRecorder) Invoke(ctx, method, args, reply any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, method, args, reply}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Invoke", reflect.TypeOf((*MockGRPCConn)(nil).Invoke), varargs...)
+}
+
+// NewStream mocks base method.
+func (m *MockGRPCConn) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, desc, method}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "NewStream", varargs...)
+	ret0, _ := ret[0].(grpc.ClientStream)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NewStream indicates an expected call of NewStream.
+func (mr *MockGRPCConnMockRecorder) NewStream(ctx, desc, method any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, desc, method}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewStream", reflect.TypeOf((*MockGRPCConn)(nil).NewStream), varargs...)
+}
+
+// MockStorageQueryClient is a mock of StorageQueryClient interface.
+type MockStorageQueryClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockStorageQueryClientMockRecorder
+	isgomock struct{}
+}
+
+// MockStorageQueryClientMockRecorder is the mock recorder for MockStorageQueryClient.
+type MockStorageQueryClientMockRecorder struct {
+	mock *MockStorageQueryClient
+}
+
+// NewMockStorageQueryClient creates a new mock instance.
+func NewMockStorageQueryClient(ctrl *gomock.Controller) *MockStorageQueryClient {
+	mock := &MockStorageQueryClient{ctrl: ctrl}
+	mock.recorder = &MockStorageQueryClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockStorageQueryClient) EXPECT() *MockStorageQueryClientMockRecorder {
+	return m.recorder
+}
+
+// ActiveProviders mocks base method.
+func (m *MockStorageQueryClient) ActiveProviders(ctx context.Context, in *types0.QueryActiveProviders, opts ...grpc.CallOption) (*types0.QueryActiveProvidersResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ActiveProviders", varargs...)
+	ret0, _ := ret[0].(*types0.QueryActiveProvidersResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ActiveProviders indicates an expected call of ActiveProviders.
+func (mr *MockStorageQueryClientMockRecorder) ActiveProviders(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActiveProviders", reflect.TypeOf((*MockStorageQueryClient)(nil).ActiveProviders), varargs...)
+}
+
+// AllAttestations mocks base method.
+func (m *MockStorageQueryClient) AllAttestations(ctx context.Context, in *types0.QueryAllAttestations, opts ...grpc.CallOption) (*types0.QueryAllAttestationsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AllAttestations", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllAttestationsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AllAttestations indicates an expected call of AllAttestations.
+func (mr *MockStorageQueryClientMockRecorder) AllAttestations(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllAttestations", reflect.TypeOf((*MockStorageQueryClient)(nil).AllAttestations), varargs...)
+}
+
+// AllFiles mocks base method.
+func (m *MockStorageQueryClient) AllFiles(ctx context.Context, in *types0.QueryAllFiles, opts ...grpc.CallOption) (*types0.QueryAllFilesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AllFiles", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllFilesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AllFiles indicates an expected call of AllFiles.
+func (mr *MockStorageQueryClientMockRecorder) AllFiles(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllFiles", reflect.TypeOf((*MockStorageQueryClient)(nil).AllFiles), varargs...)
+}
+
+// AllFilesByMerkle mocks base method.
+func (m *MockStorageQueryClient) AllFilesByMerkle(ctx context.Context, in *types0.QueryAllFilesByMerkle, opts ...grpc.CallOption) (*types0.QueryAllFilesByMerkleResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AllFilesByMerkle", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllFilesByMerkleResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AllFilesByMerkle indicates an expected call of AllFilesByMerkle.
+func (mr *MockStorageQueryClientMockRecorder) AllFilesByMerkle(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllFilesByMerkle", reflect.TypeOf((*MockStorageQueryClient)(nil).AllFilesByMerkle), varargs...)
+}
+
+// AllFilesByOwner mocks base method.
+func (m *MockStorageQueryClient) AllFilesByOwner(ctx context.Context, in *types0.QueryAllFilesByOwner, opts ...grpc.CallOption) (*types0.QueryAllFilesByOwnerResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AllFilesByOwner", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllFilesByOwnerResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AllFilesByOwner indicates an expected call of AllFilesByOwner.
+func (mr *MockStorageQueryClientMockRecorder) AllFilesByOwner(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllFilesByOwner", reflect.TypeOf((*MockStorageQueryClient)(nil).AllFilesByOwner), varargs...)
+}
+
+// AllProofs mocks base method.
+func (m *MockStorageQueryClient) AllProofs(ctx context.Context, in *types0.QueryAllProofs, opts ...grpc.CallOption) (*types0.QueryAllProofsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AllProofs", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllProofsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AllProofs indicates an expected call of AllProofs.
+func (mr *MockStorageQueryClientMockRecorder) AllProofs(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllProofs", reflect.TypeOf((*MockStorageQueryClient)(nil).AllProofs), varargs...)
+}
+
+// AllProviders mocks base method.
+func (m *MockStorageQueryClient) AllProviders(ctx context.Context, in *types0.QueryAllProviders, opts ...grpc.CallOption) (*types0.QueryAllProvidersResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AllProviders", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllProvidersResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AllProviders indicates an expected call of AllProviders.
+func (mr *MockStorageQueryClientMockRecorder) AllProviders(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllProviders", reflect.TypeOf((*MockStorageQueryClient)(nil).AllProviders), varargs...)
+}
+
+// AllReports mocks base method.
+func (m *MockStorageQueryClient) AllReports(ctx context.Context, in *types0.QueryAllReports, opts ...grpc.CallOption) (*types0.QueryAllReportsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AllReports", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllReportsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AllReports indicates an expected call of AllReports.
+func (mr *MockStorageQueryClientMockRecorder) AllReports(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllReports", reflect.TypeOf((*MockStorageQueryClient)(nil).AllReports), varargs...)
+}
+
+// AllStoragePaymentInfo mocks base method.
+func (m *MockStorageQueryClient) AllStoragePaymentInfo(ctx context.Context, in *types0.QueryAllStoragePaymentInfo, opts ...grpc.CallOption) (*types0.QueryAllStoragePaymentInfoResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AllStoragePaymentInfo", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllStoragePaymentInfoResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AllStoragePaymentInfo indicates an expected call of AllStoragePaymentInfo.
+func (mr *MockStorageQueryClientMockRecorder) AllStoragePaymentInfo(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllStoragePaymentInfo", reflect.TypeOf((*MockStorageQueryClient)(nil).AllStoragePaymentInfo), varargs...)
+}
+
+// Attestation mocks base method.
+func (m *MockStorageQueryClient) Attestation(ctx context.Context, in *types0.QueryAttestation, opts ...grpc.CallOption) (*types0.QueryAttestationResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Attestation", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAttestationResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Attestation indicates an expected call of Attestation.
+func (mr *MockStorageQueryClientMockRecorder) Attestation(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Attestation", reflect.TypeOf((*MockStorageQueryClient)(nil).Attestation), varargs...)
+}
+
+// AvailableSpace mocks base method.
+func (m *MockStorageQueryClient) AvailableSpace(ctx context.Context, in *types0.QueryAvailableSpace, opts ...grpc.CallOption) (*types0.QueryAvailableSpaceResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AvailableSpace", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAvailableSpaceResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AvailableSpace indicates an expected call of AvailableSpace.
+func (mr *MockStorageQueryClientMockRecorder) AvailableSpace(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AvailableSpace", reflect.TypeOf((*MockStorageQueryClient)(nil).AvailableSpace), varargs...)
+}
+
+// File mocks base method.
+func (m *MockStorageQueryClient) File(ctx context.Context, in *types0.QueryFile, opts ...grpc.CallOption) (*types0.QueryFileResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "File", varargs...)
+	ret0, _ := ret[0].(*types0.QueryFileResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// File indicates an expected call of File.
+func (mr *MockStorageQueryClientMockRecorder) File(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "File", reflect.TypeOf((*MockStorageQueryClient)(nil).File), varargs...)
+}
+
+// FileUploadCheck mocks base method.
+func (m *MockStorageQueryClient) FileUploadCheck(ctx context.Context, in *types0.QueryFileUploadCheck, opts ...grpc.CallOption) (*types0.QueryFileUploadCheckResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FileUploadCheck", varargs...)
+	ret0, _ := ret[0].(*types0.QueryFileUploadCheckResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FileUploadCheck indicates an expected call of FileUploadCheck.
+func (mr *MockStorageQueryClientMockRecorder) FileUploadCheck(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileUploadCheck", reflect.TypeOf((*MockStorageQueryClient)(nil).FileUploadCheck), varargs...)
+}
+
+// FilesFromNote mocks base method.
+func (m *MockStorageQueryClient) FilesFromNote(ctx context.Context, in *types0.QueryFilesFromNote, opts ...grpc.CallOption) (*types0.QueryFilesFromNoteResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FilesFromNote", varargs...)
+	ret0, _ := ret[0].(*types0.QueryFilesFromNoteResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FilesFromNote indicates an expected call of FilesFromNote.
+func (mr *MockStorageQueryClientMockRecorder) FilesFromNote(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilesFromNote", reflect.TypeOf((*MockStorageQueryClient)(nil).FilesFromNote), varargs...)
+}
+
+// FindFile mocks base method.
+func (m *MockStorageQueryClient) FindFile(ctx context.Context, in *types0.QueryFindFile, opts ...grpc.CallOption) (*types0.QueryFindFileResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FindFile", varargs...)
+	ret0, _ := ret[0].(*types0.QueryFindFileResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindFile indicates an expected call of FindFile.
+func (mr *MockStorageQueryClientMockRecorder) FindFile(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindFile", reflect.TypeOf((*MockStorageQueryClient)(nil).FindFile), varargs...)
+}
+
+// FreeSpace mocks base method.
+func (m *MockStorageQueryClient) FreeSpace(ctx context.Context, in *types0.QueryFreeSpace, opts ...grpc.CallOption) (*types0.QueryFreeSpaceResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FreeSpace", varargs...)
+	ret0, _ := ret[0].(*types0.QueryFreeSpaceResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FreeSpace indicates an expected call of FreeSpace.
+func (mr *MockStorageQueryClientMockRecorder) FreeSpace(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FreeSpace", reflect.TypeOf((*MockStorageQueryClient)(nil).FreeSpace), varargs...)
+}
+
+// Gauges mocks base method.
+func (m *MockStorageQueryClient) Gauges(ctx context.Context, in *types0.QueryAllGauges, opts ...grpc.CallOption) (*types0.QueryAllGaugesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Gauges", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllGaugesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Gauges indicates an expected call of Gauges.
+func (mr *MockStorageQueryClientMockRecorder) Gauges(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Gauges", reflect.TypeOf((*MockStorageQueryClient)(nil).Gauges), varargs...)
+}
+
+// GetClientFreeSpace mocks base method.
+func (m *MockStorageQueryClient) GetClientFreeSpace(ctx context.Context, in *types0.QueryClientFreeSpace, opts ...grpc.CallOption) (*types0.QueryClientFreeSpaceResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetClientFreeSpace", varargs...)
+	ret0, _ := ret[0].(*types0.QueryClientFreeSpaceResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetClientFreeSpace indicates an expected call of GetClientFreeSpace.
+func (mr *MockStorageQueryClientMockRecorder) GetClientFreeSpace(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClientFreeSpace", reflect.TypeOf((*MockStorageQueryClient)(nil).GetClientFreeSpace), varargs...)
+}
+
+// GetPayData mocks base method.
+func (m *MockStorageQueryClient) GetPayData(ctx context.Context, in *types0.QueryPayData, opts ...grpc.CallOption) (*types0.QueryPayDataResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetPayData", varargs...)
+	ret0, _ := ret[0].(*types0.QueryPayDataResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPayData indicates an expected call of GetPayData.
+func (mr *MockStorageQueryClientMockRecorder) GetPayData(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPayData", reflect.TypeOf((*MockStorageQueryClient)(nil).GetPayData), varargs...)
+}
+
+// NetworkSize mocks base method.
+func (m *MockStorageQueryClient) NetworkSize(ctx context.Context, in *types0.QueryNetworkSize, opts ...grpc.CallOption) (*types0.QueryNetworkSizeResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "NetworkSize", varargs...)
+	ret0, _ := ret[0].(*types0.QueryNetworkSizeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NetworkSize indicates an expected call of NetworkSize.
+func (mr *MockStorageQueryClientMockRecorder) NetworkSize(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkSize", reflect.TypeOf((*MockStorageQueryClient)(nil).NetworkSize), varargs...)
+}
+
+// OpenFiles mocks base method.
+func (m *MockStorageQueryClient) OpenFiles(ctx context.Context, in *types0.QueryOpenFiles, opts ...grpc.CallOption) (*types0.QueryAllFilesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "OpenFiles", varargs...)
+	ret0, _ := ret[0].(*types0.QueryAllFilesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OpenFiles indicates an expected call of OpenFiles.
+func (mr *MockStorageQueryClientMockRecorder) OpenFiles(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenFiles", reflect.TypeOf((*MockStorageQueryClient)(nil).OpenFiles), varargs...)
+}
+
+// Params mocks base method.
+func (m *MockStorageQueryClient) Params(ctx context.Context, in *types0.QueryParams, opts ...grpc.CallOption) (*types0.QueryParamsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Params", varargs...)
+	ret0, _ := ret[0].(*types0.QueryParamsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Params indicates an expected call of Params.
+func (mr *MockStorageQueryClientMockRecorder) Params(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockStorageQueryClient)(nil).Params), varargs...)
+}
+
+// PriceCheck mocks base method.
+func (m *MockStorageQueryClient) PriceCheck(ctx context.Context, in *types0.QueryPriceCheck, opts ...grpc.CallOption) (*types0.QueryPriceCheckResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PriceCheck", varargs...)
+	ret0, _ := ret[0].(*types0.QueryPriceCheckResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PriceCheck indicates an expected call of PriceCheck.
+func (mr *MockStorageQueryClientMockRecorder) PriceCheck(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PriceCheck", reflect.TypeOf((*MockStorageQueryClient)(nil).PriceCheck), varargs...)
+}
+
+// Proof mocks base method.
+func (m *MockStorageQueryClient) Proof(ctx context.Context, in *types0.QueryProof, opts ...grpc.CallOption) (*types0.QueryProofResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Proof", varargs...)
+	ret0, _ := ret[0].(*types0.QueryProofResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Proof indicates an expected call of Proof.
+func (mr *MockStorageQueryClientMockRecorder) Proof(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Proof", reflect.TypeOf((*MockStorageQueryClient)(nil).Proof), varargs...)
+}
+
+// ProofsByAddress mocks base method.
+func (m *MockStorageQueryClient) ProofsByAddress(ctx context.Context, in *types0.QueryProofsByAddress, opts ...grpc.CallOption) (*types0.QueryProofsByAddressResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ProofsByAddress", varargs...)
+	ret0, _ := ret[0].(*types0.QueryProofsByAddressResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProofsByAddress indicates an expected call of ProofsByAddress.
+func (mr *MockStorageQueryClientMockRecorder) ProofsByAddress(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProofsByAddress", reflect.TypeOf((*MockStorageQueryClient)(nil).ProofsByAddress), varargs...)
+}
+
+// Provider mocks base method.
+func (m *MockStorageQueryClient) Provider(ctx context.Context, in *types0.QueryProvider, opts ...grpc.CallOption) (*types0.QueryProviderResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Provider", varargs...)
+	ret0, _ := ret[0].(*types0.QueryProviderResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Provider indicates an expected call of Provider.
+func (mr *MockStorageQueryClientMockRecorder) Provider(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Provider", reflect.TypeOf((*MockStorageQueryClient)(nil).Provider), varargs...)
+}
+
+// Report mocks base method.
+func (m *MockStorageQueryClient) Report(ctx context.Context, in *types0.QueryReport, opts ...grpc.CallOption) (*types0.QueryReportResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Report", varargs...)
+	ret0, _ := ret[0].(*types0.QueryReportResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Report indicates an expected call of Report.
+func (mr *MockStorageQueryClientMockRecorder) Report(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Report", reflect.TypeOf((*MockStorageQueryClient)(nil).Report), varargs...)
+}
+
+// StoragePaymentInfo mocks base method.
+func (m *MockStorageQueryClient) StoragePaymentInfo(ctx context.Context, in *types0.QueryStoragePaymentInfo, opts ...grpc.CallOption) (*types0.QueryStoragePaymentInfoResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StoragePaymentInfo", varargs...)
+	ret0, _ := ret[0].(*types0.QueryStoragePaymentInfoResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StoragePaymentInfo indicates an expected call of StoragePaymentInfo.
+func (mr *MockStorageQueryClientMockRecorder) StoragePaymentInfo(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoragePaymentInfo", reflect.TypeOf((*MockStorageQueryClient)(nil).StoragePaymentInfo), varargs...)
+}
+
+// StorageStats mocks base method.
+func (m *MockStorageQueryClient) StorageStats(ctx context.Context, in *types0.QueryStorageStats, opts ...grpc.CallOption) (*types0.QueryStorageStatsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StorageStats", varargs...)
+	ret0, _ := ret[0].(*types0.QueryStorageStatsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StorageStats indicates an expected call of StorageStats.
+func (mr *MockStorageQueryClientMockRecorder) StorageStats(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StorageStats", reflect.TypeOf((*MockStorageQueryClient)(nil).StorageStats), varargs...)
+}
+
+// StoreCount mocks base method.
+func (m *MockStorageQueryClient) StoreCount(ctx context.Context, in *types0.QueryStoreCount, opts ...grpc.CallOption) (*types0.QueryStoreCountResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StoreCount", varargs...)
+	ret0, _ := ret[0].(*types0.QueryStoreCountResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StoreCount indicates an expected call of StoreCount.
+func (mr *MockStorageQueryClientMockRecorder) StoreCount(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreCount", reflect.TypeOf((*MockStorageQueryClient)(nil).StoreCount), varargs...)
 }

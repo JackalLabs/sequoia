@@ -18,3 +18,16 @@ func SetupRPCClient(t gomock.TestReporter) *MockRPCClient {
 	ctrl := gomock.NewController(t)
 	return NewMockRPCClient(ctrl)
 }
+
+func SetupGRPCConn(t gomock.TestReporter) *MockGRPCConn {
+	ctrl := gomock.NewController(t)
+	grpc := NewMockGRPCConn(ctrl)
+
+	return grpc
+}
+
+func SetupStorageQueryClient(t gomock.TestReporter) StorageQueryClient {
+	ctrl := gomock.NewController(t)
+
+	return NewMockStorageQueryClient(ctrl)
+}
