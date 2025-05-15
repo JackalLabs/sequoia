@@ -238,9 +238,19 @@ var _ tx.ServiceClient = (*FakeServiceClient)(nil)
 type FakeServiceClient struct {
 }
 
+func NewFakeServiceClient() *FakeServiceClient {
+	return &FakeServiceClient{}
+}
+
 // Simulate simulates executing a transaction for estimating gas usage.
+// returns 0 gas wanted, 0 gas used
 func (s *FakeServiceClient) Simulate(ctx context.Context, in *tx.SimulateRequest, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "this is a fake service client")
+	simRes := tx.SimulateResponse{
+		GasInfo: &sdk.GasInfo{GasWanted: 0, GasUsed: 0},
+		Result:  nil,
+	}
+
+	return &simRes, nil
 }
 
 // GetTx fetches a tx by hash.
@@ -325,8 +335,9 @@ func (m *FakeRPCClient) BroadcastTxAsync(arg0 context.Context, arg1 types1.Tx) (
 }
 
 // BroadcastTxCommit mocks base method.
+// returns nil, nil
 func (m *FakeRPCClient) BroadcastTxCommit(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTxCommit, error) {
-	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+	return nil, nil
 }
 
 // BroadcastTxSync mocks base method.
@@ -423,6 +434,7 @@ func (m *FakeRPCClient) Start() error {
 }
 
 // Status mocks base method.
+// returns Network: "jackaaaal"
 func (m *FakeRPCClient) Status(arg0 context.Context) (*coretypes.ResultStatus, error) {
 	re := coretypes.ResultStatus{
 		NodeInfo: p2p.DefaultNodeInfo{Network: "jackaaaal"},
