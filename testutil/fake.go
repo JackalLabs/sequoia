@@ -2,10 +2,23 @@ package testutil
 
 import (
 	"context"
+
+	codec "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
+	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	bytes "github.com/tendermint/tendermint/libs/bytes"
+	log "github.com/tendermint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/p2p"
+	rpc "github.com/tendermint/tendermint/rpc/client"
+	coretypes "github.com/tendermint/tendermint/rpc/core/types"
+	types1 "github.com/tendermint/tendermint/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 )
 
 var _ types.QueryClient = (*FakeStorageQueryClient)(nil)
@@ -13,7 +26,7 @@ var _ types.QueryClient = (*FakeStorageQueryClient)(nil)
 type FakeStorageQueryClient struct {
 }
 
-func NewFakeStorageQueryClient() types.QueryClient {
+func NewFakeStorageQueryClient() *FakeStorageQueryClient {
 	return &FakeStorageQueryClient{}
 }
 
@@ -169,4 +182,295 @@ func (f *FakeStorageQueryClient) AvailableSpace(ctx context.Context, in *types.Q
 // Queries protocol storage space used and purchased.
 func (f *FakeStorageQueryClient) Gauges(ctx context.Context, in *types.QueryAllGauges, opts ...grpc.CallOption) (*types.QueryAllGaugesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "this is a fake storage query client")
+}
+
+var _ auth.QueryClient = (*FakeAuthQueryClient)(nil)
+
+type FakeAuthQueryClient struct {
+	wallet *wallet.Wallet
+}
+
+func NewFakeAuthQueryClient(w *wallet.Wallet) *FakeAuthQueryClient {
+	return &FakeAuthQueryClient{
+		wallet: w,
+	}
+}
+
+// Accounts returns all the existing accounts
+//
+// Since: cosmos-sdk 0.43
+func (a *FakeAuthQueryClient) Accounts(ctx context.Context, in *auth.QueryAccountsRequest, opts ...grpc.CallOption) (*auth.QueryAccountsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "this is a fake auth query client")
+}
+
+// Account returns account details based on address.
+func (a *FakeAuthQueryClient) Account(ctx context.Context, in *auth.QueryAccountRequest, opts ...grpc.CallOption) (*auth.QueryAccountResponse, error) {
+	baseAcc := auth.ProtoBaseAccount()
+	err := baseAcc.SetAddress(sdk.AccAddress(a.wallet.AccAddress()))
+	if err != nil {
+		return nil, err
+	}
+
+	any, err := codec.NewAnyWithValue(baseAcc)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &auth.QueryAccountResponse{
+		Account: any,
+	}
+
+	return resp, nil
+}
+
+// Params queries all parameters.
+func (a *FakeAuthQueryClient) Params(ctx context.Context, in *auth.QueryParamsRequest, opts ...grpc.CallOption) (*auth.QueryParamsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "this is a fake auth query client")
+}
+
+// ModuleAccountByName returns the module account info by module name
+func (a *FakeAuthQueryClient) ModuleAccountByName(ctx context.Context, in *auth.QueryModuleAccountByNameRequest, opts ...grpc.CallOption) (*auth.QueryModuleAccountByNameResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "this is a fake auth query client")
+}
+
+var _ tx.ServiceClient = (*FakeServiceClient)(nil)
+
+type FakeServiceClient struct {
+}
+
+// Simulate simulates executing a transaction for estimating gas usage.
+func (s *FakeServiceClient) Simulate(ctx context.Context, in *tx.SimulateRequest, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "this is a fake service client")
+}
+
+// GetTx fetches a tx by hash.
+func (s *FakeServiceClient) GetTx(ctx context.Context, in *tx.GetTxRequest, opts ...grpc.CallOption) (*tx.GetTxResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "this is a fake service client")
+}
+
+// BroadcastTx broadcast transaction.
+func (s *FakeServiceClient) BroadcastTx(ctx context.Context, in *tx.BroadcastTxRequest, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "this is a fake service client")
+}
+
+// GetTxsEvent fetches txs by event.
+func (s *FakeServiceClient) GetTxsEvent(ctx context.Context, in *tx.GetTxsEventRequest, opts ...grpc.CallOption) (*tx.GetTxsEventResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "this is a fake service client")
+}
+
+// GetBlockWithTxs fetches a block with decoded txs.
+//
+// Since: cosmos-sdk 0.45.2
+func (s *FakeServiceClient) GetBlockWithTxs(ctx context.Context, in *tx.GetBlockWithTxsRequest, opts ...grpc.CallOption) (*tx.GetBlockWithTxsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "this is a fake service client")
+}
+
+var _ rpc.Client = (*FakeRPCClient)(nil)
+
+type FakeRPCClient struct {
+}
+
+func NewFakeRPCClient() *FakeRPCClient {
+	return &FakeRPCClient{}
+}
+
+// ABCIInfo mocks base method.
+func (m *FakeRPCClient) ABCIInfo(arg0 context.Context) (*coretypes.ResultABCIInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// ABCIQuery mocks base method.
+func (m *FakeRPCClient) ABCIQuery(ctx context.Context, path string, data bytes.HexBytes) (*coretypes.ResultABCIQuery, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// ABCIQueryWithOptions mocks base method.
+func (m *FakeRPCClient) ABCIQueryWithOptions(ctx context.Context, path string, data bytes.HexBytes, opts rpc.ABCIQueryOptions) (*coretypes.ResultABCIQuery, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// Block mocks base method.
+func (m *FakeRPCClient) Block(ctx context.Context, height *int64) (*coretypes.ResultBlock, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// BlockByHash mocks base method.
+func (m *FakeRPCClient) BlockByHash(ctx context.Context, hash []byte) (*coretypes.ResultBlock, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// BlockResults mocks base method.
+func (m *FakeRPCClient) BlockResults(ctx context.Context, height *int64) (*coretypes.ResultBlockResults, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// BlockSearch mocks base method.
+func (m *FakeRPCClient) BlockSearch(ctx context.Context, query string, page, perPage *int, orderBy string) (*coretypes.ResultBlockSearch, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// BlockchainInfo mocks base method.
+func (m *FakeRPCClient) BlockchainInfo(ctx context.Context, minHeight, maxHeight int64) (*coretypes.ResultBlockchainInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// BroadcastEvidence mocks base method.
+func (m *FakeRPCClient) BroadcastEvidence(arg0 context.Context, arg1 types1.Evidence) (*coretypes.ResultBroadcastEvidence, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// BroadcastTxAsync mocks base method.
+func (m *FakeRPCClient) BroadcastTxAsync(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTx, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// BroadcastTxCommit mocks base method.
+func (m *FakeRPCClient) BroadcastTxCommit(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTxCommit, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// BroadcastTxSync mocks base method.
+func (m *FakeRPCClient) BroadcastTxSync(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTx, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// CheckTx mocks base method.
+func (m *FakeRPCClient) CheckTx(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultCheckTx, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// Commit mocks base method.
+func (m *FakeRPCClient) Commit(ctx context.Context, height *int64) (*coretypes.ResultCommit, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// ConsensusParams mocks base method.
+func (m *FakeRPCClient) ConsensusParams(ctx context.Context, height *int64) (*coretypes.ResultConsensusParams, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// ConsensusState mocks base method.
+func (m *FakeRPCClient) ConsensusState(arg0 context.Context) (*coretypes.ResultConsensusState, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// DumpConsensusState mocks base method.
+func (m *FakeRPCClient) DumpConsensusState(arg0 context.Context) (*coretypes.ResultDumpConsensusState, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// Genesis mocks base method.
+func (m *FakeRPCClient) Genesis(arg0 context.Context) (*coretypes.ResultGenesis, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// GenesisChunked mocks base method.
+func (m *FakeRPCClient) GenesisChunked(arg0 context.Context, arg1 uint) (*coretypes.ResultGenesisChunk, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// Health mocks base method.
+func (m *FakeRPCClient) Health(arg0 context.Context) (*coretypes.ResultHealth, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// IsRunning mocks base method.
+func (m *FakeRPCClient) IsRunning() bool {
+	return false
+}
+
+// NetInfo mocks base method.
+func (m *FakeRPCClient) NetInfo(arg0 context.Context) (*coretypes.ResultNetInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// NumUnconfirmedTxs mocks base method.
+func (m *FakeRPCClient) NumUnconfirmedTxs(arg0 context.Context) (*coretypes.ResultUnconfirmedTxs, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// OnReset mocks base method.
+func (m *FakeRPCClient) OnReset() error {
+	return status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// OnStart mocks base method.
+func (m *FakeRPCClient) OnStart() error {
+	return status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// OnStop mocks base method.
+func (m *FakeRPCClient) OnStop() {
+}
+
+// Quit mocks base method.
+func (m *FakeRPCClient) Quit() <-chan struct{} {
+	return make(chan struct{})
+}
+
+// Reset mocks base method.
+func (m *FakeRPCClient) Reset() error {
+	return status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// SetLogger mocks base method.
+func (m *FakeRPCClient) SetLogger(arg0 log.Logger) {
+}
+
+// Start mocks base method.
+func (m *FakeRPCClient) Start() error {
+	return status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// Status mocks base method.
+func (m *FakeRPCClient) Status(arg0 context.Context) (*coretypes.ResultStatus, error) {
+	re := coretypes.ResultStatus{
+		NodeInfo: p2p.DefaultNodeInfo{Network: "jackaaaal"},
+	}
+	return &re, nil
+}
+
+// Stop mocks base method.
+func (m *FakeRPCClient) Stop() error {
+	return status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// String mocks base method.
+func (m *FakeRPCClient) String() string {
+	return "fake RPCClient"
+}
+
+// Subscribe mocks base method.
+func (m *FakeRPCClient) Subscribe(ctx context.Context, subscriber, query string, outCapacity ...int) (<-chan coretypes.ResultEvent, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// Tx mocks base method.
+func (m *FakeRPCClient) Tx(ctx context.Context, hash []byte, prove bool) (*coretypes.ResultTx, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// TxSearch mocks base method.
+func (m *FakeRPCClient) TxSearch(ctx context.Context, query string, prove bool, page, perPage *int, orderBy string) (*coretypes.ResultTxSearch, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// UnconfirmedTxs mocks base method.
+func (m *FakeRPCClient) UnconfirmedTxs(ctx context.Context, limit *int) (*coretypes.ResultUnconfirmedTxs, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// Unsubscribe mocks base method.
+func (m *FakeRPCClient) Unsubscribe(ctx context.Context, subscriber, query string) error {
+	return status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// UnsubscribeAll mocks base method.
+func (m *FakeRPCClient) UnsubscribeAll(ctx context.Context, subscriber string) error {
+	return status.Error(codes.Unimplemented, "this is fake RPCClient")
+}
+
+// Validators mocks base method.
+func (m *FakeRPCClient) Validators(ctx context.Context, height *int64, page, perPage *int) (*coretypes.ResultValidators, error) {
+	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
 }
