@@ -45,7 +45,13 @@ func StartCmd() *cobra.Command {
 				log.Logger = log.Level(zerolog.ErrorLevel)
 			}
 
-			app, err := core.NewApp(home)
+			var opts []core.Option
+
+			if cmd.Flags().Changed("test_mode") {
+				opts = append(opts, core.WithTestMode())
+			}
+
+			app, err := core.NewApp(home, opts...)
 			if err != nil {
 				return err
 			}
@@ -61,6 +67,8 @@ func StartCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().Bool("test_mode", false, "run provider without chain network")
 
 	return cmd
 }
