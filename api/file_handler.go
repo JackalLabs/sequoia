@@ -222,13 +222,12 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 			log.Error().Err(fmt.Errorf("can't encode json : %w", err))
 		}
 
-		cl := storageTypes.NewQueryClient(wl.Client.GRPCConn)
 		queryParams := storageTypes.QueryFile{
 			Merkle: merkle,
 			Owner:  sender,
 			Start:  startBlock,
 		}
-		res, err := cl.File(context.Background(), &queryParams)
+		res, err := queryClient.File(context.Background(), &queryParams)
 		if err != nil {
 			log.Error().Err(fmt.Errorf("failed to find file on chain with merkle: %x, owner: %s, start: %d | %w", merkle, sender, startBlock, err))
 			return
