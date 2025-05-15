@@ -88,12 +88,12 @@ func NewStrayManager(w *wallet.Wallet, q queue.Queue, interval int64, refreshInt
 	return s
 }
 
-func (s *StrayManager) Start(f *file_system.FileSystem, myUrl string, chunkSize int64) {
+func (s *StrayManager) Start(f *file_system.FileSystem, queryClient types.QueryClient, myUrl string, chunkSize int64) {
 	s.running = true
 	defer log.Info().Msg("StrayManager stopped")
 
 	for _, hand := range s.hands {
-		go hand.Start(f, s.wallet, myUrl, chunkSize)
+		go hand.Start(f, s.wallet, queryClient, myUrl, chunkSize)
 	}
 
 	for s.running {

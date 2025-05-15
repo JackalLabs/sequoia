@@ -23,7 +23,7 @@ func (h *Hand) Stop() {
 	h.running = false
 }
 
-func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, myUrl string, chunkSize int64) {
+func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, queryClient types.QueryClient, myUrl string, chunkSize int64) {
 	h.running = true
 	defer log.Info().Msg("Hand stopped")
 	for h.running {
@@ -41,7 +41,7 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, myUrl str
 		start := h.stray.Start
 		proofType := h.stray.ProofType
 
-		err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize, proofType, utils.GetIPFSParams(h.stray))
+		err := network.DownloadFile(f, merkle, signee, start, wallet, queryClient, h.stray.FileSize, myUrl, chunkSize, proofType, utils.GetIPFSParams(h.stray))
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil

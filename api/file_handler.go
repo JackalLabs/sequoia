@@ -149,7 +149,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 	}
 }
 
-func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
+func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, queryClient storageTypes.QueryClient, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
 		if err != nil {

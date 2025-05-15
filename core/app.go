@@ -25,8 +25,6 @@ import (
 
 	"github.com/JackalLabs/sequoia/monitoring"
 
-	"github.com/cosmos/gogoproto/grpc"
-
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/config"
 	"github.com/JackalLabs/sequoia/logger"
@@ -63,7 +61,7 @@ func WithTestMode() Option {
 	}
 }
 
-func NewApp(home string) (*App, error) {
+func NewApp(home string, opts ...Option) (*App, error) {
 	cfg, err := config.Init(home)
 	if err != nil {
 		return nil, err
@@ -118,12 +116,22 @@ func NewApp(home string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &App{
-		fileSystem: f,
-		api:        apiServer,
-		home:       home,
-		wallet:     w,
-	}, nil
+
+	queryClient := storageTypes.NewQueryClient(w.Client.GRPCConn)
+
+	app := &App{
+		fileSystem:  f,
+		api:         apiServer,
+		home:        home,
+		wallet:      w,
+		queryClient: queryClient,
+	}
+
+	for _, opt := range opts {
+		opt(app)
+	}
+
+	return app, nil
 }
 
 func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
@@ -192,12 +200,10 @@ func updateIp(wallet *wallet.Wallet, ip string) error {
 	return nil
 }
 
-func (a *App) GetStorageParams(client grpc.ClientConn) (storageTypes.Params, error) {
+func (a *App) GetStorageParams(queryClient storageTypes.QueryClient) (storageTypes.Params, error) {
 	queryParams := &storageTypes.QueryParams{}
 
-	cl := storageTypes.NewQueryClient(client)
-
-	res, err := cl.Params(context.Background(), queryParams)
+	res, err := queryClient.Params(context.Background(), queryParams)
 	if err != nil {
 		return storageTypes.Params{}, err
 	}
@@ -218,7 +224,7 @@ func (a *App) Start() error {
 		Address: myAddress,
 	}
 
-	cl := storageTypes.NewQueryClient(a.wallet.Client.GRPCConn)
+	cl := a.queryClient
 
 	claimers := make([]string, 0)
 
@@ -257,12 +263,12 @@ func (a *App) Start() error {
 		}
 	}
 
-	params, err := a.GetStorageParams(a.wallet.Client.GRPCConn)
+	params, err := a.GetStorageParams(a.queryClient)
 	if err != nil {
 		return err
 	}
 
-	a.q, err = queue.NewPool(a.wallet, cfg.QueueConfig)
+	a.q, err = queue.NewPool(a.wallet, a.queryClient, cfg.QueueConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize Queue module")
 		return err
@@ -285,9 +291,9 @@ func (a *App) Start() error {
 		// nolint:all
 		go a.ConnectPeers()
 	}
-	go a.api.Serve(a.fileSystem, a.prover, a.wallet, params.ChunkSize)
+	go a.api.Serve(a.fileSystem, a.prover, a.wallet, a.queryClient, params.ChunkSize)
 	go a.prover.Start()
-	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
+	go a.strayManager.Start(a.fileSystem, a.queryClient, myUrl, params.ChunkSize)
 	go a.monitor.Start()
 
 	done := make(chan os.Signal, 1)
@@ -313,16 +319,15 @@ func (a *App) Start() error {
 func (a *App) ConnectPeers() {
 	log.Info().Msg("Starting IPFS Peering cycle...")
 	ctx := context.Background()
-	queryClient := storageTypes.NewQueryClient(a.wallet.Client.GRPCConn)
 
-	activeProviders, err := queryClient.ActiveProviders(ctx, &storageTypes.QueryActiveProviders{})
+	activeProviders, err := a.queryClient.ActiveProviders(ctx, &storageTypes.QueryActiveProviders{})
 	if err != nil {
 		log.Warn().Msg("Cannot get active provider list. Won't try IPFS Peers.")
 		return
 	}
 
 	for _, provider := range activeProviders.Providers {
-		providerDetails, err := queryClient.Provider(ctx, &storageTypes.QueryProvider{
+		providerDetails, err := a.queryClient.Provider(ctx, &storageTypes.QueryProvider{
 			Address: provider.Address,
 		})
 		if err != nil {

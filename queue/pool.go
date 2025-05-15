@@ -27,8 +27,8 @@ type Pool struct {
 	wallet         *wallet.Wallet
 }
 
-func NewPool(wallet *wallet.Wallet, config config.QueueConfig) (*Pool, error) {
-	workerWallets, err := initAuthClaimers(wallet, config.QueueThreads)
+func NewPool(wallet *wallet.Wallet, queryClient storageTypes.QueryClient, config config.QueueConfig) (*Pool, error) {
+	workerWallets, err := initAuthClaimers(wallet, queryClient, config.QueueThreads)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to initialize auth claimers"), err)
 	}
@@ -116,13 +116,12 @@ func createWorkers(workerWallets []*wallet.Wallet, txTimer int, batchSize int, m
 	return workers, wChannels, workerRunning
 }
 
-func initAuthClaimers(wallet *wallet.Wallet, count int8) (workerWallets []*wallet.Wallet, err error) {
+func initAuthClaimers(wallet *wallet.Wallet, queryClient storageTypes.QueryClient, count int8) (workerWallets []*wallet.Wallet, err error) {
 	query := &storageTypes.QueryProvider{
 		Address: wallet.AccAddress(),
 	}
 
-	cl := storageTypes.NewQueryClient(wallet.Client.GRPCConn)
-	res, err := cl.Provider(context.Background(), query)
+	res, err := queryClient.Provider(context.Background(), query)
 	if err != nil {
 		return nil, errors.Join(errors.New("unable to query provider auth claimers"), err)
 	}

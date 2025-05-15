@@ -15,14 +15,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) error {
+func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start int64, wallet *wallet.Wallet, queryClinet types.QueryClient, fileSize int64, myUrl string, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) error {
 	queryParams := &types.QueryFindFile{
 		Merkle: merkle,
 	}
 
-	cl := types.NewQueryClient(wallet.Client.GRPCConn)
-
-	res, err := cl.FindFile(context.Background(), queryParams)
+	res, err := queryClinet.FindFile(context.Background(), queryParams)
 	if err != nil {
 		return err
 	}
