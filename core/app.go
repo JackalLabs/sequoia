@@ -16,6 +16,7 @@ import (
 	"time"
 
 	apiTypes "github.com/JackalLabs/sequoia/api/types"
+	"github.com/JackalLabs/sequoia/testutil"
 	"github.com/libp2p/go-libp2p/core/peer"
 
 	"github.com/JackalLabs/sequoia/file_system"
@@ -48,6 +49,18 @@ type App struct {
 	monitor      *monitoring.Monitor
 	fileSystem   *file_system.FileSystem
 	wallet       *wallet.Wallet
+	queryClient  storageTypes.QueryClient
+}
+
+type Option func(*App)
+
+func WithTestMode() Option {
+	return func(app *App) {
+		app.queryClient = testutil.NewFakeStorageQueryClient()
+		app.wallet.Client.AuthClient = testutil.NewFakeAuthQueryClient(app.wallet)
+		app.wallet.Client.RPCClient = testutil.NewFakeRPCClient()
+		app.wallet.Client.TxClient = testutil.NewFakeServiceClient()
+	}
 }
 
 func NewApp(home string) (*App, error) {
