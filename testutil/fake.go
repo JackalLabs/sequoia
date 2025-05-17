@@ -31,7 +31,25 @@ func NewFakeStorageQueryClient() *FakeStorageQueryClient {
 }
 
 func (f *FakeStorageQueryClient) Params(ctx context.Context, in *types.QueryParams, opts ...grpc.CallOption) (*types.QueryParamsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "this is a fake storage query client")
+
+	resp := types.QueryParamsResponse{
+		Params: types.Params{
+			AttestFormSize:         5,
+			AttestMinToPass:        3,
+			CheckWindow:            300,
+			ChunkSize:              10240,
+			CollateralPrice:        10000000000,
+			DepositAccount:         "jkl1t35eusvx97953uk47r3z4ckwd2prkn3fay76r8",
+			MaxContractAgeInBlocks: 100,
+			MissesToBurn:           1,
+			PolRatio:               40,
+			PriceFeed:              "jklprice",
+			PricePerTbPerMonth:     15,
+			ProofWindow:            7200,
+			ReferralCommission:     25,
+		},
+	}
+	return &resp, nil
 }
 
 // Queries a File by merkle, owner, and start.
@@ -86,7 +104,9 @@ func (f *FakeStorageQueryClient) ProofsByAddress(ctx context.Context, in *types.
 
 // Queries a Provider by address.
 func (f *FakeStorageQueryClient) Provider(ctx context.Context, in *types.QueryProvider, opts ...grpc.CallOption) (*types.QueryProviderResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "this is a fake storage query client")
+	resp := new(types.QueryProviderResponse)
+	resp.Provider.Totalspace = "100000000"
+	return resp, nil
 }
 
 // Queries a list of Provider items.
@@ -337,7 +357,9 @@ func (m *FakeRPCClient) BroadcastTxAsync(arg0 context.Context, arg1 types1.Tx) (
 // BroadcastTxCommit mocks base method.
 // returns nil, nil
 func (m *FakeRPCClient) BroadcastTxCommit(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTxCommit, error) {
-	return nil, nil
+	res := new(coretypes.ResultBroadcastTxCommit)
+
+	return res, nil
 }
 
 // BroadcastTxSync mocks base method.
