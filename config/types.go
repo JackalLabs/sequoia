@@ -105,7 +105,7 @@ func DefaultBlockStoreConfig() BlockStoreConfig {
 	if err != nil {
 		panic(err)
 	}
-	k, err := priv.Raw()
+	k, err := crypto.MarshalPrivateKey(priv)
 	if err != nil {
 		panic(err)
 	}
