@@ -18,6 +18,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 )
 
@@ -69,6 +71,7 @@ func (f *FakeStorageQueryClient) FilesFromNote(ctx context.Context, in *types.Qu
 
 // Queries a list of open files by provider_address.
 func (f *FakeStorageQueryClient) OpenFiles(ctx context.Context, in *types.QueryOpenFiles, opts ...grpc.CallOption) (*types.QueryAllFilesResponse, error) {
+	zlog.Info().Str("query", "OpenFiles").Msg("fake storage query client")
 	return nil, status.Error(codes.Unimplemented, "this is a fake storage query client")
 }
 

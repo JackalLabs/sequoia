@@ -17,7 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func NewStrayManager(w *wallet.Wallet, q queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
+func NewStrayManager(w *wallet.Wallet, queryClient types.QueryClient, q queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
 	s := &StrayManager{
 		rand:            rand.New(rand.NewSource(time.Now().Unix())),
 		wallet:          w,
@@ -27,6 +27,7 @@ func NewStrayManager(w *wallet.Wallet, q queue.Queue, interval int64, refreshInt
 		processed:       time.Time{},
 		refreshed:       time.Time{},
 		refreshInterval: time.Duration(refreshInterval),
+		queryClient:     queryClient,
 	}
 
 	for i := 0; i < handCount; i++ {
@@ -105,9 +106,7 @@ func (s *StrayManager) Start(f *file_system.FileSystem, queryClient types.QueryC
 		if s.refreshed.Add(time.Second * s.refreshInterval).Before(time.Now()) {
 			err := s.RefreshList()
 			if err != nil {
-				log.Error().Err(err)
-
-				log.Info().Msg("failed refresh")
+				log.Error().Err(err).Msg("failed refresh")
 			}
 			s.refreshed = time.Now()
 		}
@@ -170,9 +169,7 @@ func (s *StrayManager) RefreshList() error {
 		Pagination:      page,
 	}
 
-	cl := types.NewQueryClient(s.wallet.Client.GRPCConn)
-
-	res, err := cl.OpenFiles(context.Background(), queryParams)
+	res, err := s.queryClient.OpenFiles(context.Background(), queryParams)
 	if err != nil {
 		return err
 	}

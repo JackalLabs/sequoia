@@ -283,7 +283,15 @@ func (a *App) Start() error {
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
 	a.prover = prover
-	a.strayManager = strays.NewStrayManager(a.wallet, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
+	a.strayManager = strays.NewStrayManager(
+		a.wallet,
+		a.queryClient,
+		a.q,
+		cfg.StrayManagerCfg.CheckInterval,
+		cfg.StrayManagerCfg.RefreshInterval,
+		cfg.StrayManagerCfg.HandCount,
+		claimers)
+
 	a.monitor = monitoring.NewMonitor(a.wallet)
 
 	// Starting the 4 concurrent services
