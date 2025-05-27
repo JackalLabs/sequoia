@@ -360,7 +360,23 @@ func (m *FakeRPCClient) BroadcastTxAsync(arg0 context.Context, arg1 types1.Tx) (
 // BroadcastTxCommit mocks base method.
 // returns nil, nil
 func (m *FakeRPCClient) BroadcastTxCommit(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTxCommit, error) {
+
 	res := new(coretypes.ResultBroadcastTxCommit)
+
+	tx, err := GetTxDecoder()(arg1)
+	if err != nil {
+		panic(err)
+	}
+
+	msgs := tx.GetMsgs()
+	for _, m := range msgs {
+		msg, ok := m.(*types.MsgAddClaimer)
+		if !ok {
+			continue
+		}
+
+		zlog.Info().Type("msg", msg).Str("creator", msg.Creator).Msg("msg sent to wallet")
+	}
 
 	return res, nil
 }
