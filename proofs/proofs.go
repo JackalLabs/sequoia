@@ -130,7 +130,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 		// file is not ours, we need to figure out what to do with it
 		if len(file.Proofs) == int(file.MaxProofs) {
 			// disable not ours check
-			//return nil, nil, 0, errors.New(ErrNotOurs) // there is no more room on this file anyway, ignore it
+			// return nil, nil, 0, errors.New(ErrNotOurs) // there is no more room on this file anyway, ignore it
 			return nil, nil, 0, nil // there is no more room on this file anyway, ignore it
 		}
 	}
