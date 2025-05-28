@@ -219,7 +219,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 			Str("owner", owner).
 			Uint32("code", m.Res().Code).
 			Int64("start", start).
-			Msgf("response was", m.Res().RawLog)
+			Msgf("response was %s", m.Res().RawLog)
 		return nil
 	}
 
