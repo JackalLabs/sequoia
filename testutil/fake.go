@@ -370,12 +370,21 @@ func (m *FakeRPCClient) BroadcastTxCommit(arg0 context.Context, arg1 types1.Tx) 
 
 	msgs := tx.GetMsgs()
 	for _, m := range msgs {
-		msg, ok := m.(*types.MsgAddClaimer)
-		if !ok {
-			continue
+		if msg, ok := m.(*types.MsgAddClaimer); ok {
+			zlog.Info().Type("msg", msg).Str("claim address", msg.ClaimAddress).Msg("msg sent to fake rpc")
+		} else if msg, ok := m.(*types.MsgPostProof); ok {
+			zlog.Info().
+				Type("msg", msg).
+				Str("creator", msg.Creator).
+				Bytes("item", msg.Item).
+				Hex("hash_list", msg.HashList).
+				Hex("merkle", msg.Merkle).
+				Str("owner", msg.Owner).
+				Int64("start", msg.Start).
+				Int64("to_prove", msg.ToProve).
+				Msg("msg sent to fake rpc")
 		}
 
-		zlog.Info().Type("msg", msg).Str("creator", msg.Creator).Msg("msg sent to wallet")
 	}
 
 	return res, nil
