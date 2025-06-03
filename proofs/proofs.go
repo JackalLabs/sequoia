@@ -129,7 +129,9 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 	} else {
 		// file is not ours, we need to figure out what to do with it
 		if len(file.Proofs) == int(file.MaxProofs) {
-			return nil, nil, 0, errors.New(ErrNotOurs) // there is no more room on this file anyway, ignore it
+			// disable not ours check
+			// return nil, nil, 0, errors.New(ErrNotOurs) // there is no more room on this file anyway, ignore it
+			return nil, nil, 0, nil // there is no more room on this file anyway, ignore it
 		}
 	}
 
@@ -217,7 +219,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 			Str("owner", owner).
 			Uint32("code", m.Res().Code).
 			Int64("start", start).
-			Msgf("response was", m.Res().RawLog)
+			Msgf("response was %s", m.Res().RawLog)
 		return nil
 	}
 
@@ -362,21 +364,23 @@ func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height 
 					Msg("failed to delete file that no longer exist on the network")
 			}
 		}
-		if err.Error() == ErrNotOurs { // if the file is not ours, delete it
-			log.Debug().
-				Hex("merkle", merkle).
-				Str("owner", owner).
-				Int64("start", start).
-				Msg("deleting the file that does not belong to this provider")
+		// disable deleting the file if it's not ours
 
-			err := p.io.DeleteFile(merkle, owner, start)
-			if err != nil {
-				log.Error().
-					Hex("merkle", merkle).
-					Err(err).
-					Msg("failed to delete file that does not belong to this provider")
-			}
-		}
+		//if err.Error() == ErrNotOurs { // if the file is not ours, delete it
+		//	log.Debug().
+		//		Hex("merkle", merkle).
+		//		Str("owner", owner).
+		//		Int64("start", start).
+		//		Msg("deleting the file that does not belong to this provider")
+		//
+		//	err := p.io.DeleteFile(merkle, owner, start)
+		//	if err != nil {
+		//		log.Error().
+		//			Hex("merkle", merkle).
+		//			Err(err).
+		//			Msg("failed to delete file that does not belong to this provider")
+		//	}
+		//}
 	}
 }
 
