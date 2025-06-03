@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	abci "github.com/tendermint/tendermint/abci/types"
 	bytes "github.com/tendermint/tendermint/libs/bytes"
 	log "github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/p2p"
@@ -55,8 +56,18 @@ func (f *FakeStorageQueryClient) Params(ctx context.Context, in *types.QueryPara
 }
 
 // Queries a File by merkle, owner, and start.
+// returns UnifiedFile with empty proofs
 func (f *FakeStorageQueryClient) File(ctx context.Context, in *types.QueryFile, opts ...grpc.CallOption) (*types.QueryFileResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "this is a fake storage query client")
+	var file types.UnifiedFile
+	file.Merkle = in.Merkle
+	file.Owner = in.Owner
+	file.Start = in.Start
+
+	resp := &types.QueryFileResponse{
+		File: file,
+	}
+
+	return resp, nil
 }
 
 // Queries a list of File items.
@@ -301,15 +312,29 @@ func (s *FakeServiceClient) GetBlockWithTxs(ctx context.Context, in *tx.GetBlock
 var _ rpc.Client = (*FakeRPCClient)(nil)
 
 type FakeRPCClient struct {
+	BlockHeight int64
 }
 
 func NewFakeRPCClient() *FakeRPCClient {
-	return &FakeRPCClient{}
+	return &FakeRPCClient{
+		BlockHeight: 0,
+	}
 }
 
 // ABCIInfo mocks base method.
+// Pass context with key: "blockHeight" with value: int64 to get response blockheight
+// of that value otherwise client's blockheight is returned
 func (m *FakeRPCClient) ABCIInfo(arg0 context.Context) (*coretypes.ResultABCIInfo, error) {
-	return nil, status.Error(codes.Unimplemented, "this is fake RPCClient")
+	respInfo := abci.ResponseInfo{
+		LastBlockHeight: m.BlockHeight,
+	}
+	if v := arg0.Value("blockHeight"); v != nil {
+		height, ok := v.(int64)
+		if ok {
+			respInfo.LastBlockHeight = height
+		}
+	}
+	return &coretypes.ResultABCIInfo{Response: respInfo}, nil
 }
 
 // ABCIQuery mocks base method.
