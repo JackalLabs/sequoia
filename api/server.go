@@ -51,7 +51,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 
 	outline.RegisterGetRoute(r, "/", IndexHandler(wallet.AccAddress()))
 
-	outline.RegisterPostRoute(r, "/upload", PostFileHandler(f, p, wallet, chunkSize))
+	outline.RegisterPostRoute(r, "/upload", PostFileHandler(f, p, wallet, queryClient, chunkSize))
 	outline.RegisterPostRoute(r, "/v2/upload", PostFileHandlerV2(f, p, wallet, queryClient, chunkSize))
 	outline.RegisterPostRoute(r, "/v2/status/{id}", CheckUploadStatus())
 	outline.RegisterPostRoute(r, "/api/jobs", ListJobsHandler())

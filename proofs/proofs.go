@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -93,9 +94,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 		Start:  start,
 	}
 
-	cl := types.NewQueryClient(p.wallet.Client.GRPCConn)
-
-	res, err := cl.File(context.Background(), queryParams)
+	res, err := p.query.File(context.Background(), queryParams)
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -120,7 +119,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 	if file.ContainsProver(p.wallet.AccAddress()) {
 		// file is ours
-		proofRes, err := cl.Proof(context.Background(), proofQuery)
+		proofRes, err := p.query.Proof(context.Background(), proofQuery)
 		if err == nil {
 			newProof = proofRes.Proof // found the proof, we're good to go
 		}
@@ -315,16 +314,18 @@ func (p *Prover) Stop() {
 	p.running = false
 }
 
-func NewProver(wallet *wallet.Wallet, q queue.Queue, io FileSystem, interval int64, threads int16, chunkSize int) *Prover {
+func NewProver(wallet *wallet.Wallet, query types.QueryClient, q queue.Queue, io FileSystem, interval int64, threads int16, chunkSize int) *Prover {
 	p := Prover{
-		running:   false,
-		wallet:    wallet,
-		q:         q,
-		processed: time.Time{},
-		interval:  interval,
-		io:        io,
-		threads:   threads,
-		chunkSize: chunkSize,
+		running:        false,
+		wallet:         wallet,
+		query:          query,
+		q:              q,
+		processed:      time.Time{},
+		interval:       interval,
+		io:             io,
+		threads:        int32(threads),
+		currentThreads: atomic.Int32{},
+		chunkSize:      chunkSize,
 	}
 
 	return &p

@@ -43,7 +43,7 @@ func handleErr(err error, w http.ResponseWriter, code int) {
 	}
 }
 
-func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
+func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, query storageTypes.QueryClient, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
 		if err != nil {
@@ -91,13 +91,12 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			return
 		}
 
-		cl := storageTypes.NewQueryClient(wl.Client.GRPCConn)
 		queryParams := storageTypes.QueryFile{
 			Merkle: merkle,
 			Owner:  sender,
 			Start:  startBlock,
 		}
-		res, err := cl.File(context.Background(), &queryParams)
+		res, err := query.File(context.Background(), &queryParams)
 		if err != nil {
 			handleErr(fmt.Errorf("failed to find file on chain with merkle: %x, owner: %s, start: %d | %w", merkle, sender, startBlock, err), w, http.StatusInternalServerError)
 			return

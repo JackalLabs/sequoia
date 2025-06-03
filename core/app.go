@@ -276,7 +276,7 @@ func (a *App) Start() error {
 
 	go a.q.Listen()
 
-	prover := proofs.NewProver(a.wallet, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+	prover := proofs.NewProver(a.wallet, a.queryClient, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
 
 	myUrl := cfg.Ip
 
