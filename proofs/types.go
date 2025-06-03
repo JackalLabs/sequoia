@@ -1,12 +1,15 @@
 package proofs
 
 import (
+	"sync/atomic"
 	"time"
 
 	merkletree "github.com/wealdtech/go-merkletree/v2"
 
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+
+	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 )
 
 type Prover struct {
@@ -16,9 +19,10 @@ type Prover struct {
 	processed      time.Time
 	interval       int64
 	io             FileSystem
-	threads        int16
-	currentThreads int16
+	threads        int32
+	currentThreads atomic.Int32
 	chunkSize      int
+	query          storageTypes.QueryClient
 }
 
 type FileSystem interface {
@@ -28,13 +32,13 @@ type FileSystem interface {
 }
 
 func (p *Prover) Inc() {
-	p.currentThreads++
+	p.currentThreads.Add(1)
 }
 
 func (p *Prover) Dec() {
-	p.currentThreads--
+	p.currentThreads.Add(-1)
 }
 
 func (p *Prover) Full() bool {
-	return p.threads <= p.currentThreads
+	return p.threads <= p.currentThreads.Load()
 }
