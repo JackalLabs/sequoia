@@ -11,6 +11,19 @@ import (
 	canine "github.com/jackalLabs/canine-chain/v4/app"
 )
 
+// creates count wallets from main wallet
+func CreateOffsetWallets(main *wallet.Wallet, count int) (offsetWallets []*wallet.Wallet, err error) {
+	for i := range count {
+		w, err := main.CloneWalletOffset(byte(i + 1))
+		if err != nil {
+			return nil, err
+		}
+		offsetWallets = append(offsetWallets, w)
+	}
+
+	return offsetWallets, nil
+}
+
 func CreateWallet(seed string, derivation string, chainCfg types.ChainConfig) (*wallet.Wallet, error) {
 	accountCfg := types.AccountConfig{
 		Mnemonic: seed,       // forward service profit benefit punch catch fan chief jealous steel harvest column spell rude warm home melody hat broccoli pulse say garlic you firm
