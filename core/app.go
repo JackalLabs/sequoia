@@ -31,6 +31,7 @@ import (
 	"github.com/JackalLabs/sequoia/proofs"
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/JackalLabs/sequoia/strays"
+	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	badger "github.com/dgraph-io/badger/v4"
@@ -224,11 +225,13 @@ func (a *App) Start() error {
 		Address: myAddress,
 	}
 
-	cl := a.queryClient
+	offsetWalletCount := cfg.QueueConfig.QueueThreads + int8(cfg.StrayManagerCfg.HandCount)
+	offsetWallets, err := sequoiaWallet.CreateOffsetWallets(a.wallet, int(offsetWalletCount))
+	if err != nil {
+		return err
+	}
 
-	claimers := make([]string, 0)
-
-	res, err := cl.Provider(context.Background(), queryParams)
+	res, err := a.queryClient.Provider(context.Background(), queryParams)
 	if err != nil {
 		log.Info().Err(err).Msg("Provider does not exist on network or is not connected...")
 		err := initProviderOnChain(a.wallet, cfg.Ip, cfg.TotalSpace)
@@ -243,7 +246,6 @@ func (a *App) Start() error {
 			Str("burned_contracts", res.Provider.BurnedContracts).
 			Str("keybase_identity", res.Provider.KeybaseIdentity).
 			Msg("provider query result")
-		claimers = res.Provider.AuthClaimers
 
 		totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
 		if err != nil {
@@ -268,7 +270,8 @@ func (a *App) Start() error {
 		return err
 	}
 
-	a.q, err = queue.NewPool(a.wallet, a.queryClient, cfg.QueueConfig)
+	queueWallets := offsetWallets[:cfg.QueueConfig.QueueThreads]
+	a.q, err = queue.NewPool(a.wallet, a.queryClient, queueWallets, cfg.QueueConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize Queue module")
 		return err
@@ -283,14 +286,18 @@ func (a *App) Start() error {
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
 	a.prover = prover
-	a.strayManager = strays.NewStrayManager(
+	handWallets := offsetWallets[cfg.QueueConfig.QueueThreads:]
+	strayManager, err := strays.NewStrayManager(
 		a.wallet,
 		a.queryClient,
 		a.q,
 		cfg.StrayManagerCfg.CheckInterval,
 		cfg.StrayManagerCfg.RefreshInterval,
-		cfg.StrayManagerCfg.HandCount,
-		claimers)
+		handWallets)
+	if err != nil {
+		return err
+	}
+	a.strayManager = strayManager
 
 	a.monitor = monitoring.NewMonitor(a.wallet)
 

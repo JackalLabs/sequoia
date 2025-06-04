@@ -13,6 +13,7 @@ import (
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 
 	"github.com/rs/zerolog/log"
@@ -27,8 +28,8 @@ type Pool struct {
 	wallet         *wallet.Wallet
 }
 
-func NewPool(wallet *wallet.Wallet, queryClient storageTypes.QueryClient, config config.QueueConfig) (*Pool, error) {
-	workerWallets, err := initAuthClaimers(wallet, queryClient, config.QueueThreads)
+func NewPool(main *wallet.Wallet, queryClient storageTypes.QueryClient, workerWallets []*wallet.Wallet, config config.QueueConfig) (*Pool, error) {
+	err := initAuthClaimers(main, queryClient, workerWallets)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to initialize auth claimers"), err)
 	}
@@ -45,7 +46,7 @@ func NewPool(wallet *wallet.Wallet, queryClient storageTypes.QueryClient, config
 	}
 
 	pool := &Pool{
-		wallet:         wallet,
+		wallet:         main,
 		workers:        workers,
 		workerChannels: workerChannels,
 		workerRunning:  workerRunning,
@@ -116,41 +117,59 @@ func createWorkers(workerWallets []*wallet.Wallet, txTimer int, batchSize int, m
 	return workers, wChannels, workerRunning
 }
 
-func initAuthClaimers(wallet *wallet.Wallet, queryClient storageTypes.QueryClient, count int8) (workerWallets []*wallet.Wallet, err error) {
+func initAuthClaimers(wallet *wallet.Wallet, queryClient storageTypes.QueryClient, workerWallets []*wallet.Wallet) error {
 	query := &storageTypes.QueryProvider{
 		Address: wallet.AccAddress(),
 	}
 
 	res, err := queryClient.Provider(context.Background(), query)
 	if err != nil {
-		return nil, errors.Join(errors.New("unable to query provider auth claimers"), err)
+		return errors.Join(errors.New("unable to query provider auth claimers"), err)
 	}
-	claimers := res.Provider.AuthClaimers
 
-	for i := range count {
-		workerWallet := newOffsetWallet(wallet, int(i))
-		if !slices.Contains(claimers, workerWallet.AccAddress()) {
-			err := addClaimer(wallet, workerWallet)
+	claimers := res.Provider.AuthClaimers
+	// odd offsets are queue pool worker claimers
+	for _, w := range workerWallets {
+		if !slices.Contains(claimers, w.AccAddress()) {
+			err := addClaimer(wallet, w)
 			if err != nil {
-				return nil, errors.Join(errors.New("failed to add claimer on chain"), err)
+				return errors.Join(errors.New("failed to add claimer on chain"), err)
 			}
 		}
-		workerWallets = append(workerWallets, workerWallet)
 	}
 
-	return workerWallets, nil
+	return nil
 }
 
 func addClaimer(main *wallet.Wallet, claimer *wallet.Wallet) error {
+	allowance := feegrant.BasicAllowance{
+		SpendLimit: nil,
+		Expiration: nil,
+	}
+
+	wadd, err := types.AccAddressFromBech32(main.AccAddress())
+	if err != nil {
+		return err
+	}
+
+	hadd, err := types.AccAddressFromBech32(claimer.AccAddress())
+	if err != nil {
+		return err
+	}
+
+	grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, wadd, hadd)
+	if nerr != nil {
+		return err
+	}
 	msg := storageTypes.NewMsgAddClaimer(main.AccAddress(), claimer.AccAddress())
-	txData := walletTypes.NewTransactionData(msg).WithFeeAuto().WithGasAuto()
+	txData := walletTypes.NewTransactionData(msg, grantMsg).WithFeeAuto().WithGasAuto()
 
 	res, err := main.BroadcastTxCommit(txData)
 	if err != nil {
 		return errors.Join(errors.New("unable to broadcast MsgAddClaimer"), err)
 	}
 
-	log.Info().Msg(res.TxHash)
+	log.Info().Type("msg_type", msg).Msg(res.TxHash)
 
 	return nil
 }
