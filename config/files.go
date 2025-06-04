@@ -95,14 +95,8 @@ func Init(home string) (*Config, error) {
 			return nil, err
 		}
 	}
-	/*
-		config, err := ReadConfigFile(directory)
-		if err != nil {
-			return nil, err
-		}
-	*/
-	var config Config
 
+	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, err
 	}

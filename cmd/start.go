@@ -57,14 +57,13 @@ func StartCmd() *cobra.Command {
 			}
 
 			err = app.Start()
-
 			for restartAttempt := 0; restartAttempt < maxRestartAttempt && err != nil; restartAttempt++ {
 				fmt.Println(err)
 				fmt.Printf("Attempting restart again in a minute (attempt %d of %d)...\n", restartAttempt+1, maxRestartAttempt)
 				time.Sleep(time.Minute)
 				err = app.Start()
 			}
-			return nil
+			return err
 		},
 	}
 
