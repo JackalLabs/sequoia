@@ -232,7 +232,6 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 			Int64("start", start).
 			Err(err).
 			Msg("Could not decode response body")
-
 		return err
 	}
 
@@ -268,6 +267,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 			Int64("start", start).
 			Err(err).
 			Msg("Could not unmarshal response body")
+
 
 		return err
 	}
