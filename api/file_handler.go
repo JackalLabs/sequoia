@@ -485,12 +485,14 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 		if err != nil {
 			continue // skipping bad url
 		}
+		// nolint:errcheck
+		defer r.Body.Close()
 
 		if r.StatusCode != http.StatusOK {
 			continue
 		}
 
-		fileData, err := io.ReadAll(r.Body)
+		fileData, err := io.ReadAll(io.LimitReader(r.Body, MaxFileSize))
 		if err != nil {
 			continue
 		}

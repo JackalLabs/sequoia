@@ -199,7 +199,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 			Hex("merkle", merkle).
 			Str("owner", owner).
 			Int64("start", start).
-			Err(err).
+			Err(m.Error()).
 			Msg("Proof posting failed, will try again")
 		return m.Error()
 	}
@@ -267,7 +267,6 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 			Int64("start", start).
 			Err(err).
 			Msg("Could not unmarshal response body")
-
 
 		return err
 	}
