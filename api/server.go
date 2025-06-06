@@ -48,7 +48,7 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, queryClient storageTypes.QueryClient, chunkSize int64) {
+func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, queryClient storageTypes.QueryClient, myIp string, chunkSize int64) {
 	defer log.Info().Msg("API module stopped")
 	r := mux.NewRouter()
 

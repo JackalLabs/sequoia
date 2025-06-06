@@ -42,7 +42,6 @@ func setupNewPool(w *wallet.Wallet, config config.QueueConfig) *Pool {
 		workerChannels: queue,
 		workerRunning:  workerRunning,
 	}
-
 }
 
 // really rough estimate because it benchmarks the whole pool.Add pipeline

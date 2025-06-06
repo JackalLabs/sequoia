@@ -22,7 +22,7 @@ func (h *Hand) Stop() {
 	h.running = false
 }
 
-func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, queryClient types.QueryClient, myUrl string, chunkSize int64) {
+func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, queryClient types.QueryClient, q queue.Queue, myUrl string, chunkSize int64) {
 	h.running = true
 	defer log.Info().Msg("Hand stopped")
 	for h.running {
@@ -77,18 +77,7 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, queryClie
 			Start:    start,
 		}
 
-		//data := walletTypes.NewTransactionData(
-		//	msg,
-		//).WithGasAuto().WithFeeAuto()
-
 		m, wg := q.Add(msg)
-
-		//res, err := h.wallet.BroadcastTxCommit(data)
-		//if err != nil {
-		//	log.Error().Err(err)
-		//	h.stray = nil
-		//	continue
-		//}
 
 		if m.Res() != nil {
 			if m.Res().Code > 0 {

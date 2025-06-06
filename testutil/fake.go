@@ -26,15 +26,13 @@ import (
 
 var _ types.QueryClient = (*FakeStorageQueryClient)(nil)
 
-type FakeStorageQueryClient struct {
-}
+type FakeStorageQueryClient struct{}
 
 func NewFakeStorageQueryClient() *FakeStorageQueryClient {
 	return &FakeStorageQueryClient{}
 }
 
 func (f *FakeStorageQueryClient) Params(ctx context.Context, in *types.QueryParams, opts ...grpc.CallOption) (*types.QueryParamsResponse, error) {
-
 	resp := types.QueryParamsResponse{
 		Params: types.Params{
 			AttestFormSize:         5,
@@ -269,8 +267,7 @@ func (a *FakeAuthQueryClient) ModuleAccountByName(ctx context.Context, in *auth.
 
 var _ tx.ServiceClient = (*FakeServiceClient)(nil)
 
-type FakeServiceClient struct {
-}
+type FakeServiceClient struct{}
 
 func NewFakeServiceClient() *FakeServiceClient {
 	return &FakeServiceClient{}
@@ -385,7 +382,6 @@ func (m *FakeRPCClient) BroadcastTxAsync(arg0 context.Context, arg1 types1.Tx) (
 // BroadcastTxCommit mocks base method.
 // returns nil, nil
 func (m *FakeRPCClient) BroadcastTxCommit(arg0 context.Context, arg1 types1.Tx) (*coretypes.ResultBroadcastTxCommit, error) {
-
 	res := new(coretypes.ResultBroadcastTxCommit)
 
 	tx, err := GetTxDecoder()(arg1)
@@ -409,7 +405,6 @@ func (m *FakeRPCClient) BroadcastTxCommit(arg0 context.Context, arg1 types1.Tx) 
 				Int64("to_prove", msg.ToProve).
 				Msg("msg sent to fake rpc")
 		}
-
 	}
 
 	return res, nil
