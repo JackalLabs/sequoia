@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// NewStrayManager creates and initializes a new StrayManager with the specified number of hands, authorizing each hand to transact on behalf of the provided wallet if not already authorized.
 func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
 	s := &StrayManager{
 		rand:            rand.New(rand.NewSource(time.Now().Unix())),

@@ -19,7 +19,7 @@ type TemplateData struct {
 	CurrentPath string
 }
 
-// formatSize formats file size to a human-readable format
+// formatSize returns a human-readable string representation of a file size in bytes, using units such as B, KB, MB, GB, etc.
 func formatSize(size uint) string {
 	if size == 0 {
 		return "0 B"
@@ -39,12 +39,12 @@ func formatSize(size uint) string {
 	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "KMGTPE"[exp])
 }
 
-// encodeMerkleHex encodes the merkle bytes to a hex string
+// encodeMerkleHex returns the hexadecimal string representation of the given Merkle hash bytes.
 func encodeMerkleHex(merkle []byte) string {
 	return hex.EncodeToString(merkle)
 }
 
-// truncateMerkleHex returns a shortened version of the merkle hash for display in hex
+// truncateMerkleHex returns a shortened hexadecimal string of the Merkle hash, displaying the first 6 and last 4 characters separated by ellipsis if the encoded length exceeds 10 characters.
 func truncateMerkleHex(merkle []byte) string {
 	encoded := encodeMerkleHex(merkle)
 	if len(encoded) <= 10 {
@@ -53,7 +53,8 @@ func truncateMerkleHex(merkle []byte) string {
 	return encoded[:6] + "..." + encoded[len(encoded)-4:]
 }
 
-// GenerateHTML generates HTML content for the given folder data and returns it as a byte slice
+// GenerateHTML renders HTML content for the specified folder data and current path using an embedded template.
+// It returns the generated HTML as a byte slice, or an error if template parsing or execution fails.
 func GenerateHTML(folder *types.FolderData, currentPath string) ([]byte, error) {
 	// Create template functions
 	funcMap := template.FuncMap{

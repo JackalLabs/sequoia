@@ -65,6 +65,7 @@ type StrayManagerConfig struct {
 	HandCount       int   `yaml:"hands" mapstructure:"hands"`
 }
 
+// DefaultStrayManagerConfig returns the default configuration for the stray manager, setting check and refresh intervals and the hand count.
 func DefaultStrayManagerConfig() StrayManagerConfig {
 	return StrayManagerConfig{
 		CheckInterval:   30,
@@ -81,6 +82,7 @@ type APIConfig struct {
 	OpenGateway bool   `yaml:"open_gateway" mapstructure:"open_gateway"`
 }
 
+// DefaultAPIConfig returns the default APIConfig with preset ports, IPFS domain, search enabled, and an open gateway.
 func DefaultAPIConfig() APIConfig {
 	return APIConfig{
 		Port:        3333,

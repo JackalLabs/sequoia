@@ -397,6 +397,9 @@ func PostIPFSFolder(f *file_system.FileSystem) func(http.ResponseWriter, *http.R
 	}
 }
 
+// DownloadFileHandler returns an HTTP handler that serves a file by its merkle hash, using an optional filename for the response.
+// If the filename is not provided in the query, the merkle string is used as the default name.
+// Responds with a JSON error if the file cannot be found or decoded.
 func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
@@ -433,6 +436,8 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 	}
 }
 
+// getFolderData attempts to unmarshal the provided data into a FolderData structure.
+// It returns the FolderData and true on success, or nil and false if unmarshaling fails.
 func getFolderData(data []byte) (*sequoiaTypes.FolderData, bool) {
 	var folder sequoiaTypes.FolderData
 	err := json.Unmarshal(data, &folder)
@@ -442,6 +447,8 @@ func getFolderData(data []byte) (*sequoiaTypes.FolderData, bool) {
 	return &folder, true
 }
 
+// getMerkleData retrieves file data by merkle hash, first attempting local storage and then querying network providers if not found locally.
+// It returns the file data if successful, or an error if the file cannot be retrieved from any source.
 func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) ([]byte, error) {
 	file, err := f.GetFileData(merkle)
 	if err == nil {
@@ -501,6 +508,9 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 	return nil, errors.New("could not find file data on network")
 }
 
+// GetMerklePathData recursively resolves a file or folder by traversing a path from a root merkle hash.
+// If the path leads to a file, returns its data; if it leads to a folder and raw is false, returns an HTML representation of the folder.
+// Returns the file or folder data, the resolved filename, and an error if the path is invalid or data retrieval fails.
 func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string, currentPath string, raw bool) ([]byte, string, error) {
 	currentRoot := root
 
@@ -546,6 +556,9 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 	return htmlData, fmt.Sprintf("%s.html", fileName), err
 }
 
+// FindFileHandler returns an HTTP handler that serves files or folders by merkle hash and optional path, supporting raw or HTML folder views.
+// 
+// The handler extracts the merkle hash and optional path from the request, resolves the requested file or folder (recursively if a path is provided), and serves the content. If the target is a folder and the `raw` query parameter is not set, an HTML representation is generated. If a filename is not specified, the merkle string is used as the default name. Errors are returned as JSON responses.
 func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)

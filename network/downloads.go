@@ -21,6 +21,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// DownloadFile attempts to download a file identified by its Merkle root from a network of providers, excluding the caller's own URL.
+// It queries the provider network, tries each available provider until the file is successfully downloaded and matches the expected size, and writes the file to the local file system.
+// Returns an error if the file cannot be found or downloaded from any provider.
 func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) error {
 	queryParams := &types.QueryFindFile{
 		Merkle: merkle,
@@ -67,6 +70,14 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 	return nil
 }
 
+// DownloadFileFromURL downloads a file chunk from a provider URL and writes it to the local file system.
+//
+// The function performs an HTTP GET request to the provider's download endpoint for the specified Merkle root,
+// using a dynamically calculated timeout based on the file size. If the download is successful, the data is
+// written to the file system using the provided chunking and proof parameters.
+//
+// Returns the number of bytes written, or an error if the download or write fails. Timeout and HTTP errors are
+// reported with detailed messages.
 func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams, fileSize int64) (int, error) {
 	log.Info().Msg(fmt.Sprintf("Downloading %x from %s...", merkle, url))
 

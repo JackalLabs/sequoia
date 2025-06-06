@@ -32,6 +32,7 @@ type API struct {
 	cfg  *config.APIConfig
 }
 
+// NewAPI creates a new API instance using the provided API configuration.
 func NewAPI(cfg *config.APIConfig) *API {
 	return &API{
 		port: cfg.Port,
