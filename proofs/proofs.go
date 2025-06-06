@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dgraph-io/badger/v4"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -127,7 +129,9 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 	} else {
 		// file is not ours, we need to figure out what to do with it
 		if len(file.Proofs) == int(file.MaxProofs) {
-			return nil, nil, 0, errors.New(ErrNotOurs) // there is no more room on this file anyway, ignore it
+			// disable not ours check
+			// return nil, nil, 0, errors.New(ErrNotOurs) // there is no more room on this file anyway, ignore it
+			return nil, nil, 0, nil // there is no more room on this file anyway, ignore it
 		}
 	}
 
@@ -135,12 +139,12 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 	t := time.Since(startedAt)
 
-	proven := file.ProvenThisBlock(blockHeight+int64(t.Seconds()/5.0), newProof.LastProven)
+	proven := file.ProvenThisBlock(blockHeight+int64(t.Seconds()/6.0), newProof.LastProven)
 	if proven {
-		log.Debug().Msg(fmt.Sprintf("%x was proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
+		log.Debug().Msg(fmt.Sprintf("%x was already proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
 		return nil, nil, 0, nil
 	}
-	log.Info().Msg(fmt.Sprintf("%x was not yet proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
+	log.Debug().Msg(fmt.Sprintf("%x was not yet proven at %d, height is now %d", file.Merkle, newProof.LastProven, blockHeight))
 
 	block := int(newProof.ChunkToProve)
 
@@ -156,13 +160,25 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	p.Dec()
 	filesProving.Dec()
 	if err != nil {
-		log.Error().Msgf("Failed to generate proof for %x at %d", merkle, index)
-		log.Error().Msg(err.Error())
+		log.Error().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(err).
+			Msg("Proof generation failed")
+
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			if removeErr := p.io.DeleteFile(merkle, owner, start); removeErr != nil { // delete the key upon failure?
+				log.Error().
+					Err(removeErr).
+					Msg("Failed to cleanup orphaned file entry")
+			}
+		}
+
 		return err
 	}
 
 	if proof == nil || item == nil {
-		log.Debug().Msg("generated proof was nil but no error was thrown")
 		return nil
 	}
 
@@ -172,16 +188,50 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 
 	m, wg := p.q.Add(msg)
 
+	if m.Index() == -1 { // message was skipped because it was a duplicate
+		return nil
+	}
+
 	wg.Wait()
 
 	if m.Error() != nil {
-		log.Error().Err(m.Error())
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(m.Error()).
+			Msg("Proof posting failed, will try again")
 		return m.Error()
+	}
+
+	if m.Res() == nil {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Msg("Message response was nil")
+		return nil
+	}
+
+	if m.Res().Code != 0 {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Uint32("code", m.Res().Code).
+			Int64("start", start).
+			Msgf("response was %s", m.Res().RawLog)
+		return nil
 	}
 
 	var postRes types.MsgPostProofResponse
 	data, err := hex.DecodeString(m.Res().Data)
 	if err != nil {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(err).
+			Msg("Could not decode response body")
 		return err
 	}
 
@@ -189,25 +239,46 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	var txMsgData sdk.TxMsgData
 	err = encodingCfg.Marshaler.Unmarshal(data, &txMsgData)
 	if err != nil {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(err).
+			Msg("Could not parse response body")
+
 		return err
+
 	}
 
 	if len(txMsgData.Data) == 0 {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Msg("No response data")
 		return nil
 	}
 
 	err = postRes.Unmarshal(txMsgData.Data[m.Index()].Data)
 	if err != nil {
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(err).
+			Msg("Could not unmarshal response body")
+
 		return err
 	}
 
 	if !postRes.Success {
-		log.Error().Msg(postRes.ErrorMessage)
+		log.Warn().
+			Hex("merkle", merkle).
+			Str("owner", owner).
+			Int64("start", start).
+			Err(errors.New(postRes.ErrorMessage)).
+			Msg("Failed to prove file")
 	}
-
-	log.Debug().Msg(fmt.Sprintf("%x was successfully proven", merkle))
-
-	log.Debug().Msg(fmt.Sprintf("TX Hash: %s", m.Hash()))
 
 	return nil
 }
@@ -292,21 +363,23 @@ func (p *Prover) wrapPostProof(merkle []byte, owner string, start int64, height 
 					Msg("failed to delete file that no longer exist on the network")
 			}
 		}
-		if err.Error() == ErrNotOurs { // if the file is not ours, delete it
-			log.Debug().
-				Hex("merkle", merkle).
-				Str("owner", owner).
-				Int64("start", start).
-				Msg("deleting the file that does not belong to this provider")
+		// disable deleting the file if it's not ours
 
-			err := p.io.DeleteFile(merkle, owner, start)
-			if err != nil {
-				log.Error().
-					Hex("merkle", merkle).
-					Err(err).
-					Msg("failed to delete file that does not belong to this provider")
-			}
-		}
+		//if err.Error() == ErrNotOurs { // if the file is not ours, delete it
+		//	log.Debug().
+		//		Hex("merkle", merkle).
+		//		Str("owner", owner).
+		//		Int64("start", start).
+		//		Msg("deleting the file that does not belong to this provider")
+		//
+		//	err := p.io.DeleteFile(merkle, owner, start)
+		//	if err != nil {
+		//		log.Error().
+		//			Hex("merkle", merkle).
+		//			Err(err).
+		//			Msg("failed to delete file that does not belong to this provider")
+		//	}
+		//}
 	}
 }
 

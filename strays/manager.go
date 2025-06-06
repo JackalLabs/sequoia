@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// NewStrayManager creates and initializes a new StrayManager with the specified number of hands, authorizing each hand to transact on behalf of the provided wallet if not already authorized.
 func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
 	s := &StrayManager{
 		rand:            rand.New(rand.NewSource(time.Now().Unix())),
@@ -88,12 +89,12 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 	return s
 }
 
-func (s *StrayManager) Start(f *file_system.FileSystem, myUrl string, chunkSize int64) {
+func (s *StrayManager) Start(f *file_system.FileSystem, q *queue.Queue, myUrl string, chunkSize int64) {
 	s.running = true
 	defer log.Info().Msg("StrayManager stopped")
 
 	for _, hand := range s.hands {
-		go hand.Start(f, s.wallet, myUrl, chunkSize)
+		go hand.Start(f, s.wallet, q, myUrl, chunkSize)
 	}
 
 	for s.running {
@@ -154,14 +155,16 @@ func (s *StrayManager) RefreshList() error {
 	s.strays = make([]*types.UnifiedFile, 0)
 
 	var val uint64
+	reverse := false
 	if s.lastSize > 300 {
 		val = uint64(s.rand.Int63n(s.lastSize))
+		reverse = s.rand.Intn(2) == 0
 	}
 
 	page := &query.PageRequest{ // more randomly pick from the stray pile
 		Offset:     val,
 		Limit:      300,
-		Reverse:    s.rand.Intn(2) == 0,
+		Reverse:    reverse,
 		CountTotal: true,
 	}
 
@@ -176,7 +179,7 @@ func (s *StrayManager) RefreshList() error {
 	if err != nil {
 		return err
 	}
-	log.Info().Msg("Got updated list of strays")
+	log.Info().Msgf("Got updated list of strays of size %d", len(res.Files))
 
 	for _, stray := range res.Files {
 		newStray := stray

@@ -1,9 +1,14 @@
 package queue
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
+
+	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
@@ -29,13 +34,30 @@ func NewQueue(w *wallet.Wallet, interval int64) *Queue {
 func (q *Queue) Add(msg types.Msg) (*Message, *sync.WaitGroup) {
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-
 	m := &Message{
 		msg: msg,
 		wg:  &wg,
 		err: nil,
 	}
+
+	proofMessage, ok := msg.(*storageTypes.MsgPostProof)
+	if ok {
+		for _, message := range q.messages {
+			queueMessage, ok := message.msg.(*storageTypes.MsgPostProof)
+			if !ok {
+				continue
+			}
+			if bytes.Equal(
+				queueMessage.Merkle, proofMessage.Merkle) &&
+				queueMessage.Start == proofMessage.Start &&
+				queueMessage.Owner == proofMessage.Owner {
+				m.msgIndex = -1
+				return m, &wg
+			}
+		}
+	}
+
+	wg.Add(1)
 
 	q.messages = append(q.messages, m) // adding the message to the end of the list
 
@@ -90,9 +112,36 @@ func (q *Queue) Listen() {
 			allMsgs...,
 		).WithGasAuto().WithFeeAuto()
 
-		res, err := q.wallet.BroadcastTxCommit(data)
-		if err != nil {
-			log.Warn().Err(err).Msg("tx broadcast failed from queue")
+		complete := false
+		var res *types.TxResponse
+		var err error
+		var i int
+		for !complete && i < 10 {
+			i++
+			res, err = q.wallet.BroadcastTxCommit(data)
+			if err != nil {
+				log.Warn().Err(err).Msg("tx broadcast failed from queue")
+				continue
+			}
+
+			if res != nil {
+				if res.Code != 0 {
+					if strings.Contains(res.RawLog, "account sequence mismatch") {
+						if data.Sequence != nil {
+							data = data.WithSequence(*data.Sequence + 1)
+							continue
+						}
+					}
+				}
+				complete = true
+			} else {
+				log.Warn().Msg("response is nil")
+				continue
+			}
+		}
+
+		if !complete {
+			err = errors.New("could not complete broadcast in 10 loops")
 		}
 
 		for i, process := range toProcess {

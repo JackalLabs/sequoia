@@ -50,6 +50,9 @@ type App struct {
 	wallet       *wallet.Wallet
 }
 
+// NewApp initializes and returns a new App instance using the provided home directory.
+// It sets up configuration, data directories, database, IPFS datastore and blockstore, API server, wallet, and file system.
+// Returns the initialized App or an error if any component fails to initialize.
 func NewApp(home string) (*App, error) {
 	cfg, err := config.Init(home)
 	if err != nil {
@@ -93,7 +96,7 @@ func NewApp(home string) (*App, error) {
 		}
 	}
 
-	apiServer := api.NewAPI(cfg.APICfg.Port)
+	apiServer := api.NewAPI(&cfg.APICfg)
 
 	w, err := config.InitWallet(home)
 	if err != nil {
@@ -267,9 +270,9 @@ func (a *App) Start() error {
 		// nolint:all
 		go a.ConnectPeers()
 	}
-	go a.api.Serve(a.fileSystem, a.prover, a.wallet, params.ChunkSize)
+	go a.api.Serve(a.fileSystem, a.prover, a.wallet, params.ChunkSize, myUrl)
 	go a.prover.Start()
-	go a.strayManager.Start(a.fileSystem, myUrl, params.ChunkSize)
+	go a.strayManager.Start(a.fileSystem, a.q, myUrl, params.ChunkSize)
 	go a.monitor.Start()
 
 	done := make(chan os.Signal, 1)

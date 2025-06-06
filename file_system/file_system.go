@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/JackalLabs/sequoia/api/types"
 
@@ -567,6 +568,22 @@ func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 
 	rsc, err := f.ipfs.GetFile(context.Background(), c)
 	if err != nil {
+		if strings.Contains(err.Error(), "is a directory") {
+			node, err := f.ipfs.Get(context.Background(), c)
+			if err != nil {
+				return nil, fmt.Errorf("cannot get folder for cid '%s': %w", c.String(), err)
+			}
+			folder, ok := node.(*merkledag.ProtoNode)
+			if !ok {
+				return nil, fmt.Errorf("cannot parse folder from cid '%s'", c.String())
+			}
+			b, err := json.Marshal(folder)
+			if err != nil {
+				return nil, fmt.Errorf("cannot marshal folder for cid '%s': %w", c.String(), err)
+			}
+			return b, nil
+		}
+
 		return nil, fmt.Errorf("cannot get file for cid '%s': %w", c.String(), err)
 	}
 	//nolint:errcheck

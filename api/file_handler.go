@@ -9,9 +9,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/JackalLabs/sequoia/api/gateway"
+	sequoiaTypes "github.com/JackalLabs/sequoia/types"
 
 	"github.com/JackalLabs/sequoia/utils"
 
@@ -392,11 +397,20 @@ func PostIPFSFolder(f *file_system.FileSystem) func(http.ResponseWriter, *http.R
 	}
 }
 
+// DownloadFileHandler returns an HTTP handler that serves a file by its merkle hash, using an optional filename for the response.
+// If the filename is not provided in the query, the merkle string is used as the default name.
+// Responds with a JSON error if the file cannot be found or decoded.
 func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 
+		fileName := req.URL.Query().Get("filename")
+
 		merkleString := vars["merkle"]
+		if len(fileName) == 0 {
+			fileName = merkleString
+		}
+
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
 			v := types.ErrorResponse{
@@ -417,6 +431,209 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			return
 		}
 		rs := bytes.NewReader(file)
-		http.ServeContent(w, req, merkleString, time.Time{}, rs)
+
+		http.ServeContent(w, req, fileName, time.Time{}, rs)
+	}
+}
+
+// getFolderData attempts to unmarshal the provided data into a FolderData structure.
+// It returns the FolderData and true on success, or nil and false if unmarshaling fails.
+func getFolderData(data []byte) (*sequoiaTypes.FolderData, bool) {
+	var folder sequoiaTypes.FolderData
+	err := json.Unmarshal(data, &folder)
+	if err != nil {
+		return nil, false
+	}
+	return &folder, true
+}
+
+// getMerkleData retrieves file data by merkle hash, first attempting local storage and then querying network providers if not found locally.
+// It returns the file data if successful, or an error if the file cannot be retrieved from any source.
+func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) ([]byte, error) {
+	file, err := f.GetFileData(merkle)
+	if err == nil {
+		return file, nil
+	}
+
+	merkleString := hex.EncodeToString(merkle)
+
+	queryParams := &storageTypes.QueryFindFile{
+		Merkle: merkle,
+	}
+
+	cl := storageTypes.NewQueryClient(wallet.Client.GRPCConn)
+
+	res, err := cl.FindFile(context.Background(), queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	ips := res.ProviderIps
+
+	for _, ip := range ips {
+		if ip == myIp {
+			continue // skipping me
+		}
+		u, err := url.Parse(ip)
+		if err != nil {
+			continue // skipping bad url
+		}
+
+		client := &http.Client{
+			Timeout: 15 * time.Second, // 15 second timeout
+		}
+
+		u = u.JoinPath("download", merkleString)
+		uq := u.Query()
+		uq.Set("filename", fileName)
+		u.RawQuery = uq.Encode()
+
+		r, err := client.Get(u.String())
+		if err != nil {
+			continue // skipping bad url
+		}
+		// nolint:errcheck
+		defer r.Body.Close()
+
+		if r.StatusCode != http.StatusOK {
+			continue
+		}
+
+		fileData, err := io.ReadAll(io.LimitReader(r.Body, MaxFileSize))
+		if err != nil {
+			continue
+		}
+
+		return fileData, nil
+	}
+
+	return nil, errors.New("could not find file data on network")
+}
+
+// GetMerklePathData recursively resolves a file or folder by traversing a path from a root merkle hash.
+// If the path leads to a file, returns its data; if it leads to a folder and raw is false, returns an HTML representation of the folder.
+// Returns the file or folder data, the resolved filename, and an error if the path is invalid or data retrieval fails.
+func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string, currentPath string, raw bool) ([]byte, string, error) {
+	currentRoot := root
+
+	fileData, err := getMerkleData(currentRoot, fileName, f, wallet, myIp)
+	if err != nil {
+		return nil, fileName, err
+	}
+
+	if len(path) > 0 {
+		folder, isFolder := getFolderData(fileData)
+		if !isFolder {
+			return nil, fileName, errors.New("this is not a folder")
+		}
+		children := folder.Children
+
+		p := path[0] // next item in path list
+
+		for _, child := range children {
+			if child.Name == p {
+				return GetMerklePathData(child.Merkle, path[1:], child.Name, f, wallet, myIp, currentPath, raw) // check the next item in the list
+			}
+		}
+		// did not find child
+		return nil, fileName, errors.New("path not valid")
+	}
+
+	if raw {
+		return fileData, fileName, err
+	}
+
+	folder, isFolder := getFolderData(fileData)
+	if !isFolder {
+		return fileData, fileName, err
+	}
+
+	folder.Merkle = currentRoot
+
+	htmlData, err := gateway.GenerateHTML(folder, currentPath)
+	if err != nil {
+		return nil, fileName, err
+	}
+
+	return htmlData, fmt.Sprintf("%s.html", fileName), err
+}
+
+// FindFileHandler returns an HTTP handler that serves files or folders by merkle hash and optional path, supporting raw or HTML folder views.
+//
+// The handler extracts the merkle hash and optional path from the request, resolves the requested file or folder (recursively if a path is provided), and serves the content. If the target is a folder and the `raw` query parameter is not set, an HTML representation is generated. If a filename is not specified, the merkle string is used as the default name. Errors are returned as JSON responses.
+func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		fileName := req.URL.Query().Get("filename")
+		merkleString := vars["merkle"]
+		if len(fileName) == 0 {
+			fileName = merkleString
+		}
+		merkle, err := hex.DecodeString(merkleString)
+		if err != nil {
+			v := types.ErrorResponse{
+				Error: err.Error(),
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(v)
+			return
+		}
+
+		pathString, pathExists := vars["path"] // handling pathing data
+		_, raw := req.URL.Query()["raw"]
+
+		// Only process path if it actually exists and isn't empty
+		if pathExists && pathString != "" {
+			paths := strings.Split(pathString, "/")
+			// Remove empty path elements (this handles cases with leading/trailing slashes)
+			var filteredPaths []string
+			for _, p := range paths {
+				if p != "" {
+					filteredPaths = append(filteredPaths, p)
+				}
+			}
+
+			if len(filteredPaths) > 0 {
+				data, name, err := GetMerklePathData(merkle, filteredPaths, fileName, f, wallet, myIp, req.URL.Path, raw)
+				if err != nil {
+					v := types.ErrorResponse{
+						Error: err.Error(),
+					}
+					w.WriteHeader(http.StatusInternalServerError)
+					_ = json.NewEncoder(w).Encode(v)
+					return
+				}
+
+				rs := bytes.NewReader(data)
+				http.ServeContent(w, req, name, time.Time{}, rs)
+				return // Add this return to prevent executing the code below
+			}
+		}
+
+		// This code will only run if there's no path or the path is empty
+
+		fileData, err := getMerkleData(merkle, fileName, f, wallet, myIp)
+		if err != nil {
+			v := types.ErrorResponse{
+				Error: err.Error(),
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(v)
+			return
+		}
+
+		if !raw {
+			folder, isFolder := getFolderData(fileData)
+			if isFolder {
+				folder.Merkle = merkle
+				htmlData, err := gateway.GenerateHTML(folder, req.URL.Path)
+				if err == nil {
+					fileData = htmlData
+				}
+			}
+		}
+
+		rs := bytes.NewReader(fileData)
+		http.ServeContent(w, req, fileName, time.Time{}, rs)
 	}
 }
