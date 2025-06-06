@@ -50,6 +50,9 @@ type App struct {
 	wallet       *wallet.Wallet
 }
 
+// NewApp initializes and returns a new App instance using the provided home directory.
+// It sets up configuration, data directories, database, IPFS datastore and blockstore, API server, wallet, and file system.
+// Returns the initialized App or an error if any component fails to initialize.
 func NewApp(home string) (*App, error) {
 	cfg, err := config.Init(home)
 	if err != nil {

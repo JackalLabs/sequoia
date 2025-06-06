@@ -146,6 +146,7 @@ func VersionCmd() *cobra.Command {
 	return r
 }
 
+// RootCmd creates and returns the root Cobra command for the Sequoia CLI, configuring global flags and adding all subcommands.
 func RootCmd() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "sequoia",
