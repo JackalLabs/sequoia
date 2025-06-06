@@ -2,8 +2,10 @@ package strays
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
+	"slices"
 	"time"
 
 	"github.com/JackalLabs/sequoia/file_system"
@@ -18,7 +20,7 @@ import (
 )
 
 // NewStrayManager creates and initializes a new StrayManager with the specified number of hands, authorizing each hand to transact on behalf of the provided wallet if not already authorized.
-func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
+func NewStrayManager(w *wallet.Wallet, queryClient types.QueryClient, q queue.Queue, interval int64, refreshInterval int64, handWallets []*wallet.Wallet) (*StrayManager, error) {
 	s := &StrayManager{
 		rand:            rand.New(rand.NewSource(time.Now().Unix())),
 		wallet:          w,
@@ -28,26 +30,30 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 		processed:       time.Time{},
 		refreshed:       time.Time{},
 		refreshInterval: time.Duration(refreshInterval),
+		queryClient:     queryClient,
 	}
 
-	for i := 0; i < handCount; i++ {
+	query := &types.QueryProvider{
+		Address: w.AccAddress(),
+	}
+
+	res, err := queryClient.Provider(context.Background(), query)
+	if err != nil {
+		return nil, errors.Join(errors.New("unable to query provider auth claimers"), err)
+	}
+
+	authList := res.Provider.AuthClaimers
+
+	for i, wallet := range handWallets {
 		log.Info().Msg(fmt.Sprintf("Authorizing hand %d to transact on my behalf...", i))
 
 		h, err := s.NewHand(q)
 		if err != nil {
-			log.Error().Err(err)
-			continue
+			log.Error().Err(err).Int("index", i).Msg("Failed to create hand")
+			return nil, err
 		}
 
-		alreadyAuth := false
-		for _, auth := range authList {
-			if auth == h.Address() {
-				alreadyAuth = true
-				break
-			}
-		}
-
-		if alreadyAuth {
+		if slices.Contains(authList, wallet.AccAddress()) { // already authorized
 			continue
 		}
 
@@ -60,20 +66,17 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 
 		wadd, err := sdk.AccAddressFromBech32(w.AccAddress())
 		if err != nil {
-			log.Error().Err(err)
-			continue
+			return nil, err
 		}
 
 		hadd, err := sdk.AccAddressFromBech32(h.Address())
 		if err != nil {
-			log.Error().Err(err)
-			continue
+			return nil, err
 		}
 
 		grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, wadd, hadd)
 		if nerr != nil {
-			log.Error().Err(nerr)
-			continue
+			return nil, err
 		}
 
 		m, wg := q.Add(msg)
@@ -82,19 +85,19 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 		wg.Wait()
 
 		if m.Error() != nil {
-			log.Error().Err(m.Error())
+			return nil, err
 		}
 	}
 
-	return s
+	return s, nil
 }
 
-func (s *StrayManager) Start(f *file_system.FileSystem, q *queue.Queue, myUrl string, chunkSize int64) {
+func (s *StrayManager) Start(f *file_system.FileSystem, queryClient types.QueryClient, q queue.Queue, myUrl string, chunkSize int64) {
 	s.running = true
 	defer log.Info().Msg("StrayManager stopped")
 
 	for _, hand := range s.hands {
-		go hand.Start(f, s.wallet, q, myUrl, chunkSize)
+		go hand.Start(f, s.wallet, queryClient, q, myUrl, chunkSize)
 	}
 
 	for s.running {
@@ -106,9 +109,7 @@ func (s *StrayManager) Start(f *file_system.FileSystem, q *queue.Queue, myUrl st
 		if s.refreshed.Add(time.Second * s.refreshInterval).Before(time.Now()) {
 			err := s.RefreshList()
 			if err != nil {
-				log.Error().Err(err)
-
-				log.Info().Msg("failed refresh")
+				log.Error().Err(err).Msg("failed refresh")
 			}
 			s.refreshed = time.Now()
 		}
@@ -173,9 +174,7 @@ func (s *StrayManager) RefreshList() error {
 		Pagination:      page,
 	}
 
-	cl := types.NewQueryClient(s.wallet.Client.GRPCConn)
-
-	res, err := cl.OpenFiles(context.Background(), queryParams)
+	res, err := s.queryClient.OpenFiles(context.Background(), queryParams)
 	if err != nil {
 		return err
 	}

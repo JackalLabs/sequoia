@@ -16,6 +16,7 @@ import (
 	"time"
 
 	apiTypes "github.com/JackalLabs/sequoia/api/types"
+	"github.com/JackalLabs/sequoia/testutil"
 	"github.com/libp2p/go-libp2p/core/peer"
 
 	"github.com/JackalLabs/sequoia/file_system"
@@ -24,14 +25,13 @@ import (
 
 	"github.com/JackalLabs/sequoia/monitoring"
 
-	"github.com/cosmos/gogoproto/grpc"
-
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/config"
 	"github.com/JackalLabs/sequoia/logger"
 	"github.com/JackalLabs/sequoia/proofs"
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/JackalLabs/sequoia/strays"
+	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	badger "github.com/dgraph-io/badger/v4"
@@ -41,19 +41,31 @@ import (
 
 type App struct {
 	api          *api.API
-	q            *queue.Queue
+	q            queue.Queue
 	prover       *proofs.Prover
 	strayManager *strays.StrayManager
 	home         string
 	monitor      *monitoring.Monitor
 	fileSystem   *file_system.FileSystem
 	wallet       *wallet.Wallet
+	queryClient  storageTypes.QueryClient
+}
+
+type Option func(*App)
+
+func WithTestMode() Option {
+	return func(app *App) {
+		app.queryClient = testutil.NewFakeStorageQueryClient()
+		app.wallet.Client.AuthClient = testutil.NewFakeAuthQueryClient(app.wallet)
+		app.wallet.Client.RPCClient = testutil.NewFakeRPCClient()
+		app.wallet.Client.TxClient = testutil.NewFakeServiceClient()
+	}
 }
 
 // NewApp initializes and returns a new App instance using the provided home directory.
 // It sets up configuration, data directories, database, IPFS datastore and blockstore, API server, wallet, and file system.
 // Returns the initialized App or an error if any component fails to initialize.
-func NewApp(home string) (*App, error) {
+func NewApp(home string, opts ...Option) (*App, error) {
 	cfg, err := config.Init(home)
 	if err != nil {
 		return nil, err
@@ -108,12 +120,22 @@ func NewApp(home string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &App{
-		fileSystem: f,
-		api:        apiServer,
-		home:       home,
-		wallet:     w,
-	}, nil
+
+	queryClient := storageTypes.NewQueryClient(w.Client.GRPCConn)
+
+	app := &App{
+		fileSystem:  f,
+		api:         apiServer,
+		home:        home,
+		wallet:      w,
+		queryClient: queryClient,
+	}
+
+	for _, opt := range opts {
+		opt(app)
+	}
+
+	return app, nil
 }
 
 func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
@@ -182,12 +204,10 @@ func updateIp(wallet *wallet.Wallet, ip string) error {
 	return nil
 }
 
-func (a *App) GetStorageParams(client grpc.ClientConn) (storageTypes.Params, error) {
+func (a *App) GetStorageParams(queryClient storageTypes.QueryClient) (storageTypes.Params, error) {
 	queryParams := &storageTypes.QueryParams{}
 
-	cl := storageTypes.NewQueryClient(client)
-
-	res, err := cl.Params(context.Background(), queryParams)
+	res, err := queryClient.Params(context.Background(), queryParams)
 	if err != nil {
 		return storageTypes.Params{}, err
 	}
@@ -208,11 +228,13 @@ func (a *App) Start() error {
 		Address: myAddress,
 	}
 
-	cl := storageTypes.NewQueryClient(a.wallet.Client.GRPCConn)
+	offsetWalletCount := cfg.QueueConfig.QueueThreads + int8(cfg.StrayManagerCfg.HandCount)
+	offsetWallets, err := sequoiaWallet.CreateOffsetWallets(a.wallet, int(offsetWalletCount))
+	if err != nil {
+		return err
+	}
 
-	claimers := make([]string, 0)
-
-	res, err := cl.Provider(context.Background(), queryParams)
+	res, err := a.queryClient.Provider(context.Background(), queryParams)
 	if err != nil {
 		log.Info().Err(err).Msg("Provider does not exist on network or is not connected...")
 		err := initProviderOnChain(a.wallet, cfg.Ip, cfg.TotalSpace)
@@ -227,7 +249,6 @@ func (a *App) Start() error {
 			Str("burned_contracts", res.Provider.BurnedContracts).
 			Str("keybase_identity", res.Provider.KeybaseIdentity).
 			Msg("provider query result")
-		claimers = res.Provider.AuthClaimers
 
 		totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
 		if err != nil {
@@ -247,22 +268,40 @@ func (a *App) Start() error {
 		}
 	}
 
-	params, err := a.GetStorageParams(a.wallet.Client.GRPCConn)
+	params, err := a.GetStorageParams(a.queryClient)
 	if err != nil {
 		return err
 	}
 
-	a.q = queue.NewQueue(a.wallet, cfg.QueueInterval)
+	queueWallets := offsetWallets[:cfg.QueueConfig.QueueThreads]
+	a.q, err = queue.NewPool(a.wallet, a.queryClient, queueWallets, cfg.QueueConfig)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to initialize Queue module")
+		return err
+	}
+
 	go a.q.Listen()
 
-	prover := proofs.NewProver(a.wallet, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
+	prover := proofs.NewProver(a.wallet, a.queryClient, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
 
 	myUrl := cfg.Ip
 
 	log.Info().Msg(fmt.Sprintf("Provider started as: %s", myAddress))
 
 	a.prover = prover
-	a.strayManager = strays.NewStrayManager(a.wallet, a.q, cfg.StrayManagerCfg.CheckInterval, cfg.StrayManagerCfg.RefreshInterval, cfg.StrayManagerCfg.HandCount, claimers)
+	handWallets := offsetWallets[cfg.QueueConfig.QueueThreads:]
+	strayManager, err := strays.NewStrayManager(
+		a.wallet,
+		a.queryClient,
+		a.q,
+		cfg.StrayManagerCfg.CheckInterval,
+		cfg.StrayManagerCfg.RefreshInterval,
+		handWallets)
+	if err != nil {
+		return err
+	}
+	a.strayManager = strayManager
+
 	a.monitor = monitoring.NewMonitor(a.wallet)
 
 	// Starting the 4 concurrent services
@@ -270,9 +309,10 @@ func (a *App) Start() error {
 		// nolint:all
 		go a.ConnectPeers()
 	}
-	go a.api.Serve(a.fileSystem, a.prover, a.wallet, params.ChunkSize, myUrl)
+	go a.api.Serve(a.fileSystem, a.prover, a.wallet, a.queryClient, myUrl, params.ChunkSize)
 	go a.prover.Start()
-	go a.strayManager.Start(a.fileSystem, a.q, myUrl, params.ChunkSize)
+	go a.strayManager.Start(a.fileSystem, a.queryClient, a.q, myUrl, params.ChunkSize)
+
 	go a.monitor.Start()
 
 	done := make(chan os.Signal, 1)
@@ -298,16 +338,15 @@ func (a *App) Start() error {
 func (a *App) ConnectPeers() {
 	log.Info().Msg("Starting IPFS Peering cycle...")
 	ctx := context.Background()
-	queryClient := storageTypes.NewQueryClient(a.wallet.Client.GRPCConn)
 
-	activeProviders, err := queryClient.ActiveProviders(ctx, &storageTypes.QueryActiveProviders{})
+	activeProviders, err := a.queryClient.ActiveProviders(ctx, &storageTypes.QueryActiveProviders{})
 	if err != nil {
 		log.Warn().Msg("Cannot get active provider list. Won't try IPFS Peers.")
 		return
 	}
 
 	for _, provider := range activeProviders.Providers {
-		providerDetails, err := queryClient.Provider(ctx, &storageTypes.QueryProvider{
+		providerDetails, err := a.queryClient.Provider(ctx, &storageTypes.QueryProvider{
 			Address: provider.Address,
 		})
 		if err != nil {
