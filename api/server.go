@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/JackalLabs/sequoia/config"
+
 	"github.com/JackalLabs/sequoia/api/types"
 
 	"github.com/rs/cors"
@@ -28,11 +30,14 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 type API struct {
 	port int64
 	srv  *http.Server
+	cfg  *config.APIConfig
 }
 
-func NewAPI(port int64) *API {
+// NewAPI creates a new API instance using the provided API configuration.
+func NewAPI(cfg *config.APIConfig) *API {
 	return &API{
-		port: port,
+		port: cfg.Port,
+		cfg:  cfg,
 	}
 }
 
@@ -56,6 +61,11 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	outline.RegisterPostRoute(r, "/v2/status/{id}", CheckUploadStatus())
 	outline.RegisterPostRoute(r, "/api/jobs", ListJobsHandler())
 	outline.RegisterGetRoute(r, "/download/{merkle}", DownloadFileHandler(f))
+
+	if a.cfg.OpenGateway {
+		outline.RegisterGetRoute(r, "/get/{merkle}/{path:.*}", FindFileHandler(f, wallet, myIp))
+		outline.RegisterGetRoute(r, "/get/{merkle}", FindFileHandler(f, wallet, myIp))
+	}
 
 	outline.RegisterGetRoute(r, "/list", ListFilesHandler(f))
 	outline.RegisterGetRoute(r, "/api/client/list", ListFilesHandler(f))

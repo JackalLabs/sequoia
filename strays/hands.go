@@ -10,7 +10,6 @@ import (
 
 	"github.com/JackalLabs/sequoia/network"
 	"github.com/JackalLabs/sequoia/queue"
-	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/rs/zerolog/log"
@@ -70,7 +69,7 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, queryClie
 		}
 
 		msg := &types.MsgPostProof{
-			Creator:  h.Address(),
+			Creator:  wallet.AccAddress(),
 			Item:     chunk,
 			HashList: jproof,
 			Merkle:   merkle,
@@ -78,22 +77,26 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, queryClie
 			Start:    start,
 		}
 
-		data := walletTypes.NewTransactionData(
-			msg,
-		).WithGasAuto().WithFeeAuto()
+		//data := walletTypes.NewTransactionData(
+		//	msg,
+		//).WithGasAuto().WithFeeAuto()
 
-		res, err := h.wallet.BroadcastTxCommit(data)
-		if err != nil {
-			log.Error().Err(err)
-			h.stray = nil
-			continue
-		}
+		m, wg := q.Add(msg)
 
-		if res != nil {
-			if res.Code > 0 {
-				log.Info().Msg(res.RawLog)
+		//res, err := h.wallet.BroadcastTxCommit(data)
+		//if err != nil {
+		//	log.Error().Err(err)
+		//	h.stray = nil
+		//	continue
+		//}
+
+		if m.Res() != nil {
+			if m.Res().Code > 0 {
+				log.Info().Msg(m.Res().RawLog)
 			}
 		}
+
+		wg.Wait()
 
 		h.stray = nil
 
