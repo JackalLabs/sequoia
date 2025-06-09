@@ -100,11 +100,18 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	}
 
 	log.Logger.Info().Msg(fmt.Sprintf("Sequoia API now listening on %s", a.srv.Addr))
-	err := a.srv.ListenAndServe()
-	if err != nil {
-		if !errors.Is(err, http.ErrServerClosed) {
-			log.Warn().Err(err)
-			return
-		}
+
+	// Create a channel to listen for errors coming from the listener.
+	serverErrors := make(chan error, 1)
+
+	go func() {
+		serverErrors <- a.srv.ListenAndServe()
+	}()
+
+	// Wait for server error
+	err := <-serverErrors
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Warn().Err(err).Msg("server error")
+		return
 	}
 }
