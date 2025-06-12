@@ -85,7 +85,7 @@ func NewStrayManager(w *wallet.Wallet, queryClient types.QueryClient, q queue.Qu
 		wg.Wait()
 
 		if m.Error() != nil {
-			return nil, err
+			return nil, m.Error()
 		}
 	}
 
