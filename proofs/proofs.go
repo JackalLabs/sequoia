@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
@@ -34,7 +35,7 @@ const (
 )
 
 func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (bool, *merkletree.Proof, error) {
-	log.Debug().Msg(fmt.Sprintf("Generating Merkle proof for %d", index))
+	log.Debug().Msg(fmt.Sprintf("Generating Merkle proof for index: %d", index))
 
 	h := sha256.New()
 	_, err := fmt.Fprintf(h, "%d%x", index, item)
@@ -58,14 +59,14 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (b
 //
 // returns proof, item and error
 func GenProof(io FileSystem, merkle []byte, owner string, start int64, block int, chunkSize int, proofType int64) ([]byte, []byte, error) {
+	log.Debug().Msg(fmt.Sprintf("About to generate merkle proof for file: %x", merkle))
+
 	tree, chunk, err := io.GetFileTreeByChunk(merkle, owner, start, block, chunkSize, proofType)
 	if err != nil {
 		e := fmt.Errorf("cannot get chunk for %x at %d | %w", merkle, block, err)
 		log.Error().Err(e)
 		return nil, nil, e
 	}
-
-	log.Debug().Msg(fmt.Sprintf("About to generate merkle proof for %x", merkle))
 
 	valid, proof, err := GenerateMerkleProof(tree, block, chunk)
 	if err != nil {
@@ -95,9 +96,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 		Start:  start,
 	}
 
-	cl := types.NewQueryClient(p.wallet.Client.GRPCConn)
-
-	res, err := cl.File(context.Background(), queryParams)
+	res, err := p.query.File(context.Background(), queryParams)
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -122,7 +121,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 
 	if file.ContainsProver(p.wallet.AccAddress()) {
 		// file is ours
-		proofRes, err := cl.Proof(context.Background(), proofQuery)
+		proofRes, err := p.query.Proof(context.Background(), proofQuery)
 		if err == nil {
 			newProof = proofRes.Proof // found the proof, we're good to go
 		}
@@ -295,7 +294,7 @@ func (p *Prover) Start() {
 			continue
 		}
 
-		log.Debug().Msg("Starting proof cycle...")
+		log.Debug().Time("start at", p.processed).Msg("Starting proof cycle...")
 
 		abciInfo, err := p.wallet.Client.RPCClient.ABCIInfo(context.Background())
 		if err != nil {
@@ -312,15 +311,16 @@ func (p *Prover) Start() {
 
 				time.Sleep(time.Second * 5)
 			}
-			log.Debug().Msg(fmt.Sprintf("proving: %x", merkle))
+			log.Debug().Hex("merkle", merkle).Str("owner", owner).Int64("start", start).Msg("proving file")
 			filesProving.Inc()
 			p.Inc()
 			go p.wrapPostProof(merkle, owner, start, height, t)
 		})
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("something went wrong while processing files in this proving cycle")
 		}
 
+		log.Debug().Time("finish at", time.Now()).TimeDiff("duration", time.Now(), p.processed).Msg("End of proof cycle")
 		p.processed = time.Now()
 	}
 	log.Info().Msg("Prover module stopped")
@@ -387,16 +387,18 @@ func (p *Prover) Stop() {
 	p.running = false
 }
 
-func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval int64, threads int16, chunkSize int) *Prover {
+func NewProver(wallet *wallet.Wallet, query types.QueryClient, q queue.Queue, io FileSystem, interval int64, threads int16, chunkSize int) *Prover {
 	p := Prover{
-		running:   false,
-		wallet:    wallet,
-		q:         q,
-		processed: time.Time{},
-		interval:  interval,
-		io:        io,
-		threads:   threads,
-		chunkSize: chunkSize,
+		running:        false,
+		wallet:         wallet,
+		query:          query,
+		q:              q,
+		processed:      time.Time{},
+		interval:       interval,
+		io:             io,
+		threads:        int32(threads),
+		currentThreads: atomic.Int32{},
+		chunkSize:      chunkSize,
 	}
 
 	return &p
