@@ -104,13 +104,8 @@ func (h *Hand) Take(stray *types.UnifiedFile) {
 	h.stray = stray
 }
 
-func (s *StrayManager) NewHand(q queue.Queue) (*Hand, error) {
+func (s *StrayManager) NewHand(q queue.Queue, w *wallet.Wallet) (*Hand, error) {
 	offset := byte(len(s.hands)) + 1
-
-	w, err := s.wallet.CloneWalletOffset(offset)
-	if err != nil {
-		return nil, err
-	}
 
 	h := &Hand{
 		offset: offset,

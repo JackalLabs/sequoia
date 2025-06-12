@@ -47,7 +47,7 @@ func NewStrayManager(w *wallet.Wallet, queryClient types.QueryClient, q queue.Qu
 	for i, wallet := range handWallets {
 		log.Info().Msg(fmt.Sprintf("Authorizing hand %d to transact on my behalf...", i))
 
-		h, err := s.NewHand(q)
+		h, err := s.NewHand(q, wallet)
 		if err != nil {
 			log.Error().Err(err).Int("index", i).Msg("Failed to create hand")
 			return nil, err
