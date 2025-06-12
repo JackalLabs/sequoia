@@ -61,6 +61,7 @@ type StrayManagerConfig struct {
 	HandCount       int   `yaml:"hands" mapstructure:"hands"`
 }
 
+// DefaultStrayManagerConfig returns the default configuration for the stray manager, setting check and refresh intervals and the hand count.
 func DefaultStrayManagerConfig() StrayManagerConfig {
 	return StrayManagerConfig{
 		CheckInterval:   30,
@@ -70,18 +71,21 @@ func DefaultStrayManagerConfig() StrayManagerConfig {
 }
 
 type APIConfig struct {
-	Port       int64  `yaml:"port" mapstructure:"port"`
-	IPFSPort   int    `yaml:"ipfs_port" mapstructure:"ipfs_port"`
-	IPFSDomain string `yaml:"ipfs_domain" mapstructure:"ipfs_domain"`
-	IPFSSearch bool   `yaml:"ipfs_search" mapstructure:"ipfs_search"`
+	Port        int64  `yaml:"port" mapstructure:"port"`
+	IPFSPort    int    `yaml:"ipfs_port" mapstructure:"ipfs_port"`
+	IPFSDomain  string `yaml:"ipfs_domain" mapstructure:"ipfs_domain"`
+	IPFSSearch  bool   `yaml:"ipfs_search" mapstructure:"ipfs_search"`
+	OpenGateway bool   `yaml:"open_gateway" mapstructure:"open_gateway"`
 }
 
+// DefaultAPIConfig returns the default APIConfig with preset ports, IPFS domain, search enabled, and an open gateway.
 func DefaultAPIConfig() APIConfig {
 	return APIConfig{
-		Port:       3333,
-		IPFSPort:   4005,
-		IPFSDomain: "dns4/ipfs.example.com/tcp/4001",
-		IPFSSearch: true,
+		Port:        3333,
+		IPFSPort:    4005,
+		IPFSDomain:  "dns4/ipfs.example.com/tcp/4001",
+		IPFSSearch:  true,
+		OpenGateway: true,
 	}
 }
 

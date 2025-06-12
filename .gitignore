@@ -3,3 +3,7 @@ data
 /coverage.txt
 *.log
 sequoia
+*.txt
+*.json
+~
+.DS_Store
