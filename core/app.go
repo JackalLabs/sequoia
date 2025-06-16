@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"os/signal"
 	"path"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -37,6 +39,9 @@ import (
 	badger "github.com/dgraph-io/badger/v4"
 	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/rs/zerolog/log"
+
+	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
 )
 
 type App struct {
@@ -249,19 +254,27 @@ func (a *App) Start() error {
 			Str("burned_contracts", res.Provider.BurnedContracts).
 			Str("keybase_identity", res.Provider.KeybaseIdentity).
 			Msg("provider query result")
+	}
 
-		totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
+	totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
+	if err != nil {
+		return err
+	}
+	if totalSpace != cfg.TotalSpace {
+		err := updateSpace(a.wallet, cfg.TotalSpace)
 		if err != nil {
 			return err
 		}
-		if totalSpace != cfg.TotalSpace {
-			err := updateSpace(a.wallet, cfg.TotalSpace)
-			if err != nil {
-				return err
-			}
+	}
+	if res.Provider.Ip != cfg.Ip {
+		err := updateIp(a.wallet, cfg.Ip)
+		if err != nil {
+			return err
 		}
-		if res.Provider.Ip != cfg.Ip {
-			err := updateIp(a.wallet, cfg.Ip)
+	}
+	for _, w := range offsetWallets {
+		if !slices.Contains(res.Provider.AuthClaimers, w.AccAddress()) {
+			err = a.authorizeClaimer(w)
 			if err != nil {
 				return err
 			}
@@ -333,6 +346,40 @@ func (a *App) Start() error {
 	a.fileSystem.Close()
 
 	return nil
+}
+
+func (a *App) authorizeClaimer(claimer *wallet.Wallet) error {
+	allowance := feegrant.BasicAllowance{
+		SpendLimit: nil,
+		Expiration: nil,
+	}
+
+	wadd, err := types.AccAddressFromBech32(a.wallet.AccAddress())
+	if err != nil {
+		return err
+	}
+
+	hadd, err := types.AccAddressFromBech32(claimer.AccAddress())
+	if err != nil {
+		return err
+	}
+
+	grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, wadd, hadd)
+	if nerr != nil {
+		return err
+	}
+	msg := storageTypes.NewMsgAddClaimer(a.wallet.AccAddress(), claimer.AccAddress())
+	txData := walletTypes.NewTransactionData(msg, grantMsg).WithFeeAuto().WithGasAuto()
+
+	res, err := a.wallet.BroadcastTxCommit(txData)
+	if err != nil {
+		return errors.Join(errors.New("unable to broadcast MsgAddClaimer"), err)
+	}
+
+	log.Info().Str("claimer", claimer.AccAddress()).Type("msg_type", msg).Str("tx_hash", res.TxHash).Msg("added new claimer")
+
+	return nil
+
 }
 
 func (a *App) ConnectPeers() {
