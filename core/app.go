@@ -246,15 +246,15 @@ func (a *App) Start() error {
 		if err != nil {
 			return err
 		}
+	} else {
+		log.Debug().
+			Str("address", res.Provider.Address).
+			Str("ip", res.Provider.Ip).
+			Str("totalspace", res.Provider.Totalspace).
+			Str("burned_contracts", res.Provider.BurnedContracts).
+			Str("keybase_identity", res.Provider.KeybaseIdentity).
+			Msg("provider query result")
 	}
-
-	log.Debug().
-		Str("address", res.Provider.Address).
-		Str("ip", res.Provider.Ip).
-		Str("totalspace", res.Provider.Totalspace).
-		Str("burned_contracts", res.Provider.BurnedContracts).
-		Str("keybase_identity", res.Provider.KeybaseIdentity).
-		Msg("provider query result")
 
 	totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
 	if err != nil {
