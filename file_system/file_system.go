@@ -551,11 +551,10 @@ func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 			return err
 		}
 
-		_ = b.Value(func(val []byte) error {
+		return b.Value(func(val []byte) error {
 			fcid = string(val)
 			return nil
 		})
-		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot get cid mapping from disk: %w", err)
@@ -586,12 +585,16 @@ func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 
 		return nil, fmt.Errorf("cannot get file for cid '%s': %w", c.String(), err)
 	}
-	//nolint:errcheck
-	defer rsc.Close()
+	defer func() {
+		if err := rsc.Close(); err != nil {
+			log.Error().Err(err).Msg("error closing file resource")
+		}
+	}()
+
 	fileData, err := io.ReadAll(rsc)
 	if err != nil {
 		return nil, err
 	}
 
-	return fileData, err
+	return fileData, nil
 }
