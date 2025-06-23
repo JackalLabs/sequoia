@@ -249,10 +249,7 @@ func (a *App) Start() error {
 			Str("ip", cfg.Ip).
 			Int64("total_space", cfg.TotalSpace).
 			Msg("attempting to register provider on network")
-		err := initProviderOnChain(a.wallet, cfg.Ip, cfg.TotalSpace)
-		if err != nil {
-			return err
-		}
+		return initProviderOnChain(a.wallet, cfg.Ip, cfg.TotalSpace)
 	} else if err != nil {
 		log.Info().Err(err).Msg("Network is unreachable...")
 		return err
