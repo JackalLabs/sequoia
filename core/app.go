@@ -20,6 +20,8 @@ import (
 	apiTypes "github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/testutil"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/JackalLabs/sequoia/ipfs"
@@ -240,21 +242,29 @@ func (a *App) Start() error {
 	}
 
 	res, err := a.queryClient.Provider(context.Background(), queryParams)
-	if err != nil {
-		log.Info().Err(err).Msg("Provider does not exist on network or is not connected...")
+	if code := status.Code(err); code == codes.NotFound {
+		log.Info().Err(err).Msg("Provider does not exist on network")
+		log.Info().
+			Str("address", myAddress).
+			Str("ip", cfg.Ip).
+			Int64("total_space", cfg.TotalSpace).
+			Msg("attempting to register provider on network")
 		err := initProviderOnChain(a.wallet, cfg.Ip, cfg.TotalSpace)
 		if err != nil {
 			return err
 		}
-	} else {
-		log.Debug().
-			Str("address", res.Provider.Address).
-			Str("ip", res.Provider.Ip).
-			Str("totalspace", res.Provider.Totalspace).
-			Str("burned_contracts", res.Provider.BurnedContracts).
-			Str("keybase_identity", res.Provider.KeybaseIdentity).
-			Msg("provider query result")
+	} else if err != nil {
+		log.Info().Err(err).Msg("Network is unreachable...")
+		return err
 	}
+
+	log.Debug().
+		Str("address", res.Provider.Address).
+		Str("ip", res.Provider.Ip).
+		Str("totalspace", res.Provider.Totalspace).
+		Str("burned_contracts", res.Provider.BurnedContracts).
+		Str("keybase_identity", res.Provider.KeybaseIdentity).
+		Msg("provider query result")
 
 	totalSpace, err := strconv.ParseInt(res.Provider.Totalspace, 10, 64)
 	if err != nil {
