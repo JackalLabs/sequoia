@@ -2,13 +2,14 @@ package queue
 
 import (
 	"errors"
-	"sync"
 	"time"
 
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
 	"github.com/cosmos/cosmos-sdk/types"
+
+	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 
 	"github.com/rs/zerolog/log"
 
@@ -17,30 +18,25 @@ import (
 )
 
 type worker struct {
-	id              int8
 	wallet          *wallet.Wallet // offset wallet
 	maxRetryAttempt int8
 	msgIn           <-chan *Message // worker stop if this closes
 	batch           []*Message
 	batchSize       int
 	txTimer         int
-	running         *sync.WaitGroup
 }
 
-func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRetryAttempt int8, msgIn <-chan *Message, running *sync.WaitGroup) *worker {
+func newWorker(id int8, wallet *wallet.Wallet, txTimer int, batchSize int, maxRetryAttempt int8, msgIn <-chan *Message) *worker {
 	return &worker{
-		id:              id,
 		wallet:          wallet,
 		maxRetryAttempt: int8(maxRetryAttempt),
 		msgIn:           msgIn,
 		batchSize:       batchSize,
 		txTimer:         txTimer,
-		running:         running,
 	}
 }
 
 func (w *worker) start() {
-	defer w.running.Done()
 	d := time.Duration(w.txTimer) * time.Second
 	timer := time.NewTimer(d) // if no msg comes for 5 seconds, broadcast tx
 run:
@@ -65,14 +61,22 @@ run:
 		}
 	}
 
-	log.Info().Int8("worker_id", w.id).Msg("queue worker stopped")
-	if len(w.batch) > 0 { // send the remaining messages
-		log.Info().Int8("id", w.id).Int("messages", len(w.batch)).Msg("sending remaining messages")
-		w.send()
+	log.Info().Str("worker_id", w.Id()).Msg("queue worker stopped")
+	if len(w.batch) > 0 {
+		log.Info().
+			Str("id", w.Id()).
+			Str("addr", w.wallet.AccAddress()).
+			Int("count", len(w.batch)).
+			Msg("worker discarded remaining messages in the queue")
 	}
 }
 
 func (w *worker) add(msg *Message) {
+	// broadcast message as auth claimer
+	if m, ok := msg.msg.(*storageTypes.MsgPostProof); ok {
+		m.Creator = w.wallet.AccAddress()
+		msg.msg = m
+	}
 	if w.batch == nil {
 		w.batch = []*Message{msg}
 		return
@@ -110,7 +114,7 @@ retry:
 
 	if a == int(w.maxRetryAttempt+1) {
 		log.Error().
-			Int8("id", w.id).
+			Str("id", w.Id()).
 			Int8("max attempt", w.maxRetryAttempt).
 			Int("msg size", len(msg)).
 			Err(err).
@@ -123,4 +127,8 @@ retry:
 		m.err = err
 		m.wg.Done()
 	}
+}
+
+func (w *worker) Id() string {
+	return w.wallet.AccAddress()[3:8]
 }
