@@ -29,6 +29,8 @@ jobs:
       - name: Install Venom
         shell: bash
         run: curl https://github.com/ovh/venom/releases/download/v1.2.0/venom.linux-amd64 -L -o /usr/local/bin/venom && chmod +x /usr/local/bin/venom
+      - name: Install sequoia
+        run: make install
       - name: Test
         shell: bash
         working-directory: ./test
