@@ -22,7 +22,7 @@ jobs:
         run: git checkout v4.6.1
       - name: Install canined
         working-directory: ./canined/canine-chain
-        run: install canined
+        run: make install
       - name: Get canined dependency
         run: wget https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so
       - uses: actions/checkout@v4.2.2
