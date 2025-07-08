@@ -33,7 +33,7 @@ jobs:
         run: |
           git checkout v4.6.1
           make install
-          wget -O /lib/libwasmvm.x86_64.so https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so
+          wget -O /lib/libwasmvm.x86_64.so https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so && chmod +x /lib/libwasmvm.x86_64.so
       - name: Install venom
         if: steps.cache-dependencies.outputs.cache-it != 'true'
         run: curl https://github.com/ovh/venom/releases/download/v1.2.0/venom.linux-amd64 -L -o /usr/local/bin/venom && chmod +x /usr/local/bin/venom
