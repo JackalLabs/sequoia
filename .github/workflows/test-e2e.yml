@@ -11,6 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v5
+      - name: Cache test dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            $GOPATH/bin
+            /lib
       - name: Build directory for canined
         shell: bash
         run: mkdir canined
@@ -24,7 +30,7 @@ jobs:
         working-directory: ./canined/canine-chain
         run: make install
       - name: Get canined dependency
-        run: wget https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so
+        run: wget -O /lib/libwasmvm.x86_64.so https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so
       - uses: actions/checkout@v4.2.2
       - name: Install Venom
         shell: bash
