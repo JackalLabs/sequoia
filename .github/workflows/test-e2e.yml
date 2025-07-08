@@ -13,32 +13,34 @@ jobs:
       - uses: actions/setup-go@v5
       - name: Cache test dependencies
         uses: actions/cache@v4
+        id: cache-dependencies
         with:
           path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
             /usr/local/bin
             $GOPATH/bin
             /lib
-          key: ${{ runner.os }}-${{ hashFiles('/usr/local/bin', '$GOPATH/bin', '/lib') }}
+          key: ${{ runner.os }}-${{ hashFiles('/usr/local/bin', '$GOPATH/bin', '/lib', '**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-
-      - name: Build directory for canined
-        shell: bash
-        run: mkdir canined
-      - name: Clone canined repo
-        working-directory: ./canined
+      - name: Clone canine-chain repo
+        if: steps.cache-dependencies.outputs.cache-it != 'true'
         run: git clone https://github.com/JackalLabs/canine-chain.git
-      - name: Checkout to version
-        working-directory: ./canined/canine-chain
-        run: git checkout v4.6.1
       - name: Install canined
-        working-directory: ./canined/canine-chain
-        run: make install
-      - name: Get canined dependency
-        run: wget -O /lib/libwasmvm.x86_64.so https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so
-      - uses: actions/checkout@v4.2.2
-      - name: Install Venom
-        shell: bash
+        if: steps.cache-dependencies.outputs.cache-it != 'true'
+        working-directory: ./canine-chain
+        run: |
+          git checkout v4.6.1
+          make install
+          wget -O /lib/libwasmvm.x86_64.so https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so
+      - name: Install venom
+        if: steps.cache-dependencies.outputs.cache-it != 'true'
         run: curl https://github.com/ovh/venom/releases/download/v1.2.0/venom.linux-amd64 -L -o /usr/local/bin/venom && chmod +x /usr/local/bin/venom
+      - uses: actions/checkout@v4.2.2
+      - name: Get sequoia build pkgs
+        if: steps.cache-dependencies.outputs.cache-it != 'true'
+        run: go mod download
       - name: Install sequoia
         run: make install
       - name: Test
