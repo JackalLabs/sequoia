@@ -18,5 +18,5 @@ jobs:
       - name: Test
         shell: bash
         working-directory: ./test
-        run: venom run e2e/init.yaml `find e2e/ -type f -name "*_test-*.yaml" | sort`
+        run: venom run -vv e2e/init.yaml `find e2e/ -type f -name "*_test-*.yaml" | sort`
 
