@@ -18,10 +18,10 @@ jobs:
         working-directory: ./canined
         run: git clone https://github.com/JackalLabs/canine-chain.git
       - name: Checkout to version
-        working-directory: ./canined
+        working-directory: ./canined/canine-chain
         run: git checkout v4.6.1
       - name: Install canined
-        working-directory: ./canined
+        working-directory: ./canined/canine-chain
         run: install canined
       - name: Get canined dependency
         run: wget https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so
