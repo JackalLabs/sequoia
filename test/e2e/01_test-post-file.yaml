@@ -1,0 +1,18 @@
+name: Test Sequoia File Upload
+description: Test file upload to sequoia
+vars:
+  dev-mode: false
+
+testcases:
+- name: Start sequoia and canine-chain containers
+  steps:
+  - script: docker compose up -d; sleep 5
+
+- name: Upload file to sequoia
+
+  steps:
+  - name: Upload file using canined
+    script: 'canined tx storage post ../../.assets/logo.png 500000 --dest http://localhost:3333 --max_proofs 1 --from j1 -y'
+    assertions:
+    - result.systemout ShouldContainSubstring 1ab5cd31e2d001fedad0b92abb01cf36f16e1c395c7880a67e2d18d39d81040d7732fa5a33d81bb33578243c54d60c8d5a56de604b1827243dc1feab39b4b3a6
+    - result.code ShouldEqual 0

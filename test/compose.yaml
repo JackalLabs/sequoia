@@ -1,0 +1,27 @@
+services:
+  chain:
+    build: ./resources/canine
+    image: e2e-test-chain
+    ports: 
+    - "26656:26656"
+    - "26657:26657"
+    - "1317:1317"
+    - "9092:9092"
+    - "9090:9090"
+
+  sequoia:
+    build:
+      context: ../
+      args:
+        RPC_ADDR: 'http:\/\/chain:26657'
+        GRPC_ADDR: "chain:9090"
+    image: e2e-test-sequoia
+    volumes:
+    - $HOME/.sequoia/provider_wallet.json:/root/.sequoia/provider_wallet.json
+    depends_on:
+    - chain
+    entrypoint: ["/bin/sh", "-c", "sleep 10 && sequoia start"]
+    ports:
+    - "3333:3333"
+    - "4005:4005"
+

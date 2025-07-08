@@ -16,10 +16,7 @@ BROADCASTMODE="block"
 
 command -v jq > /dev/null 2>&1 || { echo >&2 "jq not installed. More info: https://stedolan.github.io/jq/download/"; exit 1; }
 
-from_scratch () {
-    # remove existing daemon
-    rm -rf ~/.canine/*
-
+add_keys () {
     # jkl1hj5fveer5cjtn4wd6wstzugjfdxzl0xpljur4u '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"ApZa31BR3NWLylRT6Qi5+f+zXtj2OpqtC76vgkUGLyww"}'
     echo "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry" | canined keys add $KEY --keyring-backend $KEYRING --algo $KEYALGO --recover
     # j2 jkl1s00nvkagel9xe6luqmmd09jt6jgjl7qu57prct  '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"Ah3VzRghgXLn8IA2AH6qaoiuBwZv3ADg3gNPFTo92FwM"}'
@@ -28,6 +25,13 @@ from_scratch () {
     echo "video pluck level diagram maximum grant make there clog tray enrich book hawk confirm spot you book vendor ensure theory sure jewel sort basket" | canined keys add $KEY1 --algo $KEYALGO --keyring-backend $KEYRING --recover
 
     echo "flock stereo dignity lawsuit mouse page faith exact mountain clinic hazard parent arrest face couch asset jump feed benefit upper hair scrap loud spirit" | canined keys add $KEY2 --algo $KEYALGO --keyring-backend $KEYRING --recover
+}
+
+from_scratch () {
+    # remove existing daemon
+    rm -rf ~/.canine/*
+
+	add_keys
 
     canined init $MONIKER --chain-id $CHAINID
 

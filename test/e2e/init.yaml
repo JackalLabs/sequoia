@@ -1,0 +1,58 @@
+name: Test Sequoia Initialization
+description: Test provider Initialization on chain
+vars:
+  dev-mode: false
+  faucet: jkl1hj5fveer5cjtn4wd6wstzugjfdxzl0xpljur4u
+
+testcases:
+- name: Initialize canine-chain and sequoia configs
+  skip:
+  - dev-mode ShouldEqual false
+
+  steps:
+  - name: Delete existing docker containers
+    script: "docker compose down"
+
+  - name: Initialize sequoia config
+    script: "rm -rf $HOME/.sequoia; sequoia init"
+
+  - name: Initialize canined config
+    script: "rm -rf $HOME/.canine; ../resources/canine/setup-chain.sh"
+
+  - name: Build and start canined container
+    script: "docker compose up -d chain; sleep 5" # wait for the chain to open api
+
+- name: Fund sequoia provider wallet
+  skip:
+  - dev-mode ShouldEqual false
+
+  steps:
+  - name: Get provider address
+    script: "sequoia wallet address | sed 's/Provider Address: //'"
+    vars:
+      address:
+        from: result.systemout
+
+  - name: Fund provider
+    info: "provider address {{.address}}"
+    script: "canined tx bank send {{.faucet}} {{.address}} 100000000000ujkl -y"
+    retry: 3
+    delay: 10
+    assertions:
+    - result.code ShouldEqual 0
+
+- name: Start sequoia
+  steps:
+  - name: Build and start sequoia container
+    script: "docker compose up -d sequoia"
+    assertions:
+    - result.code ShouldEqual 0
+
+- name: Verify provider registration on chain
+  steps:
+  - script: "canined query storage show-providers {{.Fund-sequoia-provider-wallet.address}}"
+    retry: 3
+    delay: 10 # bump this number if provider takes longer to start up
+    assertions:
+    - result.systemout ShouldContainSubstring {{.Fund-sequoia-provider-wallet.address}}
+    - result.code ShouldEqual 0
