@@ -14,6 +14,6 @@ jobs:
       - uses: actions/setup-go@v5
       - name: Test
         shell: bash
-        run: cd test
+        working-directory: ./test
         run: venom run e2e/init.yaml `find e2e/ -type f -name "*_test-*.yaml" | sort`
 
