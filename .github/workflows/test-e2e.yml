@@ -1,0 +1,19 @@
+name: End-to-end Test
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-go@v5
+      - name: Test
+        shell: bash
+        run: cd test
+        run: venom run e2e/init.yaml `find e2e/ -type f -name "*_test-*.yaml" | sort`
+
