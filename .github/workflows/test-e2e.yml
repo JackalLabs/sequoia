@@ -15,8 +15,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
+            /usr/local/bin
             $GOPATH/bin
             /lib
+          key: ${{ runner.os }}-${{ hashFiles('/usr/local/bin', '$GOPATH/bin', '/lib') }}
+          restore-keys: |
+            ${{ runner.os }}-
       - name: Build directory for canined
         shell: bash
         run: mkdir canined
