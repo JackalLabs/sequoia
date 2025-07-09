@@ -47,6 +47,7 @@ jobs:
         working-directory: ./sequoia
         run: go mod download
       - name: Install sequoia
+        working-directory: ./sequoia
         run: make install
       - name: Test
         shell: bash
