@@ -24,9 +24,8 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('/usr/local/bin', '$GOPATH/bin', '/lib', '**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-
-      - name: Clone canine-chain repo
-        if: steps.cache-dependencies.outputs.cache-it != 'true'
       - uses: actions/checkout@v4.2.2
+        if: steps.cache-dependencies.outputs.cache-it != 'true'
         with:
           repository: JackalLabs/canine-chain
           ref: v4.6.1
