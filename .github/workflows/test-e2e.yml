@@ -26,25 +26,31 @@ jobs:
             ${{ runner.os }}-
       - name: Clone canine-chain repo
         if: steps.cache-dependencies.outputs.cache-it != 'true'
-        run: git clone https://github.com/JackalLabs/canine-chain.git
+      - uses: actions/checkout@v4.2.2
+        with:
+          repository: JackalLabs/canine-chain
+          ref: v4.6.1
+          path: canine-chain
       - name: Install canined
         if: steps.cache-dependencies.outputs.cache-it != 'true'
         working-directory: ./canine-chain
         run: |
-          wget -O /lib/libwasmvm.x86_64.so https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so && chmod +x /lib/libwasmvm.x86_64.so
-          git checkout v4.6.1
+          wget -O /lib/libwasmvm.x86_64.so https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so
           make install
       - name: Install venom
         if: steps.cache-dependencies.outputs.cache-it != 'true'
         run: curl https://github.com/ovh/venom/releases/download/v1.2.0/venom.linux-amd64 -L -o /usr/local/bin/venom && chmod +x /usr/local/bin/venom
       - uses: actions/checkout@v4.2.2
+        with:
+          path: sequoia
       - name: Get sequoia build pkgs
         if: steps.cache-dependencies.outputs.cache-it != 'true'
+        working-directory: ./sequoia
         run: go mod download
       - name: Install sequoia
         run: make install
       - name: Test
         shell: bash
-        working-directory: ./test
+        working-directory: ./sequoia/test
         run: venom run -vv e2e/init.yaml `find e2e/ -type f -name "*_test-*.yaml" | sort`
 
