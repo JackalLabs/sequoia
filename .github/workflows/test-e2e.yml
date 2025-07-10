@@ -53,4 +53,7 @@ jobs:
         shell: bash
         working-directory: ./sequoia/test
         run: venom run -vv e2e/init.yaml `find e2e/ -type f -name "*_test-*.yaml" | sort`
+      - name: Stop containers
+        working-directory: ./sequoia/test
+        run: docker compose down
 
