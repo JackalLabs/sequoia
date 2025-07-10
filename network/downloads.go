@@ -2,6 +2,8 @@ package network
 
 import (
 	"bytes"
+	"compress/flate"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +12,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/andybalholm/brotli"
 
 	apiTypes "github.com/JackalLabs/sequoia/api/types"
 
@@ -79,7 +83,7 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 // Returns the number of bytes written, or an error if the download or write fails. Timeout and HTTP errors are
 // reported with detailed messages.
 func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams, fileSize int64) (int, error) {
-	log.Info().Msg(fmt.Sprintf("Downloading %x from %s...", merkle, url))
+	log.Info().Msgf("Downloading %x from %s...", merkle, url)
 
 	// Calculate timeout based on file size
 	// Base timeout + additional time for large files
@@ -153,6 +157,29 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	//nolint:errcheck
 	defer resp.Body.Close()
 
+	var bodyReader io.Reader = resp.Body
+	contentEncoding := resp.Header.Get("Content-Encoding")
+	log.Info().Str("merkle", fmt.Sprintf("%x", merkle)).Msgf("Downloads content encoding: %s", contentEncoding)
+	switch contentEncoding {
+	case "gzip":
+		gz, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create gzip reader: %w", err)
+		}
+		//nolint:errcheck
+		defer gz.Close()
+		bodyReader = gz
+	case "deflate":
+		deflateReader := flate.NewReader(resp.Body)
+		//nolint:errcheck
+		defer deflateReader.Close()
+		bodyReader = deflateReader
+	case "br":
+		bodyReader = brotli.NewReader(resp.Body)
+	default:
+		// No compression or unsupported; use raw body
+	}
+
 	buff := bytes.NewBuffer([]byte{})
 
 	// Use TeeReader to monitor for context cancellation while copying
@@ -160,7 +187,7 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	errCh := make(chan error, 1)
 
 	go func() {
-		_, err := io.Copy(buff, resp.Body)
+		_, err := io.Copy(buff, bodyReader)
 		if err != nil {
 			errCh <- err
 		}
