@@ -170,7 +170,10 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		defer gz.Close()
 		bodyReader = gz
 	case "deflate":
-		bodyReader = flate.NewReader(resp.Body)
+		deflateReader := flate.NewReader(resp.Body)
+		//nolint:errcheck
+		defer deflateReader.Close()
+		bodyReader = deflateReader
 	case "br":
 		bodyReader = brotli.NewReader(resp.Body)
 	default:
