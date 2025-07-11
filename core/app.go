@@ -386,7 +386,6 @@ func (a *App) authorizeClaimer(claimer *wallet.Wallet) error {
 	log.Info().Str("claimer", claimer.AccAddress()).Type("msg_type", msg).Str("tx_hash", res.TxHash).Msg("added new claimer")
 
 	return nil
-
 }
 
 func (a *App) ConnectPeers() {
