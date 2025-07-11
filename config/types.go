@@ -23,8 +23,8 @@ type ChainConfig struct {
 }
 
 type Config struct {
-	QueueInterval    int64              `yaml:"queue_interval" mapstructure:"queue_interval"`
 	ProofInterval    int64              `yaml:"proof_interval" mapstructure:"proof_interval"`
+	QueueConfig      QueueConfig        `yaml:"queue_config" mapstructure:"queue_config"`
 	StrayManagerCfg  StrayManagerConfig `yaml:"stray_manager" mapstructure:"stray_manager"`
 	ChainCfg         ChainConfig        `yaml:"chain_config" mapstructure:"chain_config"`
 	Ip               string             `yaml:"domain" mapstructure:"domain"`
@@ -33,10 +33,6 @@ type Config struct {
 	APICfg           APIConfig          `yaml:"api_config" mapstructure:"api_config"`
 	ProofThreads     int16              `yaml:"proof_threads" mapstructure:"proof_threads"`
 	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config" mapstructure:"block_store_config"`
-}
-
-func DefaultQueueInterval() int64 {
-	return 10
 }
 
 func DefaultProofInterval() int64 {
@@ -113,7 +109,7 @@ func DefaultBlockStoreConfig() BlockStoreConfig {
 	if err != nil {
 		panic(err)
 	}
-	k, err := priv.Raw()
+	k, err := crypto.MarshalPrivateKey(priv)
 	if err != nil {
 		panic(err)
 	}
@@ -144,10 +140,32 @@ func DefaultChainConfig() ChainConfig {
 	}
 }
 
+type QueueConfig struct {
+	// seconds
+	QueueInterval int64 `yaml:"queue_interval" mapstructure:"queue_interval"`
+	// seconds
+	TxTimer      int16 `yaml:"tx_timer" mapstructure:"tx_timer"`
+	QueueThreads int8  `yaml:"queue_threads" mapstructure:"queue_threads"`
+	// resend tx if network isn't responding
+	MaxRetryAttempt int8 `yaml:"max_retry_attempt" mapstructure:"max_retry_attempt"`
+	// group individual messages into one tx
+	TxBatchSize int8 `yaml:"tx_batch_size" mapstructure:"tx_batch_size"`
+}
+
+func DefaultQueueConfig() QueueConfig {
+	return QueueConfig{
+		QueueInterval:   10,
+		QueueThreads:    5,
+		MaxRetryAttempt: 100,
+		TxBatchSize:     45,
+		TxTimer:         3,
+	}
+}
+
 func DefaultConfig() *Config {
 	return &Config{
-		QueueInterval:    DefaultQueueInterval(),
 		ProofInterval:    DefaultProofInterval(),
+		QueueConfig:      DefaultQueueConfig(),
 		StrayManagerCfg:  DefaultStrayManagerConfig(),
 		ChainCfg:         DefaultChainConfig(),
 		Ip:               DefaultIP(),
@@ -160,8 +178,7 @@ func DefaultConfig() *Config {
 }
 
 func (c Config) MarshalZerologObject(e *zerolog.Event) {
-	e.Int64("QueueInterval", c.QueueInterval).
-		Int64("ProofInterval", c.ProofInterval).
+	e.Int64("ProofInterval", c.ProofInterval).
 		Int64("StrayCheckInterval", c.StrayManagerCfg.CheckInterval).
 		Int64("StrayRefreshInterval", c.StrayManagerCfg.RefreshInterval).
 		Int("StrayHandCount", c.StrayManagerCfg.HandCount).
@@ -180,7 +197,7 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 }
 
 func init() {
-	viper.SetDefault("QueueInterval", DefaultQueueInterval())
+	viper.SetDefault("QueueConfig", DefaultQueueConfig())
 	viper.SetDefault("ProofInterval", DefaultProofInterval())
 	viper.SetDefault("StrayManagerCfg", DefaultStrayManagerConfig())
 	viper.SetDefault("ChainCfg", DefaultChainConfig())

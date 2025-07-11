@@ -28,14 +28,12 @@ import (
 // DownloadFile attempts to download a file identified by its Merkle root from a network of providers, excluding the caller's own URL.
 // It queries the provider network, tries each available provider until the file is successfully downloaded and matches the expected size, and writes the file to the local file system.
 // Returns an error if the file cannot be found or downloaded from any provider.
-func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start int64, wallet *wallet.Wallet, fileSize int64, myUrl string, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) error {
+func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start int64, wallet *wallet.Wallet, queryClinet types.QueryClient, fileSize int64, myUrl string, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) error {
 	queryParams := &types.QueryFindFile{
 		Merkle: merkle,
 	}
 
-	cl := types.NewQueryClient(wallet.Client.GRPCConn)
-
-	res, err := cl.FindFile(context.Background(), queryParams)
+	res, err := queryClinet.FindFile(context.Background(), queryParams)
 	if err != nil {
 		return err
 	}
@@ -140,6 +138,11 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		}
 		return 0, err
 	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Error().Err(err).Msg("error closing response body")
+		}
+	}()
 
 	if resp.StatusCode != 200 {
 		data, err := io.ReadAll(resp.Body)
@@ -154,8 +157,6 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 
 		return 0, fmt.Errorf("could not get file, code: %d | msg: %s", resp.StatusCode, e.Error)
 	}
-	//nolint:errcheck
-	defer resp.Body.Close()
 
 	var bodyReader io.Reader = resp.Body
 	contentEncoding := resp.Header.Get("Content-Encoding")
