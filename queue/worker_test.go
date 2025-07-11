@@ -96,9 +96,7 @@ func TestWorkerSendMaxRetry(t *testing.T) {
 
 	chMsg := make(chan *Message)
 
-	workerRunning := sync.WaitGroup{} // not used
-
-	w := newWorker(0, wallet, 1, 10, 3, chMsg, &workerRunning)
+	w := newWorker(0, wallet, 1, 10, 3, chMsg)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -128,11 +126,11 @@ func TestBatchFullSend(t *testing.T) {
 	wg.Add(2)
 
 	m0 := Message{
-		msg: types.NewMsgPostProof("1", []byte(""), "", 0, []byte(""), []byte(""), 0),
+		msg: types.NewMsgPostProof(wallet.AccAddress(), []byte(""), "", 0, []byte(""), []byte(""), 0),
 		wg:  &wg,
 	}
 	m1 := Message{
-		msg: types.NewMsgPostProof("2", []byte(""), "", 0, []byte(""), []byte(""), 0),
+		msg: types.NewMsgPostProof(wallet.AccAddress(), []byte(""), "", 0, []byte(""), []byte(""), 0),
 		wg:  &wg,
 	}
 
@@ -160,10 +158,7 @@ func TestBatchFullSend(t *testing.T) {
 
 	chMsg := make(chan *Message)
 
-	workerRunning := sync.WaitGroup{}
-	workerRunning.Add(1)
-
-	w := newWorker(0, wallet, 3, 2, 2, chMsg, &workerRunning)
+	w := newWorker(0, wallet, 3, 2, 2, chMsg)
 	go w.start()
 
 	chMsg <- &m0
@@ -173,7 +168,6 @@ func TestBatchFullSend(t *testing.T) {
 
 	close(chMsg)
 	r.EqualValues(expectedSignedTx, actual)
-	workerRunning.Wait()
 }
 
 func TestBatchHalfFullSend(t *testing.T) {
@@ -185,11 +179,11 @@ func TestBatchHalfFullSend(t *testing.T) {
 	wg.Add(2)
 
 	m0 := Message{
-		msg: types.NewMsgPostProof("1", []byte(""), "", 0, []byte(""), []byte(""), 0),
+		msg: types.NewMsgPostProof(wallet.AccAddress(), []byte(""), "", 0, []byte(""), []byte(""), 0),
 		wg:  &wg,
 	}
 	m1 := Message{
-		msg: types.NewMsgPostProof("2", []byte(""), "", 0, []byte(""), []byte(""), 0),
+		msg: types.NewMsgPostProof(wallet.AccAddress(), []byte(""), "", 0, []byte(""), []byte(""), 0),
 		wg:  &wg,
 	}
 
@@ -216,9 +210,7 @@ func TestBatchHalfFullSend(t *testing.T) {
 
 	chMsg := make(chan *Message)
 
-	workerRunning := sync.WaitGroup{}
-	workerRunning.Add(1)
-	w := newWorker(0, wallet, 3, 5, 2, chMsg, &workerRunning)
+	w := newWorker(0, wallet, 3, 5, 2, chMsg)
 	go w.start()
 
 	chMsg <- &m0
@@ -228,5 +220,4 @@ func TestBatchHalfFullSend(t *testing.T) {
 
 	close(chMsg)
 	r.EqualValues(expectedSignedTx, actual)
-	workerRunning.Wait()
 }

@@ -8,13 +8,14 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/JackalLabs/sequoia/config"
+	"github.com/JackalLabs/sequoia/testutil"
+	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 
 	"go.uber.org/mock/gomock"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdkTypes "github.com/cosmos/cosmos-sdk/types"
 	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	ttypes "github.com/tendermint/tendermint/types"
 
 	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
@@ -26,22 +27,6 @@ var queueConfig config.QueueConfig = config.QueueConfig{
 	MaxRetryAttempt: 100,
 	TxBatchSize:     45,
 	TxTimer:         3,
-}
-
-func setupNewPool(w *wallet.Wallet, config config.QueueConfig) *Pool {
-	workerWallets := make([]*wallet.Wallet, 0)
-	for i := range config.QueueThreads {
-		workerWallet := newOffsetWallet(w, int(i))
-		workerWallets = append(workerWallets, workerWallet)
-	}
-
-	workers, queue, workerRunning := createWorkers(workerWallets, int(config.TxTimer), int(config.TxBatchSize), config.MaxRetryAttempt)
-	return &Pool{
-		wallet:         w,
-		workers:        workers,
-		workerChannels: queue,
-		workerRunning:  workerRunning,
-	}
 }
 
 // really rough estimate because it benchmarks the whole pool.Add pipeline
@@ -70,7 +55,17 @@ func BenchmarkPoolAdd(b *testing.B) {
 	}
 	queryClient.EXPECT().Account(gomock.Any(), gomock.Any()).Return(queryResp, nil).AnyTimes()
 
-	pool := setupNewPool(wallet, queueConfig)
+	storageQuery := testutil.NewFakeStorageQueryClient()
+
+	offsetWallets, err := sequoiaWallet.CreateOffsetWallets(wallet, int(queueConfig.QueueThreads))
+	if err != nil {
+		b.Error(err)
+	}
+	pool, err := NewPool(wallet, storageQuery, offsetWallets, queueConfig)
+	if err != nil {
+		b.Error(err)
+	}
+
 	go pool.Listen()
 	defer pool.Stop()
 
