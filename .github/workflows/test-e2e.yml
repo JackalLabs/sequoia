@@ -1,0 +1,59 @@
+name: End-to-end Test
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+      - name: Cache test dependencies
+        uses: actions/cache@v4
+        id: cache-dependencies
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            /usr/local/bin
+            $GOPATH/bin
+            /lib
+          key: ${{ runner.os }}-${{ hashFiles('/usr/local/bin', '$GOPATH/bin', '/lib', '**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-
+      - uses: actions/checkout@v4.2.2
+        if: steps.cache-dependencies.outputs.cache-it != 'true'
+        with:
+          repository: JackalLabs/canine-chain
+          ref: v4.6.2-alpha.1
+          path: canine-chain
+      - name: Install canined
+        if: steps.cache-dependencies.outputs.cache-it != 'true'
+        working-directory: ./canine-chain
+        run: |
+          sudo wget -O /lib/libwasmvm.x86_64.so https://github.com/CosmWasm/wasmvm/raw/v1.2.6/internal/api/libwasmvm.x86_64.so
+          make install
+      - name: Install venom
+        if: steps.cache-dependencies.outputs.cache-it != 'true'
+        run: curl https://github.com/ovh/venom/releases/download/v1.2.0/venom.linux-amd64 -L -o /usr/local/bin/venom && chmod +x /usr/local/bin/venom
+      - uses: actions/checkout@v4.2.2
+        with:
+          path: sequoia
+      - name: Get sequoia build pkgs
+        if: steps.cache-dependencies.outputs.cache-it != 'true'
+        working-directory: ./sequoia
+        run: go mod download
+      - name: Install sequoia
+        working-directory: ./sequoia
+        run: make install
+      - name: Test
+        shell: bash
+        working-directory: ./sequoia/test
+        run: venom run -vv e2e/init.yaml `find e2e/ -type f -name "*_test-*.yaml" | sort`
+      - name: Stop containers
+        working-directory: ./sequoia/test
+        run: docker compose down
+

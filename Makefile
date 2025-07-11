@@ -10,7 +10,7 @@ COMMIT := $(shell git log -1 --format='%H')
 ldflags = -X github.com/JackalLabs/sequoia/config.COMMIT=$(COMMIT) \
 		  -X github.com/JackalLabs/sequoia/config.VERSION=$(VERSION)
 
-all: lint test-unit
+all: lint test
 
 install:
 	@go install -ldflags '$(ldflags)'
@@ -69,7 +69,21 @@ format:
 ###                           Tests & Simulation                            ###
 ###############################################################################
 
+test: test-unit test-e2e
+
 test-unit:
 	@echo "Executing unit tests..."
 	@go test -mod=readonly -v -coverprofile coverage.txt ./...
-.PHONY: test-unit
+
+test-e2e:
+	@echo "Executing e2e tests..."
+	@venom run ./test/e2e/*.yml
+
+test-e2e-dev-mode:
+	@echo "Executing e2e tests..."
+	@venom run --var dev-mode=true ./test/e2e/*.yml
+
+test-clean:
+	rm venom*.log
+
+.PHONY: test-unit test-e2e test-e2e-dev-mode test test-clean
