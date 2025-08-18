@@ -76,7 +76,7 @@ func BenchmarkFileWrites(b *testing.B) {
 				buf := bytes.NewBuffer(token)
 				buf2 := bytes.NewBuffer(token)
 
-				root, _, _, _, err := BuildTree(buf2, 10240)
+				root, _, _, _, err := BuildTree(buf2, 10240, 0)
 				require.NoError(b, err)
 
 				_, _, err = f.WriteFile(buf, root, "file_owner", 0, 10240, 0, nil)
@@ -223,7 +223,7 @@ func TestWriteAndProveFiles(t *testing.T) {
 	b := bytes.NewBuffer(token)
 	b2 := bytes.NewBuffer(newToken)
 
-	root, _, _, _, err := BuildTree(b, chunkSize)
+	root, _, _, _, err := BuildTree(b, chunkSize, 0)
 	require.NoError(t, err)
 
 	owner := "file_owner"

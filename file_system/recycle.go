@@ -10,7 +10,7 @@ import (
 )
 
 func (f *FileSystem) salvageFile(r io.Reader, chunkSize int64) ([]byte, int, error) {
-	root, _, chunks, size, err := BuildTree(r, chunkSize)
+	root, _, chunks, size, err := BuildTree(r, chunkSize, 0)
 	if err != nil {
 		return nil, 0, err
 	}

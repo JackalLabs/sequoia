@@ -10,6 +10,11 @@ import (
 	"io"
 	"strings"
 
+	sequoiaTypes "github.com/JackalLabs/sequoia/types"
+	treeblake3 "github.com/wealdtech/go-merkletree/v2/blake3"
+	"github.com/wealdtech/go-merkletree/v2/sha3"
+	"github.com/zeebo/blake3"
+
 	"github.com/JackalLabs/sequoia/api/types"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
@@ -23,15 +28,13 @@ import (
 	ipldFormat "github.com/ipfs/go-ipld-format"
 	"github.com/wealdtech/go-merkletree/v2"
 
-	"github.com/rs/zerolog/log"
-	"github.com/wealdtech/go-merkletree/v2/sha3"
-
 	jsoniter "github.com/json-iterator/go"
+	"github.com/rs/zerolog/log"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, error) {
+func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte, [][]byte, int, error) {
 	size := 0
 
 	data := make([][]byte, 0)
@@ -53,7 +56,11 @@ func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 
 		chunks = append(chunks, b)
 
-		hash := sha256.New()
+		var hash sequoiaTypes.Hash = sha256.New()
+		if proofType == sequoiaTypes.ProofTypeBlake3 {
+			hash = blake3.New()
+		}
+
 		_, err := fmt.Fprintf(hash, "%d%x", index, b) // appending the index and the data
 		if err != nil {
 			log.Warn().Msg("failed to write to hash")
@@ -66,9 +73,13 @@ func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 		index++
 	}
 
+	var h merkletree.HashType = sha3.New512()
+	if proofType == sequoiaTypes.ProofTypeBlake3 {
+		h = treeblake3.New256()
+	}
 	tree, err := merkletree.NewTree(
 		merkletree.WithData(data),
-		merkletree.WithHashType(sha3.New512()),
+		merkletree.WithHashType(h),
 		merkletree.WithSalt(false),
 	)
 	if err != nil {
@@ -87,7 +98,7 @@ func BuildTree(buf io.Reader, chunkSize int64) ([]byte, []byte, [][]byte, int, e
 
 func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) (size int, cid string, err error) {
 	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
-	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize)
+	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize, proofType)
 	if err != nil {
 		log.Error().Err(fmt.Errorf("cannot build tree | %w", err))
 		return 0, "", err
@@ -104,7 +115,7 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 	buf := bytes.NewBuffer(b)
 
 	var n ipldFormat.Node
-	if proofType == 1 {
+	if proofType == sequoiaTypes.ProofTypeIPFSFolder {
 		folderNode := unixfs.EmptyDirNode()
 		err := folderNode.UnmarshalJSON(buf.Bytes())
 		if err != nil {
@@ -150,7 +161,7 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 
 func (f *FileSystem) WriteFileWithProgress(reader io.Reader, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams, tracker *types.UploadResponseV2) (size int, cid string, err error) {
 	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
-	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize)
+	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize, proofType)
 	if err != nil {
 		log.Error().Err(fmt.Errorf("cannot build tree | %w", err))
 		return 0, "", err
@@ -168,7 +179,7 @@ func (f *FileSystem) WriteFileWithProgress(reader io.Reader, merkle []byte, owne
 	buf := bytes.NewBuffer(b)
 	tracker.Progress = 70
 	var n ipldFormat.Node
-	if proofType == 1 {
+	if proofType == sequoiaTypes.ProofTypeIPFSFolder {
 		folderNode := unixfs.EmptyDirNode()
 		err := folderNode.UnmarshalJSON(buf.Bytes())
 		if err != nil {
@@ -519,7 +530,7 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 	}
 
 	var chunkOut []byte
-	if proofType == 1 {
+	if proofType == sequoiaTypes.ProofTypeIPFSFolder {
 		n, err := f.ipfs.Get(context.Background(), c)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get node chunk for cid: %s | %w", fcid, err)
