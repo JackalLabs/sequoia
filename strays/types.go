@@ -26,4 +26,5 @@ type StrayManager struct {
 	hands           []*Hand
 	processed       time.Time
 	refreshed       time.Time
+	queryClient     types.QueryClient
 }

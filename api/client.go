@@ -11,10 +11,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func SpaceHandler(c *client.Client, address string) func(http.ResponseWriter, *http.Request) {
+func SpaceHandler(c *client.Client, queryClient storageTypes.QueryClient, address string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		queryClient := storageTypes.NewQueryClient(c.GRPCConn)
-
 		params := &storageTypes.QueryProvider{
 			Address: address,
 		}

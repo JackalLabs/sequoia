@@ -13,6 +13,7 @@ import (
 	"github.com/rs/cors"
 
 	"github.com/JackalLabs/sequoia/file_system"
+	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/JackalLabs/sequoia/proofs"
@@ -47,7 +48,7 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64, myIp string) {
+func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, queryClient storageTypes.QueryClient, myIp string, chunkSize int64) {
 	defer log.Info().Msg("API module stopped")
 	r := mux.NewRouter()
 
@@ -55,8 +56,8 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 
 	outline.RegisterGetRoute(r, "/", IndexHandler(wallet.AccAddress()))
 
-	outline.RegisterPostRoute(r, "/upload", PostFileHandler(f, p, wallet, chunkSize))
-	outline.RegisterPostRoute(r, "/v2/upload", PostFileHandlerV2(f, p, wallet, chunkSize))
+	outline.RegisterPostRoute(r, "/upload", PostFileHandler(f, p, wallet, queryClient, chunkSize))
+	outline.RegisterPostRoute(r, "/v2/upload", PostFileHandlerV2(f, p, wallet, queryClient, chunkSize))
 	outline.RegisterPostRoute(r, "/v2/status/{id}", CheckUploadStatus())
 	outline.RegisterPostRoute(r, "/api/jobs", ListJobsHandler())
 	outline.RegisterGetRoute(r, "/download/{merkle}", DownloadFileHandler(f))
@@ -69,7 +70,7 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	outline.RegisterGetRoute(r, "/list", ListFilesHandler(f))
 	outline.RegisterGetRoute(r, "/api/client/list", ListFilesHandler(f))
 	outline.RegisterGetRoute(r, "/api/data/fids", LegacyListFilesHandler(f))
-	outline.RegisterGetRoute(r, "/api/client/space", SpaceHandler(wallet.Client, wallet.AccAddress()))
+	outline.RegisterGetRoute(r, "/api/client/space", SpaceHandler(wallet.Client, queryClient, wallet.AccAddress()))
 
 	outline.RegisterGetRoute(r, "/ipfs/peers", IPFSListPeers(f))
 	outline.RegisterGetRoute(r, "/ipfs/hosts", IPFSListHosts(f))
@@ -99,11 +100,18 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 	}
 
 	log.Logger.Info().Msg(fmt.Sprintf("Sequoia API now listening on %s", a.srv.Addr))
-	err := a.srv.ListenAndServe()
-	if err != nil {
-		if !errors.Is(err, http.ErrServerClosed) {
-			log.Warn().Err(err)
-			return
-		}
+
+	// Create a channel to listen for errors coming from the listener.
+	serverErrors := make(chan error, 1)
+
+	go func() {
+		serverErrors <- a.srv.ListenAndServe()
+	}()
+
+	// Wait for server error
+	err := <-serverErrors
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Warn().Err(err).Msg("server error")
+		return
 	}
 }

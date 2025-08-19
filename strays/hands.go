@@ -22,7 +22,7 @@ func (h *Hand) Stop() {
 	h.running = false
 }
 
-func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.Queue, myUrl string, chunkSize int64) {
+func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, queryClient types.QueryClient, q queue.Queue, myUrl string, chunkSize int64) {
 	h.running = true
 	defer log.Info().Msg("Hand stopped")
 	for h.running {
@@ -40,7 +40,7 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.
 		start := h.stray.Start
 		proofType := h.stray.ProofType
 
-		err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize, proofType, utils.GetIPFSParams(h.stray))
+		err := network.DownloadFile(f, merkle, signee, start, wallet, queryClient, h.stray.FileSize, myUrl, chunkSize, proofType, utils.GetIPFSParams(h.stray))
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil
@@ -77,18 +77,7 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.
 			Start:    start,
 		}
 
-		//data := walletTypes.NewTransactionData(
-		//	msg,
-		//).WithGasAuto().WithFeeAuto()
-
 		m, wg := q.Add(msg)
-
-		//res, err := h.wallet.BroadcastTxCommit(data)
-		//if err != nil {
-		//	log.Error().Err(err)
-		//	h.stray = nil
-		//	continue
-		//}
 
 		if m.Res() != nil {
 			if m.Res().Code > 0 {
@@ -115,13 +104,8 @@ func (h *Hand) Take(stray *types.UnifiedFile) {
 	h.stray = stray
 }
 
-func (s *StrayManager) NewHand(q *queue.Queue) (*Hand, error) {
+func (s *StrayManager) NewHand(q queue.Queue, w *wallet.Wallet) (*Hand, error) {
 	offset := byte(len(s.hands)) + 1
-
-	w, err := s.wallet.CloneWalletOffset(offset)
-	if err != nil {
-		return nil, err
-	}
 
 	h := &Hand{
 		offset: offset,
