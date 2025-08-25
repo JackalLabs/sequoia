@@ -216,6 +216,8 @@ func (f *FileSystem) WriteFileWithProgress(reader io.Reader, merkle []byte, owne
 
 	fileCount.Inc()
 	tracker.Progress = 100
+	tracker.Status = "done!"
+
 	return size, n.Cid().String(), nil
 }
 
