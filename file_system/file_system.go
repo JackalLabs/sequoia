@@ -56,18 +56,18 @@ func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte,
 
 		chunks = append(chunks, b)
 
-		var hash sequoiaTypes.Hash = sha256.New()
+		h := sha256.New()
 		if proofType == sequoiaTypes.ProofTypeBlake3 {
 			log.Info().Msg("Switching to blake3 for hash")
-			hash = blake3.New()
+			h = blake3.New()
 		}
 
-		_, err := fmt.Fprintf(hash, "%d%x", index, b) // appending the index and the data
+		_, err := fmt.Fprintf(h, "%d%x", index, b) // appending the index and the data
 		if err != nil {
 			log.Warn().Msg("failed to write to hash")
 			break
 		}
-		hashName := hash.Sum(nil)
+		hashName := h.Sum(nil)
 
 		data = append(data, hashName)
 
