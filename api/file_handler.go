@@ -257,6 +257,8 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 		up.Progress = 40
 		up.Status = "Got proofs"
 
+		log.Info().Msgf("file: %x | type: %d", f.Merkle, f.ProofType)
+
 		size, c, err := fio.WriteFileWithProgress(file, merkle, sender, startBlock, chunkSize, f.ProofType, utils.GetIPFSParams(&f), &up)
 		if err != nil {
 			log.Error().Err(fmt.Errorf("failed to write file to disk: %w", err))

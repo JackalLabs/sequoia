@@ -58,6 +58,7 @@ func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte,
 
 		var hash sequoiaTypes.Hash = sha256.New()
 		if proofType == sequoiaTypes.ProofTypeBlake3 {
+			log.Info().Msg("Switching to blake3 for hash")
 			hash = blake3.New()
 		}
 
