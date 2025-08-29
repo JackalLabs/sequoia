@@ -7,12 +7,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"strings"
 
+	"github.com/wealdtech/go-merkletree/v2/sha3"
+
 	sequoiaTypes "github.com/JackalLabs/sequoia/types"
 	treeblake3 "github.com/wealdtech/go-merkletree/v2/blake3"
-	"github.com/wealdtech/go-merkletree/v2/sha3"
 	"github.com/zeebo/blake3"
 
 	"github.com/JackalLabs/sequoia/api/types"
@@ -56,10 +58,14 @@ func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte,
 
 		chunks = append(chunks, b)
 
-		h := sha256.New()
-		if proofType == sequoiaTypes.ProofTypeBlake3 {
-			log.Info().Msg("Switching to blake3 for hash")
+		var h hash.Hash
+		switch proofType {
+		case sequoiaTypes.ProofTypeBlake3:
+			log.Info().Msg("Using blake3 for hash")
 			h = blake3.New()
+		default:
+			log.Info().Msg("Using sha256 for hash")
+			h = sha256.New()
 		}
 
 		_, err := fmt.Fprintf(h, "%d%x", index, b) // appending the index and the data
@@ -74,10 +80,16 @@ func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte,
 		index++
 	}
 
-	var h merkletree.HashType = sha3.New512()
-	if proofType == sequoiaTypes.ProofTypeBlake3 {
+	var h merkletree.HashType
+	switch proofType {
+	case sequoiaTypes.ProofTypeBlake3:
+		log.Info().Msg("Using blake3 for tree proof")
 		h = treeblake3.New256()
+	default:
+		log.Info().Msg("Using sha512 for tree proof")
+		h = sha3.New512()
 	}
+
 	tree, err := merkletree.NewTree(
 		merkletree.WithData(data),
 		merkletree.WithHashType(h),
