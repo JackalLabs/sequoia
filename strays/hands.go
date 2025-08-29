@@ -54,7 +54,7 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.
 			continue
 		}
 
-		_, proof, err := proofs.GenerateMerkleProof(tree, 0, chunk)
+		_, proof, err := proofs.GenerateMerkleProof(tree, 0, chunk, proofType)
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil
