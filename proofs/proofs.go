@@ -164,6 +164,9 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 	log.Debug().Msg(fmt.Sprintf("Getting file tree by chunk for %x", merkle))
 
 	proof, item, err := GenProof(p.io, merkle, owner, start, block, p.chunkSize, file.ProofType)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("could not gen proof: %w", err)
+	}
 
 	return proof, item, newProof.ChunkToProve, err
 }

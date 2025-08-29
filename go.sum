@@ -115,8 +115,8 @@ github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20240605140035-368812a1d4
 github.com/TheMarstonConnell/cosmos-go-wallet v0.7.3-0.20240605140035-368812a1d4d5/go.mod h1:1Qv2CAWgjKx/h/yA3xP/3losGFRxxKbxFDjGIqwhvvc=
 github.com/TheMarstonConnell/go-ds-badger2 v0.0.0-20240304191516-af5ee03005fc h1:Zm5BYljo+2iwfgKyPKHXt/k5GDAa7vQhB3OZxIrjeKc=
 github.com/TheMarstonConnell/go-ds-badger2 v0.0.0-20240304191516-af5ee03005fc/go.mod h1:66WAKUovf4tFU+Yp6LnG3JQAonJyFxjVQNbz1TTncj0=
-github.com/TheMarstonConnell/go-merkletree/v2 v2.0.0-20250813200334-b5bd569a17e9 h1:iRaeBL7BaIrjyixlMOQVcZ6uPM7zj9deB5pC3SSuP3Y=
-github.com/TheMarstonConnell/go-merkletree/v2 v2.0.0-20250813200334-b5bd569a17e9/go.mod h1:elmwt2QEc9W6cO5f053IVxITyfShoevRR+afIfXrA8U=
+github.com/TheMarstonConnell/go-merkletree/v2 v2.0.0-20250829184252-ad65f46fbd22 h1:qplet315vUHNkCh9+fOWHsbTrC3gv/mPVGdWjXxeZa0=
+github.com/TheMarstonConnell/go-merkletree/v2 v2.0.0-20250829184252-ad65f46fbd22/go.mod h1:elmwt2QEc9W6cO5f053IVxITyfShoevRR+afIfXrA8U=
 github.com/TheMarstonConnell/ipfs-lite v0.0.0-20240304191454-94283a9ad1c9 h1:3id6BxQQZYwneoqlCATEy7nVB+gpDqoa4cGaPJ4kriE=
 github.com/TheMarstonConnell/ipfs-lite v0.0.0-20240304191454-94283a9ad1c9/go.mod h1:0lWPYieZQOWwFaK3g9jZyFWb5mjn/0DFSlpfCx6A8F0=
 github.com/VictoriaMetrics/fastcache v1.6.0/go.mod h1:0qHz5QP0GMX4pfmMA/zt5RgfNuXJrTP0zS7DqpHGGTw=

@@ -305,5 +305,6 @@ replace (
 	//github.com/jackalLabs/canine-chain/v4 => ../canine-chain
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27
 
-	github.com/wealdtech/go-merkletree/v2 => github.com/TheMarstonConnell/go-merkletree/v2 v2.0.0-20250813200334-b5bd569a17e9
+	github.com/wealdtech/go-merkletree/v2 => github.com/TheMarstonConnell/go-merkletree/v2 v2.0.0-20250829184252-ad65f46fbd22
+
 )
