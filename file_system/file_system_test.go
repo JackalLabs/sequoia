@@ -10,7 +10,10 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"strings"
 	"testing"
+
+	sequoiaTypes "github.com/JackalLabs/sequoia/types"
 
 	"github.com/JackalLabs/sequoia/utils"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
@@ -365,4 +368,17 @@ func TestWriteFileWithParams(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, 2, len(ms))
+}
+
+func TestBuildTree(t *testing.T) {
+	data := "Hello World"
+
+	dataBuf := strings.NewReader(data)
+
+	root, _, _, _, err := BuildTree(dataBuf, 10240, sequoiaTypes.ProofTypeBlake3)
+	require.NoError(t, err)
+
+	hexRoot := hex.EncodeToString(root)
+
+	require.Equal(t, "469a83c529d5aeebf15dc90c1bdacda1b77fd17b2c0a63f698d5f6381efd1c6a", hexRoot)
 }
