@@ -8,6 +8,10 @@ import (
 	"fmt"
 	"time"
 
+	sequoiaTypes "github.com/JackalLabs/sequoia/types"
+	treeblake3 "github.com/wealdtech/go-merkletree/v2/blake3"
+	"github.com/zeebo/blake3"
+
 	"github.com/dgraph-io/badger/v4"
 
 	"google.golang.org/grpc/codes"
@@ -33,10 +37,14 @@ const (
 	ErrNotReady = "not ready yet"
 )
 
-func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (bool, *merkletree.Proof, error) {
+func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte, proofType int64) (bool, *merkletree.Proof, error) {
 	log.Debug().Msg(fmt.Sprintf("Generating Merkle proof for %d", index))
 
 	h := sha256.New()
+	if proofType == sequoiaTypes.ProofTypeBlake3 {
+		h = blake3.New()
+	}
+
 	_, err := fmt.Fprintf(h, "%d%x", index, item)
 	if err != nil {
 		return false, nil, err
@@ -47,7 +55,12 @@ func GenerateMerkleProof(tree *merkletree.MerkleTree, index int, item []byte) (b
 		return false, nil, err
 	}
 
-	valid, err := merkletree.VerifyProofUsing(h.Sum(nil), false, proof, [][]byte{tree.Root()}, sha3.New512())
+	var treeHash merkletree.HashType = sha3.New512()
+	if proofType == sequoiaTypes.ProofTypeBlake3 {
+		treeHash = treeblake3.New256()
+	}
+
+	valid, err := merkletree.VerifyProofUsing(h.Sum(nil), false, proof, [][]byte{tree.Root()}, treeHash)
 	if err != nil {
 		return false, nil, err
 	}
@@ -67,7 +80,7 @@ func GenProof(io FileSystem, merkle []byte, owner string, start int64, block int
 
 	log.Debug().Msg(fmt.Sprintf("About to generate merkle proof for %x", merkle))
 
-	valid, proof, err := GenerateMerkleProof(tree, block, chunk)
+	valid, proof, err := GenerateMerkleProof(tree, block, chunk, proofType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -151,6 +164,9 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 	log.Debug().Msg(fmt.Sprintf("Getting file tree by chunk for %x", merkle))
 
 	proof, item, err := GenProof(p.io, merkle, owner, start, block, p.chunkSize, file.ProofType)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("could not gen proof: %w", err)
+	}
 
 	return proof, item, newProof.ChunkToProve, err
 }

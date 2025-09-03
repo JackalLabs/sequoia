@@ -17,6 +17,7 @@ type UploadResponseV2 struct {
 	Start    int64   `json:"start"`
 	CID      string  `json:"cid"`
 	Progress float64 `json:"progress"`
+	Status   string  `json:"status"`
 }
 
 type AcceptedUploadResponse struct {

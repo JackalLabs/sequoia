@@ -5,6 +5,7 @@ go 1.22.2
 toolchain go1.22.5
 
 require (
+	github.com/andybalholm/brotli v1.2.0
 	github.com/cosmos/cosmos-sdk v0.45.17
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.4.12
@@ -30,6 +31,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tendermint/tendermint v0.34.27
 	github.com/wealdtech/go-merkletree/v2 v2.6.0
+	github.com/zeebo/blake3 v0.2.4
 	google.golang.org/grpc v1.61.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -49,7 +51,6 @@ require (
 	github.com/Workiva/go-datastructures v1.0.53 // indirect
 	github.com/alecthomas/units v0.0.0-20231202071711-9a357b53e9c9 // indirect
 	github.com/alexbrainman/goissue34681 v0.0.0-20191006012335-3fc7a47baff5 // indirect
-	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -304,5 +305,6 @@ replace (
 	//github.com/jackalLabs/canine-chain/v4 => ../canine-chain
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27
 
-	github.com/wealdtech/go-merkletree => github.com/TheMarstonConnell/go-merkletree v0.0.0-20230328183338-b5d590ab1aaf
+	github.com/wealdtech/go-merkletree/v2 => github.com/TheMarstonConnell/go-merkletree/v2 v2.0.0-20250829184252-ad65f46fbd22
+
 )

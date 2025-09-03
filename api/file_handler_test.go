@@ -19,7 +19,7 @@ import (
 const owner = "jkl15w9zm873n0femu8egv7hyj9l7jfqtqvwyrqk73"
 
 func writeFile(f *file_system.FileSystem, file []byte) ([]byte, uint, error) {
-	root, _, _, _, err := file_system.BuildTree(bytes.NewReader(file), 1024)
+	root, _, _, _, err := file_system.BuildTree(bytes.NewReader(file), 10240, 0)
 	if err != nil {
 		return root, 0, err
 	}

@@ -176,16 +176,6 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 			return
 		}
 
-		proofTypeString := req.Form.Get("type")
-		if len(proofTypeString) == 0 {
-			proofTypeString = "0"
-		}
-		proofType, err := strconv.ParseInt(proofTypeString, 10, 64)
-		if err != nil {
-			handleErr(fmt.Errorf("cannot parse proof type: %w", err), w, http.StatusBadRequest)
-			return
-		}
-
 		file, fh, err := req.FormFile("file") // Retrieve the file from form data
 		if err != nil {
 			handleErr(fmt.Errorf("cannot get file from form: %w", err), w, http.StatusBadRequest)
@@ -214,6 +204,7 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 			Start:    startBlock,
 			CID:      "",
 			Progress: 10,
+			Status:   "Started upload",
 		}
 
 		JobMap.Store(jobId, &up)
@@ -236,33 +227,42 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 		res, err := cl.File(context.Background(), &queryParams)
 		if err != nil {
 			log.Error().Err(fmt.Errorf("failed to find file on chain with merkle: %x, owner: %s, start: %d | %w", merkle, sender, startBlock, err))
+			up.Status = "Error: No such file on chain"
 			return
 		}
 		up.Progress = 30
+		up.Status = "Got file from chain"
 
 		f := res.File
 
 		if readSize != f.FileSize {
 			log.Error().Err(fmt.Errorf("cannot accept form file that doesn't match the chain data %d != %d", readSize, f.FileSize))
+			up.Status = "Error: File size does not match"
 			return
 		}
 
 		if hex.EncodeToString(f.Merkle) != merkleString {
 			log.Error().Err(fmt.Errorf("cannot accept file that doesn't match the chain data %x != %x", f.Merkle, merkle))
+			up.Status = "Error: Merkle does not match"
 			return
 		}
 
 		if len(f.Proofs) == int(f.MaxProofs) {
 			if !f.ContainsProver(wl.AccAddress()) {
 				log.Error().Err(fmt.Errorf("cannot accept file that I cannot claim"))
+				up.Status = "Error: Can't claim"
 				return
 			}
 		}
 		up.Progress = 40
+		up.Status = "Got proofs"
 
-		size, c, err := fio.WriteFileWithProgress(file, merkle, sender, startBlock, chunkSize, proofType, utils.GetIPFSParams(&f), &up)
+		log.Info().Msgf("file: %x | type: %d", f.Merkle, f.ProofType)
+
+		size, c, err := fio.WriteFileWithProgress(file, merkle, sender, startBlock, chunkSize, f.ProofType, utils.GetIPFSParams(&f), &up)
 		if err != nil {
 			log.Error().Err(fmt.Errorf("failed to write file to disk: %w", err))
+			up.Status = fmt.Sprintf("Error: Could not write file to disk %s", err.Error())
 			return
 		}
 		up.CID = c
