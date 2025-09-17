@@ -28,16 +28,22 @@ import (
 var urlMap map[string]string
 
 func init() {
-	log.Info().Msg("Importing url replacement map...")
-	data, err := os.ReadFile("urlmap.json")
+	path := os.Getenv("URLMAP_PATH")
+	if path == "" {
+		path = "urlmap.json"
+	}
+	log.Info().Str("path", path).Msg("Importing url replacement map...")
+	data, err := os.ReadFile(path)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not import URL map.")
+		urlMap = make(map[string]string)
 		return
 	}
 
 	err = json.Unmarshal(data, &urlMap)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not parse url map.")
+		urlMap = make(map[string]string)
 		return
 	}
 }
