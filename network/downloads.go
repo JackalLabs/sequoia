@@ -25,6 +25,29 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var urlMap map[string]string
+
+func init() {
+	path := os.Getenv("URLMAP_PATH")
+	if path == "" {
+		path = "urlmap.json"
+	}
+	log.Info().Str("path", path).Msg("Importing url replacement map...")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not import URL map.")
+		urlMap = make(map[string]string)
+		return
+	}
+
+	err = json.Unmarshal(data, &urlMap)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not parse url map.")
+		urlMap = make(map[string]string)
+		return
+	}
+}
+
 // DownloadFile attempts to download a file identified by its Merkle root from a network of providers, excluding the caller's own URL.
 // It queries the provider network, tries each available provider until the file is successfully downloaded and matches the expected size, and writes the file to the local file system.
 // Returns an error if the file cannot be found or downloaded from any provider.
@@ -50,6 +73,12 @@ func DownloadFile(f *file_system.FileSystem, merkle []byte, owner string, start 
 	for _, url := range arr {
 		if url == myUrl {
 			continue
+		}
+
+		mappedUrl, found := urlMap[url]
+		if found {
+			log.Info().Msgf("Swapping internal URL from %s to %s", url, mappedUrl)
+			url = mappedUrl
 		}
 
 		size, err := DownloadFileFromURL(f, url, merkle, owner, start, chunkSize, proofType, ipfsParams, fileSize)
