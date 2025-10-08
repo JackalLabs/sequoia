@@ -71,19 +71,30 @@ func NewApp(home string) (*App, error) {
 
 	options := badger.DefaultOptions(dataDir)
 
-	options.Logger = &logger.SequoiaLogger{}
-	options.BlockCacheSize = 256 << 25
-	options.MaxLevels = 8
+	l := logger.NewSequoiaLogger(&log.Logger)
 
-	// Enable debug logging for Badger if the global log level is debug
-	if log.Logger.GetLevel() == zerolog.DebugLevel {
-		options = options.WithLoggingLevel(badger.DEBUG)
+	options = options.WithBlockCacheSize(256 << 25).WithMaxLevels(8).WithLogger(l)
+
+	badgerLogLevel := badger.INFO
+	switch log.Logger.GetLevel() {
+	case zerolog.DebugLevel:
+		badgerLogLevel = badger.DEBUG
+	case zerolog.InfoLevel:
+		badgerLogLevel = badger.INFO
+	case zerolog.WarnLevel:
+		badgerLogLevel = badger.WARNING
+	case zerolog.ErrorLevel:
+		badgerLogLevel = badger.ERROR
 	}
+	log.Info().Msgf("Badger log level: %d | global log level: %d", badgerLogLevel, log.Logger.GetLevel())
+
+	options = options.WithLoggingLevel(badgerLogLevel)
 
 	log.Info().Msg("Creating sequoia app...")
 
 	db, err := badger.Open(options)
 	if err != nil {
+		log.Error().Err(err).Msg("Error opening database")
 		return nil, err
 	}
 	log.Info().Msg("Opened database")
