@@ -28,7 +28,6 @@ import (
 
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/config"
-	"github.com/JackalLabs/sequoia/logger"
 	"github.com/JackalLabs/sequoia/proofs"
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/JackalLabs/sequoia/strays"
@@ -71,9 +70,11 @@ func NewApp(home string) (*App, error) {
 
 	options := badger.DefaultOptions(dataDir)
 
-	l := logger.NewSequoiaLogger(&log.Logger)
+	// l := logger.NewSequoiaLogger(&log.Logger)
 
-	options = options.WithBlockCacheSize(256 << 25).WithMaxLevels(8).WithLogger(l)
+	options = options.WithBlockCacheSize(256 << 25).WithMaxLevels(8)
+
+	// options = options.WithLogger(l)
 
 	badgerLogLevel := badger.INFO
 	switch log.Logger.GetLevel() {
