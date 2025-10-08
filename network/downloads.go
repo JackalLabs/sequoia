@@ -33,7 +33,9 @@ func init() {
 		path = "urlmap.json"
 	}
 	log.Info().Str("path", path).Msg("Importing url replacement map...")
-	data, err := os.ReadFile(path)
+
+	// Use a goroutine with timeout to prevent hanging in remote deployments
+	data, err := readFileWithTimeout(path, 5*time.Second)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not import URL map.")
 		urlMap = make(map[string]string)
@@ -48,6 +50,34 @@ func init() {
 	}
 
 	log.Info().Str("path", path).Msg("Import of url replacement map was successful")
+}
+
+// readFileWithTimeout reads a file with a timeout to prevent hanging in remote deployments
+func readFileWithTimeout(filepath string, timeout time.Duration) ([]byte, error) {
+	type result struct {
+		data []byte
+		err  error
+	}
+
+	resultCh := make(chan result, 1)
+
+	go func() {
+		// Check if file exists first to provide better error messages
+		if _, err := os.Stat(filepath); err != nil {
+			resultCh <- result{data: nil, err: fmt.Errorf("file does not exist or cannot be accessed: %w", err)}
+			return
+		}
+
+		data, err := os.ReadFile(filepath)
+		resultCh <- result{data: data, err: err}
+	}()
+
+	select {
+	case res := <-resultCh:
+		return res.data, res.err
+	case <-time.After(timeout):
+		return nil, fmt.Errorf("readFile timeout after %v for file: %s (this may indicate file system issues in remote deployment)", timeout, filepath)
+	}
 }
 
 // DownloadFile attempts to download a file identified by its Merkle root from a network of providers, excluding the caller's own URL.
