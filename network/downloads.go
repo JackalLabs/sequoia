@@ -46,6 +46,8 @@ func init() {
 		urlMap = make(map[string]string)
 		return
 	}
+
+	log.Info().Str("path", path).Msg("Import of url replacement map was successful")
 }
 
 // DownloadFile attempts to download a file identified by its Merkle root from a network of providers, excluding the caller's own URL.

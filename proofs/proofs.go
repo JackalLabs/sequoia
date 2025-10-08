@@ -318,7 +318,7 @@ func (p *Prover) Start() {
 			log.Error().Err(err)
 			continue
 		}
-		height := abciInfo.Response.LastBlockHeight + 10
+		height := abciInfo.Response.LastBlockHeight
 
 		t := time.Now()
 
