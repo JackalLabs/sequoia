@@ -80,6 +80,7 @@ func NewApp(home string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msg("Opened database")
 
 	ds, err := ipfs.NewBadgerDataStore(db)
 	if err != nil {
