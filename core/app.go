@@ -74,6 +74,8 @@ func NewApp(home string) (*App, error) {
 	options.BlockCacheSize = 256 << 25
 	options.MaxLevels = 8
 
+	log.Info().Msg("Creating sequoia app...")
+
 	db, err := badger.Open(options)
 	if err != nil {
 		return nil, err
@@ -83,6 +85,7 @@ func NewApp(home string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msg("Data store initialized")
 
 	bsDir := os.ExpandEnv(cfg.BlockStoreConfig.Directory)
 	var bs blockstore.Blockstore
@@ -95,6 +98,7 @@ func NewApp(home string) (*App, error) {
 			return nil, err
 		}
 	}
+	log.Info().Msg("Blockstore initialized")
 
 	apiServer := api.NewAPI(&cfg.APICfg)
 
@@ -108,6 +112,8 @@ func NewApp(home string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msg("File system initialized")
+
 	return &App{
 		fileSystem: f,
 		api:        apiServer,
@@ -200,6 +206,8 @@ func (a *App) Start() error {
 	if err != nil {
 		return err
 	}
+	log.Info().Msg("Starting sequoia...")
+
 	log.Debug().Object("config", cfg).Msg("sequoia config")
 
 	myAddress := a.wallet.AccAddress()
