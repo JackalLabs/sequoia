@@ -46,9 +46,6 @@ func StartCmd() *cobra.Command {
 				log.Logger = log.Logger.Level(zerolog.ErrorLevel)
 			}
 
-			// Add a test debug log to verify the level is set correctly
-			log.Debug().Msg("DEBUG LOGGING IS ENABLED - This should be visible if log-level=debug")
-
 			app, err := core.NewApp(home)
 			if err != nil {
 				return err

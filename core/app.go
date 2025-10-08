@@ -36,6 +36,7 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	badger "github.com/dgraph-io/badger/v4"
 	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -73,6 +74,11 @@ func NewApp(home string) (*App, error) {
 	options.Logger = &logger.SequoiaLogger{}
 	options.BlockCacheSize = 256 << 25
 	options.MaxLevels = 8
+
+	// Enable debug logging for Badger if the global log level is debug
+	if log.Logger.GetLevel() == zerolog.DebugLevel {
+		options = options.WithLoggingLevel(badger.DEBUG)
+	}
 
 	log.Info().Msg("Creating sequoia app...")
 
