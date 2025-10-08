@@ -5,3 +5,4 @@ data
 sequoia
 *.txt
 *.json
+.DS_Store

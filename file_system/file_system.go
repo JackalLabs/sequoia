@@ -61,10 +61,8 @@ func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte,
 		var h hash.Hash
 		switch proofType {
 		case sequoiaTypes.ProofTypeBlake3:
-			log.Info().Msg("Using blake3 for hash")
 			h = blake3.New()
 		default:
-			log.Info().Msg("Using sha256 for hash")
 			h = sha256.New()
 		}
 
@@ -83,10 +81,8 @@ func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte,
 	var h merkletree.HashType
 	switch proofType {
 	case sequoiaTypes.ProofTypeBlake3:
-		log.Info().Msg("Using blake3 for tree proof")
 		h = treeblake3.New256()
 	default:
-		log.Info().Msg("Using sha512 for tree proof")
 		h = sha3.New512()
 	}
 
