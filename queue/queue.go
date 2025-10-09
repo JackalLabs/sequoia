@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JackalLabs/sequoia/config"
 	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
 
 	"github.com/cosmos/cosmos-sdk/types"
@@ -16,17 +17,51 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+func calculateTransactionSize(messages []types.Msg) (int64, error) {
+	if len(messages) == 0 {
+		return 0, nil
+	}
+
+	// Estimate transaction size based on message types and content
+	// This is an approximation since we can't easily get the exact transaction size
+	var totalSize int64 = 0
+
+	// Add base transaction overhead (signature, fee, gas, etc.)
+	var baseOverhead int64 = 500
+
+	for _, msg := range messages {
+		// Estimate size based on message type
+		switch m := msg.(type) {
+		case *storageTypes.MsgPostProof:
+			// Estimate size for MsgPostProof based on its fields
+			size := int64(len(m.Creator)) + int64(len(m.Item)) + int64(len(m.HashList)) +
+				int64(len(m.Merkle)) + int64(len(m.Owner)) + 16 // 16 bytes for Start field
+			totalSize += size
+		default:
+			// For other message types, use a conservative estimate
+			totalSize += 500 // Default estimate for unknown message types
+		}
+	}
+
+	// Add some additional overhead for transaction structure
+	return totalSize + baseOverhead, nil
+}
+
 func (m *Message) Done() {
 	m.wg.Done()
 }
 
-func NewQueue(w *wallet.Wallet, interval int64) *Queue {
+func NewQueue(w *wallet.Wallet, interval int64, maxSizeBytes int64) *Queue {
+	if maxSizeBytes == 0 {
+		maxSizeBytes = config.DefaultMaxSizeBytes()
+	}
 	q := &Queue{
-		wallet:    w,
-		messages:  make([]*Message, 0),
-		processed: time.Now(),
-		running:   false,
-		interval:  interval,
+		wallet:       w,
+		messages:     make([]*Message, 0),
+		processed:    time.Now(),
+		running:      false,
+		interval:     interval,
+		maxSizeBytes: maxSizeBytes,
 	}
 	return q
 }
@@ -79,28 +114,43 @@ func (q *Queue) Listen() {
 			continue
 		}
 
-		lmsg := len(q.messages)
-
-		if lmsg == 0 { // skipping this queue cycle if there is no messages to be pushed
-			continue
-		}
-
-		log.Info().Msg(fmt.Sprintf("Queue: %d messages waiting to be put on-chain...", lmsg))
-
-		// maxSize := 1024 * 1024 // 1mb
-		maxSize := 45
-
 		total := len(q.messages)
 		queueSize.Set(float64(total))
 
-		if total > maxSize {
-			total = maxSize
+		if total == 0 { // skipping this queue cycle if there is no messages to be pushed
+			continue
 		}
 
-		log.Info().Msg(fmt.Sprintf("Queue: Posting %d messages to chain...", total))
+		log.Info().Msg(fmt.Sprintf("Queue: %d messages waiting to be put on-chain...", total))
 
-		toProcess := q.messages[:total]
-		q.messages = q.messages[total:]
+		msgs := make([]types.Msg, 0)
+		cutoff := 0
+		for i := range total {
+
+			msgs = append(msgs, q.messages[i].msg)
+
+			size, err := calculateTransactionSize(msgs)
+			if err != nil {
+				log.Warn().Err(err).Msg("Failed to calculate transaction size")
+				break
+			}
+
+			if size > q.maxSizeBytes {
+				break
+			}
+
+			cutoff = i + 1 // cutoff is now the count of messages that fit
+		}
+
+		// If nothing fits, process at least the first message
+		if cutoff == 0 {
+			cutoff = 1
+		}
+
+		log.Info().Msg(fmt.Sprintf("Queue: Posting %d messages to chain...", cutoff))
+
+		toProcess := q.messages[:cutoff]
+		q.messages = q.messages[cutoff:]
 
 		allMsgs := make([]types.Msg, len(toProcess))
 

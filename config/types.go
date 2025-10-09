@@ -24,6 +24,7 @@ type ChainConfig struct {
 
 type Config struct {
 	QueueInterval    int64              `yaml:"queue_interval" mapstructure:"queue_interval"`
+	MaxSizeBytes     int64              `yaml:"max_size_bytes" mapstructure:"max_size_bytes"`
 	ProofInterval    int64              `yaml:"proof_interval" mapstructure:"proof_interval"`
 	StrayManagerCfg  StrayManagerConfig `yaml:"stray_manager" mapstructure:"stray_manager"`
 	ChainCfg         ChainConfig        `yaml:"chain_config" mapstructure:"chain_config"`
@@ -37,6 +38,10 @@ type Config struct {
 
 func DefaultQueueInterval() int64 {
 	return 10
+}
+
+func DefaultMaxSizeBytes() int64 {
+	return 1024 * 1024 * 2 // 2mb
 }
 
 func DefaultProofInterval() int64 {
@@ -147,6 +152,7 @@ func DefaultChainConfig() ChainConfig {
 func DefaultConfig() *Config {
 	return &Config{
 		QueueInterval:    DefaultQueueInterval(),
+		MaxSizeBytes:     DefaultMaxSizeBytes(),
 		ProofInterval:    DefaultProofInterval(),
 		StrayManagerCfg:  DefaultStrayManagerConfig(),
 		ChainCfg:         DefaultChainConfig(),
@@ -161,6 +167,7 @@ func DefaultConfig() *Config {
 
 func (c Config) MarshalZerologObject(e *zerolog.Event) {
 	e.Int64("QueueInterval", c.QueueInterval).
+		Int64("MaxSizeBytes", c.MaxSizeBytes).
 		Int64("ProofInterval", c.ProofInterval).
 		Int64("StrayCheckInterval", c.StrayManagerCfg.CheckInterval).
 		Int64("StrayRefreshInterval", c.StrayManagerCfg.RefreshInterval).
@@ -181,6 +188,7 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 
 func init() {
 	viper.SetDefault("QueueInterval", DefaultQueueInterval())
+	viper.SetDefault("MaxSizeBytes", DefaultMaxSizeBytes())
 	viper.SetDefault("ProofInterval", DefaultProofInterval())
 	viper.SetDefault("StrayManagerCfg", DefaultStrayManagerConfig())
 	viper.SetDefault("ChainCfg", DefaultChainConfig())
