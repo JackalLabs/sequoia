@@ -78,6 +78,12 @@ func (q *Queue) Add(msg types.Msg) (*Message, *sync.WaitGroup) {
 	proofMessage, ok := msg.(*storageTypes.MsgPostProof)
 	if ok {
 		for _, message := range q.messages {
+			if message == nil {
+				continue
+			}
+			if message.msg == nil {
+				continue
+			}
 			queueMessage, ok := message.msg.(*storageTypes.MsgPostProof)
 			if !ok {
 				continue
@@ -109,7 +115,7 @@ func (q *Queue) Listen() {
 
 	log.Info().Msg("Queue module started")
 	for q.running {
-		time.Sleep(time.Millisecond * 333)                                                // pauses for one third of a second
+		time.Sleep(time.Millisecond * 100)                                                // pauses for one third of a second
 		if !q.processed.Add(time.Second * time.Duration(q.interval)).Before(time.Now()) { // check every ten seconds
 			continue
 		}
@@ -168,8 +174,14 @@ func (q *Queue) Listen() {
 		var i int
 		for !complete && i < 10 {
 			i++
-			res, err = q.wallet.BroadcastTxCommit(data)
+			res, err = q.wallet.BroadcastTxAsync(data)
 			if err != nil {
+				if strings.Contains(err.Error(), "tx already exists in cache") {
+					if data.Sequence != nil {
+						data = data.WithSequence(*data.Sequence + 1)
+						continue
+					}
+				}
 				log.Warn().Err(err).Msg("tx broadcast failed from queue")
 				continue
 			}

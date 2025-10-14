@@ -276,7 +276,7 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 
 		go func() {
 			time.Sleep(10 * time.Minute)
-			log.Info().Str("jobId", jobId).Msg("Deleting job after 10-minute retention period")
+			log.Debug().Str("jobId", jobId).Msg("Deleting job after 10-minute retention period")
 			JobMap.Delete(jobId)
 		}()
 	}
