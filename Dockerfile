@@ -47,7 +47,7 @@ COPY --from=builder /app/sequoia .
 
 # Copy required shared libraries from wasmvm
 RUN mkdir -p /usr/local/lib
-COPY --from=builder /go/pkg/mod/github.com/\!cosm\!wasm/wasmvm@v1.2.6/internal/api/libwasmvm.aarch64.so /usr/local/lib/
+COPY --from=builder /go/pkg/mod/github.com/\!cosm\!wasm/wasmvm@v1.2.6/internal/api/libwasmvm.*.so /usr/local/lib/
 RUN ldconfig
 
 # Create necessary directories
