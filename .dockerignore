@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+migration.md
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Build artifacts
+coverage.txt
+*.log
+chain_log.log
+sequoia.log
+
+# Test files
+*_test.go
+test120/
+test130/
+
+# Scripts
+scripts/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Data directories (will be mounted as volumes)
+data/
+blockstore/
+logs/
+
+# JSON files (likely test data)
+*.json
+urlmap.json
+helloFolder.json
+hello.txt

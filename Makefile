@@ -12,10 +12,13 @@ ldflags = -X github.com/JackalLabs/sequoia/config.COMMIT=$(COMMIT) \
 
 all: lint test-unit
 
+build:
+	@go build -ldflags '$(ldflags)'
+
 install:
 	@go install -ldflags '$(ldflags)'
 
-.PHONY: install
+.PHONY: install build
 
 
 ###############################################################################

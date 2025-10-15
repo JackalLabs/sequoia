@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  sequoia:
+    build: .
+    container_name: sequoia-provider
+    restart: unless-stopped
+    ports:
+      - "3333:3333"  # API port
+      - "4005:4005"  # IPFS port
+      - "4001:4001"  # IPFS port
+    volumes:
+      # Main data directory - stores all provider data
+      - sequoia_data:/home/sequoia/.sequoia/data
+      # Blockstore directory - IPFS block storage
+      - sequoia_blockstore:/home/sequoia/.sequoia/blockstore
+      # Configuration directory - stores config files and wallet
+      - sequoia_config:/home/sequoia/.sequoia/config
+      # Logs directory - application logs
+      - sequoia_logs:/home/sequoia/.sequoia/logs
+    environment:
+      # Override default home directory to use container path
+      - HOME=/home/sequoia
+      - SEQUOIA_HOME=/home/sequoia/.sequoia
+      # API configuration
+      - api_config.ipfs_domain=dns4/ipfs.example.com/tcp/4001
+      # Provider configuration
+      - domain=http://localhost:3333
+      - total_bytes_offered=1092616192
+      - proof_threads=1000
+      - queue_interval=10
+      - proof_interval=120
+      # Chain configuration (update these for your network)
+      - chain_config.rpc_addr=http://localhost:26657
+      - chain_config.grpc_addr=localhost:9090
+    networks:
+      - sequoia_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  # Persistent data storage - contains all provider data and IPFS blocks
+  sequoia_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data
+  # Blockstore for IPFS - stores IPFS blocks and data
+  sequoia_blockstore:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/blockstore
+  # Configuration storage - wallet and config files
+  sequoia_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/config
+  # Logs storage - application logs
+  sequoia_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/logs
+
+networks:
+  sequoia_network:
+    driver: bridge
