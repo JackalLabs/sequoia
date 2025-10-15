@@ -5,8 +5,8 @@ services:
     build:
       context: .
       args:
-        VERSION: ${VERSION:-$(echo $(git describe --tags) | sed 's/^v//')}
-        COMMIT: ${COMMIT:-$(git log -1 --format='%H')}
+        VERSION: ${VERSION}
+        COMMIT: ${COMMIT}
     container_name: sequoia-provider
     restart: unless-stopped
     ports:
