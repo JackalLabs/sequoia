@@ -2,7 +2,11 @@ version: '3.8'
 
 services:
   sequoia:
-    build: .
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-$(shell echo $(shell git describe --tags) | sed 's/^v//')}
+        COMMIT: ${COMMIT:-$(shell git log -1 --format='%H')}
     container_name: sequoia-provider
     restart: unless-stopped
     ports:

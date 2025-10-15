@@ -22,10 +22,16 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Set version and commit environment variables for build
-RUN export VERSION=$(echo $(git describe --tags) | sed 's/^v//') && \
-    export COMMIT=$(git log -1 --format='%H') && \
-    make build
+# Build arguments for version and commit
+ARG VERSION
+ARG COMMIT
+
+# Set environment variables for build
+ENV VERSION=${VERSION}
+ENV COMMIT=${COMMIT}
+
+# Build the application
+RUN make build
 
 # Final stage
 FROM debian:bullseye-slim
