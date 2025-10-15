@@ -267,7 +267,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	}
 
 	if len(txMsgData.Data) == 0 {
-		log.Warn().
+		log.Debug().
 			Hex("merkle", merkle).
 			Str("owner", owner).
 			Int64("start", start).

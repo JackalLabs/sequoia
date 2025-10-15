@@ -15,6 +15,7 @@ type Queue struct {
 	running      bool
 	interval     int64
 	maxSizeBytes int64
+	domain       string
 }
 
 type Message struct {

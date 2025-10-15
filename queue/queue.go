@@ -51,7 +51,7 @@ func (m *Message) Done() {
 	m.wg.Done()
 }
 
-func NewQueue(w *wallet.Wallet, interval int64, maxSizeBytes int64) *Queue {
+func NewQueue(w *wallet.Wallet, interval int64, maxSizeBytes int64, domain string) *Queue {
 	if maxSizeBytes == 0 {
 		maxSizeBytes = config.DefaultMaxSizeBytes()
 	}
@@ -62,6 +62,7 @@ func NewQueue(w *wallet.Wallet, interval int64, maxSizeBytes int64) *Queue {
 		running:      false,
 		interval:     interval,
 		maxSizeBytes: maxSizeBytes,
+		domain:       domain,
 	}
 	return q
 }
@@ -166,7 +167,7 @@ func (q *Queue) Listen() {
 
 		data := walletTypes.NewTransactionData(
 			allMsgs...,
-		).WithGasAuto().WithFeeAuto()
+		).WithGasAuto().WithFeeAuto().WithMemo(fmt.Sprintf("Proven by %s", q.domain))
 
 		complete := false
 		var res *types.TxResponse

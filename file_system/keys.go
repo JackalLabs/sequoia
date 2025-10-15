@@ -11,16 +11,16 @@ func SplitMerkle(key []byte) (merkle []byte, owner string, start int64, err erro
 	its := strings.Split(string(key), "/")
 	merkle, err = hex.DecodeString(its[0])
 	if err != nil {
-		return
+		return merkle, owner, start, err
 	}
 
 	start, err = strconv.ParseInt(its[2], 10, 64)
 	if err != nil {
-		return
+		return merkle, owner, start, err
 	}
 
 	owner = its[1]
-	return
+	return merkle, owner, start, err
 }
 
 func treeKey(merkle []byte, owner string, start int64) []byte {
