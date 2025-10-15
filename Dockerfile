@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     tzdata \
     wget \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -45,19 +46,25 @@ WORKDIR /app
 # Copy binary from builder stage
 COPY --from=builder /app/sequoia .
 
+# Copy entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Copy required shared libraries from wasmvm
 RUN mkdir -p /usr/local/lib
 COPY --from=builder /go/pkg/mod/github.com/\!cosm\!wasm/wasmvm@v1.2.6/internal/api/libwasmvm.*.so /usr/local/lib/
 RUN ldconfig
 
-# Create necessary directories
+# Create necessary directories with proper permissions
 RUN mkdir -p /home/sequoia/.sequoia/data && \
     mkdir -p /home/sequoia/.sequoia/blockstore && \
+    mkdir -p /home/sequoia/.sequoia/config && \
+    mkdir -p /home/sequoia/.sequoia/logs && \
     chown -R sequoia:sequoia /home/sequoia && \
-    chown -R sequoia:sequoia /app
+    chown -R sequoia:sequoia /app && \
+    chmod -R 755 /home/sequoia/.sequoia
 
-# Switch to non-root user
-USER sequoia
+# Note: User switching is handled by the entrypoint script
 
 # Expose ports
 EXPOSE 3333 4005 4001
@@ -70,5 +77,6 @@ ENV SEQUOIA_HOME=/home/sequoia/.sequoia
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3333/health || exit 1
 
-# Default command
+# Set entrypoint and default command
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["./sequoia", "start"]
