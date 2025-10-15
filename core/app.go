@@ -87,7 +87,10 @@ func NewApp(home string) (*App, error) {
 	case zerolog.ErrorLevel:
 		badgerLogLevel = badger.ERROR
 	}
-	log.Info().Msgf("Badger log level: %d | global log level: %d", badgerLogLevel, log.Logger.GetLevel())
+	log.Info().
+		Int("badger_log_level", int(badgerLogLevel)).
+		Str("global_log_level", log.Logger.GetLevel().String()).
+		Msg("badger logging configured")
 
 	options = options.WithLoggingLevel(badgerLogLevel)
 
@@ -359,16 +362,23 @@ func (a *App) ConnectPeers() {
 			log.Warn().Msgf("Could not get hosts from %s", ipfsHostAddress)
 			continue
 		}
-		//nolint:errcheck
-		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			log.Warn().Msgf("Unexpected status %d from %s", res.StatusCode, ipfsHostAddress)
+			_ = res.Body.Close()
+			continue
+		}
 
 		var hosts apiTypes.HostResponse
 
 		err = json.NewDecoder(res.Body).Decode(&hosts)
 		if err != nil {
 			log.Warn().Msgf("Could not parse hosts %s", ip)
+			_ = res.Body.Close()
 			continue
 		}
+
+		_ = res.Body.Close()
 
 		r, err := regexp.Compile(`/ip4/(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)[0-9.]+/`)
 		if err != nil {
