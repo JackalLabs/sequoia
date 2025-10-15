@@ -1,7 +1,7 @@
 export GO111MODULE = on
 
-VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
-COMMIT := $(shell git log -1 --format='%H')
+VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
+COMMIT ?= $(shell git log -1 --format='%H')
 
 ###############################################################################
 ###                                   All                                   ###
