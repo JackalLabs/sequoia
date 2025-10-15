@@ -72,7 +72,7 @@ func NewApp(home string) (*App, error) {
 
 	// l := logger.NewSequoiaLogger(&log.Logger)
 
-	options = options.WithBlockCacheSize(256 << 25).WithMaxLevels(8)
+	options = options.WithBlockCacheSize(256 << 22).WithMaxLevels(8)
 
 	// options = options.WithLogger(l)
 
