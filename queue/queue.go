@@ -132,7 +132,7 @@ func (q *Queue) Listen() {
 
 		msgs := make([]types.Msg, 0)
 		cutoff := 0
-		for i := range total {
+		for i := 0; i < total; i++ {
 
 			msgs = append(msgs, q.messages[i].msg)
 

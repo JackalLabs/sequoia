@@ -9,6 +9,9 @@ type SequoiaLogger struct {
 }
 
 func NewSequoiaLogger(logger *zerolog.Logger) *SequoiaLogger {
+	if logger == nil {
+		return nil
+	}
 	return &SequoiaLogger{logger: logger}
 }
 

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/JackalLabs/sequoia/ipfs"
@@ -31,7 +33,7 @@ func writeFile(f *file_system.FileSystem, file []byte) ([]byte, uint, error) {
 func TestPathing(t *testing.T) {
 	r := require.New(t)
 	options := badger.DefaultOptions("/tmp/badger/k")
-	options.Logger = &logger.SequoiaLogger{}
+	options.Logger = logger.NewSequoiaLogger(&log.Logger)
 
 	db, err := badger.Open(options)
 	r.NoError(err)

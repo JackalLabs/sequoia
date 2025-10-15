@@ -2,8 +2,8 @@ package network
 
 import (
 	"bytes"
-	"compress/flate"
 	"compress/gzip"
+	"compress/zlib"
 	"context"
 	"encoding/json"
 	"errors"
@@ -170,7 +170,6 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	}
 
 	cli := &http.Client{
-		Timeout:   timeout,
 		Transport: transport,
 	}
 
@@ -231,24 +230,27 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		defer gz.Close()
 		bodyReader = gz
 	case "deflate":
-		deflateReader := flate.NewReader(resp.Body)
+		zr, err := zlib.NewReader(resp.Body)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create zlib (deflate) reader: %w", err)
+		}
 		//nolint:errcheck
-		defer deflateReader.Close()
-		bodyReader = deflateReader
+		defer zr.Close()
+		bodyReader = zr
 	case "br":
 		bodyReader = brotli.NewReader(resp.Body)
 	default:
 		// No compression or unsupported; use raw body
 	}
 
-	buff := bytes.NewBuffer([]byte{})
+	var buff bytes.Buffer
 
 	// Use TeeReader to monitor for context cancellation while copying
 	doneCh := make(chan struct{})
 	errCh := make(chan error, 1)
 
 	go func() {
-		_, err := io.Copy(buff, bodyReader)
+		_, err := io.Copy(&buff, bodyReader)
 		if err != nil {
 			errCh <- err
 		}

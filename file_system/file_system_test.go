@@ -47,7 +47,7 @@ func BenchmarkFileWrites(b *testing.B) {
 	log.Logger = log.With().Caller().Logger()
 
 	options := badger.DefaultOptions("/tmp/badger/k")
-	options.Logger = &logger.SequoiaLogger{}
+	options.Logger = logger.NewSequoiaLogger(&log.Logger)
 
 	db, err := badger.Open(options)
 	require.NoError(b, err)
