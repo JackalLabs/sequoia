@@ -181,6 +181,7 @@ func (s *StrayManager) RefreshList() error {
 	}
 
 	strayCount := len(res.Files)
+	s.lastSize = int64(res.Pagination.Total)
 	if strayCount > 0 {
 		log.Info().Msgf("Got updated list of strays of size %d", strayCount)
 
@@ -188,10 +189,6 @@ func (s *StrayManager) RefreshList() error {
 			newStray := stray
 			s.strays = append(s.strays, &newStray)
 		}
-
-		s.lastSize = int64(res.Pagination.Total)
-	} else {
-		s.lastSize = 0
 	}
 
 	return nil
