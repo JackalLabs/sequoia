@@ -150,7 +150,7 @@ func (s *StrayManager) Stop() {
 }
 
 func (s *StrayManager) RefreshList() error {
-	log.Info().Msg("Refreshing stray list...")
+	log.Debug().Msg("Refreshing stray list...")
 
 	s.strays = make([]*types.UnifiedFile, 0)
 
@@ -179,14 +179,20 @@ func (s *StrayManager) RefreshList() error {
 	if err != nil {
 		return err
 	}
-	log.Info().Msgf("Got updated list of strays of size %d", len(res.Files))
 
-	for _, stray := range res.Files {
-		newStray := stray
-		s.strays = append(s.strays, &newStray)
+	strayCount := len(res.Files)
+	if strayCount > 0 {
+		log.Info().Msgf("Got updated list of strays of size %d", strayCount)
+
+		for _, stray := range res.Files {
+			newStray := stray
+			s.strays = append(s.strays, &newStray)
+		}
+
+		s.lastSize = int64(res.Pagination.Total)
+	} else {
+		s.lastSize = 0
 	}
-
-	s.lastSize = int64(res.Pagination.Total)
 
 	return nil
 }
