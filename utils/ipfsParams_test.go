@@ -6,7 +6,7 @@ import (
 
 	"github.com/JackalLabs/sequoia/utils"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
-	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	"github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/stretchr/testify/require"
 )
 

@@ -8,7 +8,7 @@ import (
 
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 
-	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
 
 	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/cmd/wallet"

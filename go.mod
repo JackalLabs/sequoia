@@ -19,7 +19,7 @@ require (
 	github.com/ipfs/go-ds-badger2 v0.1.3
 	github.com/ipfs/go-ds-flatfs v0.5.1
 	github.com/ipfs/go-ipld-format v0.6.0
-	github.com/jackalLabs/canine-chain/v4 v4.6.1
+	github.com/jackalLabs/canine-chain/v5 v5.0.1
 	github.com/json-iterator/go v1.1.12
 	github.com/libp2p/go-libp2p v0.32.2
 	github.com/multiformats/go-multiaddr v0.12.3

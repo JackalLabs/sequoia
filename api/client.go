@@ -7,7 +7,7 @@ import (
 	"github.com/JackalLabs/sequoia/api/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/desmos-labs/cosmos-go-wallet/client"
-	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
 

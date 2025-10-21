@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/JackalLabs/sequoia/config"
-	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"

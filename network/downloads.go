@@ -21,7 +21,7 @@ import (
 
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	"github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
 

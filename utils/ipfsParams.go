@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
-	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	"github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
 
