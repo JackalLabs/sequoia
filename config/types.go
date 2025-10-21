@@ -1,9 +1,6 @@
 package config
 
 import (
-	"encoding/hex"
-
-	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
@@ -37,7 +34,7 @@ type Config struct {
 }
 
 func DefaultQueueInterval() int64 {
-	return 10
+	return 2
 }
 
 func DefaultMaxSizeBytes() int64 {
@@ -45,7 +42,7 @@ func DefaultMaxSizeBytes() int64 {
 }
 
 func DefaultProofInterval() int64 {
-	return 120
+	return 700
 }
 
 func DefaultIP() string {
@@ -114,19 +111,10 @@ type BlockStoreConfig struct {
 }
 
 func DefaultBlockStoreConfig() BlockStoreConfig {
-	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
-	if err != nil {
-		panic(err)
-	}
-	k, err := priv.Raw()
-	if err != nil {
-		panic(err)
-	}
-
 	return BlockStoreConfig{
 		Directory: "$HOME/.sequoia/blockstore",
 		Type:      OptFlatFS,
-		Key:       hex.EncodeToString(k),
+		Key:       "",
 	}
 }
 
