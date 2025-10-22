@@ -16,11 +16,11 @@ import (
 	"github.com/andybalholm/brotli"
 
 	apiTypes "github.com/JackalLabs/sequoia/api/types"
-
-	ipfslite "github.com/hsanjuan/ipfs-lite"
-
 	"github.com/JackalLabs/sequoia/file_system"
+	sequoiaTypes "github.com/JackalLabs/sequoia/types"
+
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
@@ -243,18 +243,21 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		// No compression or unsupported; use raw body
 	}
 
+	// Create a buffered reader with timeout monitoring
+	// We need to buffer since WriteFile requires seeking capability
 	var buff bytes.Buffer
 
-	// Use TeeReader to monitor for context cancellation while copying
+	// Channel to signal completion
 	doneCh := make(chan struct{})
 	errCh := make(chan error, 1)
 
+	// Stream data with timeout monitoring
 	go func() {
+		defer close(doneCh)
 		_, err := io.Copy(&buff, bodyReader)
 		if err != nil {
 			errCh <- err
 		}
-		close(doneCh)
 	}()
 
 	// Wait for either completion or timeout
@@ -267,7 +270,8 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		// Download completed successfully
 	}
 
-	reader := bytes.NewReader(buff.Bytes())
+	// Create a seeker-compatible reader from the buffered data
+	reader := sequoiaTypes.NewBytesSeeker(buff.Bytes())
 
 	size, _, err := f.WriteFile(reader, merkle, owner, start, chunkSize, proofType, ipfsParams)
 	if err != nil {

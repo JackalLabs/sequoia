@@ -1,7 +1,6 @@
 package api_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"strings"
@@ -21,12 +20,14 @@ import (
 const owner = "jkl15w9zm873n0femu8egv7hyj9l7jfqtqvwyrqk73"
 
 func writeFile(f *file_system.FileSystem, file []byte) ([]byte, uint, error) {
-	root, _, _, _, err := file_system.BuildTree(bytes.NewReader(file), 10240, 0)
+	reader1 := types.NewBytesSeeker(file)
+	reader2 := types.NewBytesSeeker(file)
+	root, _, _, err := file_system.BuildTree(reader1, 10240, 0)
 	if err != nil {
 		return root, 0, err
 	}
 
-	size, _, err := f.WriteFile(bytes.NewReader(file), root, owner, 0, 1024, 0, nil)
+	size, _, err := f.WriteFile(reader2, root, owner, 0, 1024, 0, nil)
 	return root, uint(size), err
 }
 

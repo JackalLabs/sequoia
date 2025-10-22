@@ -41,6 +41,7 @@ import (
 
 type App struct {
 	api          *api.API
+	pprofServer  *monitoring.PProf
 	q            *queue.Queue
 	prover       *proofs.Prover
 	strayManager *strays.StrayManager
@@ -124,6 +125,8 @@ func NewApp(home string) (*App, error) {
 
 	apiServer := api.NewAPI(&cfg.APICfg)
 
+	pprofServer := monitoring.NewPProf("localhost:6060")
+
 	w, err := config.InitWallet(home)
 	if err != nil {
 		return nil, err
@@ -137,10 +140,11 @@ func NewApp(home string) (*App, error) {
 	log.Info().Msg("File system initialized")
 
 	return &App{
-		fileSystem: f,
-		api:        apiServer,
-		home:       home,
-		wallet:     w,
+		fileSystem:  f,
+		api:         apiServer,
+		pprofServer: pprofServer,
+		home:        home,
+		wallet:      w,
 	}, nil
 }
 
@@ -304,6 +308,7 @@ func (a *App) Start() error {
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, a.q, myUrl, params.ChunkSize)
 	go a.monitor.Start()
+	go a.pprofServer.Start()
 
 	done := make(chan os.Signal, 1)
 	defer signal.Stop(done) // undo signal.Notify effect
@@ -321,6 +326,7 @@ func (a *App) Start() error {
 
 	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.fileSystem.Close()
+	_ = a.pprofServer.Stop()
 
 	return nil
 }
