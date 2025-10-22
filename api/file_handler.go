@@ -33,8 +33,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const MaxFileSize = 32 << 30 // 32 gib
-
 var JobMap sync.Map
 
 func handleErr(err error, w http.ResponseWriter, code int) {
@@ -80,9 +78,8 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			return
 		}
 
-		// Since we're streaming, we can't get the file size upfront
-		// We'll need to validate the size during processing or use a different approach
-		// For now, we'll proceed without size validation and let the chain data validation handle it
+		// Size validation is now enforced during multipart streaming
+		// Files larger than MaxFileSize (32GB) will be rejected immediately
 
 		cl := storageTypes.NewQueryClient(wl.Client.GRPCConn)
 		queryParams := storageTypes.QueryFile{
@@ -160,8 +157,8 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 			return
 		}
 
-		// Since we're streaming, we can't get the file size upfront
-		// We'll validate the size during processing
+		// Size validation is now enforced during multipart streaming
+		// Files larger than MaxFileSize (32GB) will be rejected immediately
 
 		s := sha256.New() // creating id
 		_, _ = s.Write(merkle)

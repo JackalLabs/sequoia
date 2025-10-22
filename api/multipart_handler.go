@@ -11,7 +11,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const MaxMemoryFileSize = 10 << 20 // 10 MB - files larger than this go to disk
+const (
+	MaxMemoryFileSize = 10 << 20 // 10 MB - files larger than this go to disk
+	MaxFileSize       = 32 << 30 // 32 GiB - maximum allowed file size
+)
 
 // tempFileReader wraps a temporary file to implement the FileReader interface
 type tempFileReader struct {
@@ -47,17 +50,13 @@ func readFormField(part *multipart.Part) (string, error) {
 func processSmallFile(part *multipart.Part, peekBuffer []byte, n int) (sequoiaTypes.FileReader, *multipart.FileHeader, error) {
 	log.Debug().Int64("size", int64(n)).Msg("Using in-memory processing for small file")
 
+	// Check if file exceeds maximum allowed size
+	if int64(n) > MaxFileSize {
+		return nil, nil, fmt.Errorf("file size %d exceeds maximum allowed size %d", int64(n), MaxFileSize)
+	}
+
 	fileData := make([]byte, n)
 	copy(fileData, peekBuffer[:n])
-
-	// Read any remaining data if file was exactly at threshold
-	if n == MaxMemoryFileSize+1 {
-		remainingData, err := io.ReadAll(part)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error reading remaining file data: %w", err)
-		}
-		fileData = append(fileData, remainingData...)
-	}
 
 	// Create a FileReader from the buffered data
 	file := sequoiaTypes.NewBytesSeeker(fileData)
@@ -74,6 +73,11 @@ func processSmallFile(part *multipart.Part, peekBuffer []byte, n int) (sequoiaTy
 func processLargeFile(part *multipart.Part, peekBuffer []byte, n int) (sequoiaTypes.FileReader, *multipart.FileHeader, error) {
 	log.Debug().Int64("size", int64(n)).Msg("Using disk streaming for large file")
 
+	// Check if file exceeds maximum allowed size
+	if int64(n) > MaxFileSize {
+		return nil, nil, fmt.Errorf("file size %d exceeds maximum allowed size %d", int64(n), MaxFileSize)
+	}
+
 	tempFile, err := os.CreateTemp("", "sequoia_upload_*")
 	if err != nil {
 		return nil, nil, fmt.Errorf("error creating temporary file: %w", err)
@@ -89,8 +93,10 @@ func processLargeFile(part *multipart.Part, peekBuffer []byte, n int) (sequoiaTy
 		return nil, nil, fmt.Errorf("error writing to temporary file: %w", err)
 	}
 
-	// Stream any remaining multipart data directly to the temporary file
-	size, err := io.Copy(tempFile, part)
+	// Stream any remaining multipart data directly to the temporary file with size limit
+	// Use io.LimitReader to enforce MaxFileSize
+	limitedReader := io.LimitReader(part, MaxFileSize-int64(n))
+	size, err := io.Copy(tempFile, limitedReader)
 	if err != nil {
 		// nolint:errcheck
 		tempFile.Close()
@@ -98,6 +104,20 @@ func processLargeFile(part *multipart.Part, peekBuffer []byte, n int) (sequoiaTy
 		os.Remove(tempFile.Name())
 		return nil, nil, fmt.Errorf("error streaming file data: %w", err)
 	}
+
+	// Check if we hit the size limit (meaning file is too large)
+	if size == MaxFileSize-int64(n) {
+		// Try to read one more byte to see if there's more data
+		buf := make([]byte, 1)
+		if _, err := part.Read(buf); err == nil {
+			// nolint:errcheck
+			tempFile.Close()
+			// nolint:errcheck
+			os.Remove(tempFile.Name())
+			return nil, nil, fmt.Errorf("file size exceeds maximum allowed size %d", MaxFileSize)
+		}
+	}
+
 	totalSize := int64(n) + size
 
 	// Seek back to the beginning of the temporary file
