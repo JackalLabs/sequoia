@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Get git version and commit
-export VERSION=$(echo $(git describe --tags) | sed 's/^v//')
+export VERSION=$(git describe --tags --always 2>/dev/null | sed 's/^v//')
 export COMMIT=$(git log -1 --format='%H')
 
 echo "Building with VERSION: $VERSION"
