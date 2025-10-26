@@ -1,6 +1,7 @@
 package strays
 
 import (
+	"runtime"
 	"time"
 
 	"github.com/JackalLabs/sequoia/utils"
@@ -40,10 +41,15 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.
 		start := h.stray.Start
 		proofType := h.stray.ProofType
 
+		// Force garbage collection before download to free up memory
+		runtime.GC()
+		
 		err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize, proofType, utils.GetIPFSParams(h.stray))
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msgf("Failed to download file %x", merkle)
 			h.stray = nil
+			// Force garbage collection after failed download to free up memory
+			runtime.GC()
 			continue
 		}
 
@@ -51,6 +57,8 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil
+			// Force garbage collection after error to free up memory
+			runtime.GC()
 			continue
 		}
 
@@ -58,6 +66,8 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil
+			// Force garbage collection after error to free up memory
+			runtime.GC()
 			continue
 		}
 
@@ -65,6 +75,8 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.
 		if err != nil {
 			log.Error().Err(err)
 			h.stray = nil
+			// Force garbage collection after error to free up memory
+			runtime.GC()
 			continue
 		}
 
@@ -99,6 +111,9 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.
 		wg.Wait()
 
 		h.stray = nil
+		
+		// Force garbage collection after successful completion to free up memory
+		runtime.GC()
 
 	}
 }

@@ -210,17 +210,19 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	}
 
 	buff := bytes.NewBuffer([]byte{})
+	// Ensure buffer is cleaned up even if function exits early
+	defer buff.Reset()
 
 	// Use TeeReader to monitor for context cancellation while copying
 	doneCh := make(chan struct{})
 	errCh := make(chan error, 1)
 
 	go func() {
+		defer close(doneCh)
 		_, err := io.Copy(buff, bodyReader)
 		if err != nil {
 			errCh <- err
 		}
-		close(doneCh)
 	}()
 
 	// Wait for either completion or timeout

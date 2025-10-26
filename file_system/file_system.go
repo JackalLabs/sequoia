@@ -121,11 +121,19 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 		return 0, "", fmt.Errorf("merkle does not match %x != %x", merkle, root)
 	}
 
-	b := make([]byte, 0)
+	// Calculate total size to avoid multiple reallocations
+	totalSize := 0
+	for _, chunk := range chunks {
+		totalSize += len(chunk)
+	}
+	
+	b := make([]byte, 0, totalSize)
 	for _, chunk := range chunks {
 		b = append(b, chunk...)
 	}
 	buf := bytes.NewBuffer(b)
+	// Clear the large byte slice to free memory after creating the buffer
+	b = nil
 
 	var n ipldFormat.Node
 	if proofType == sequoiaTypes.ProofTypeIPFSFolder {
@@ -185,11 +193,19 @@ func (f *FileSystem) WriteFileWithProgress(reader io.Reader, merkle []byte, owne
 	}
 	tracker.Progress = 60
 
-	b := make([]byte, 0)
+	// Calculate total size to avoid multiple reallocations
+	totalSize := 0
+	for _, chunk := range chunks {
+		totalSize += len(chunk)
+	}
+	
+	b := make([]byte, 0, totalSize)
 	for _, chunk := range chunks {
 		b = append(b, chunk...)
 	}
 	buf := bytes.NewBuffer(b)
+	// Clear the large byte slice to free memory after creating the buffer
+	b = nil
 	tracker.Progress = 70
 	var n ipldFormat.Node
 	if proofType == sequoiaTypes.ProofTypeIPFSFolder {
