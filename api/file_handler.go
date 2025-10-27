@@ -480,6 +480,8 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 		if !isFolder {
 			return nil, fileName, errors.New("this is not a folder")
 		}
+		// Seek back to the beginning since getFolderData reads from the reader
+		_, _ = fileData.Seek(0, io.SeekStart)
 		children := folder.Children
 
 		p := path[0] // next item in path list
@@ -499,6 +501,8 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 
 	folder, isFolder := getFolderData(fileData)
 	if !isFolder {
+		// Seek back to the beginning since getFolderData reads from the reader
+		_, _ = fileData.Seek(0, io.SeekStart)
 		return fileData, fileName, err
 	}
 
