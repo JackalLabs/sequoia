@@ -116,7 +116,7 @@ func ShutdownCmd() *cobra.Command {
 				msg,
 			).WithGasAuto().WithFeeAuto()
 
-			res, err := wallet.BroadcastTxCommit(data)
+			res, err := wallet.BroadcastTxAsync(data)
 			if err != nil {
 				return err
 			}
