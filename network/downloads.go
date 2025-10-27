@@ -200,6 +200,8 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		}
 		return 0, err
 	}
+	//nolint:errcheck
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		data, err := io.ReadAll(resp.Body)
@@ -214,8 +216,6 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 
 		return 0, fmt.Errorf("could not get file, code: %d | msg: %s", resp.StatusCode, e.Error)
 	}
-	//nolint:errcheck
-	defer resp.Body.Close()
 
 	var bodyReader io.Reader = resp.Body
 	contentEncoding := resp.Header.Get("Content-Encoding")
@@ -272,6 +272,8 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 
 	// Create a seeker-compatible reader from the buffered data
 	reader := sequoiaTypes.NewBytesSeeker(buff.Bytes())
+	//nolint:errcheck
+	defer reader.Close()
 
 	size, _, err := f.WriteFile(reader, merkle, owner, start, chunkSize, proofType, ipfsParams)
 	if err != nil {

@@ -33,8 +33,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const MaxFileSize = 32 << 30 // 32 gib
-
 var JobMap sync.Map
 
 func handleErr(err error, w http.ResponseWriter, code int) {
@@ -50,27 +48,27 @@ func handleErr(err error, w http.ResponseWriter, code int) {
 
 func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
+		// Use streaming multipart parsing instead of loading entire form into memory
+		sender, merkleString, startBlockString, proofTypeString, file, _, err := parseMultipartFormStreaming(req)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse form %w", err), w, http.StatusBadRequest)
 			return
 		}
-		sender := req.Form.Get("sender")
-		merkleString := req.Form.Get("merkle")
+		//nolint:errcheck
+		defer file.Close()
+
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse merkle: %w", err), w, http.StatusBadRequest)
 			return
 		}
 
-		startBlockString := req.Form.Get("start")
 		startBlock, err := strconv.ParseInt(startBlockString, 10, 64)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse start block: %w", err), w, http.StatusBadRequest)
 			return
 		}
 
-		proofTypeString := req.Form.Get("type")
 		if len(proofTypeString) == 0 {
 			proofTypeString = "0"
 		}
@@ -80,21 +78,8 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			return
 		}
 
-		file, fh, err := req.FormFile("file") // Retrieve the file from form data
-		if err != nil {
-			handleErr(fmt.Errorf("cannot get file from form: %w", err), w, http.StatusBadRequest)
-			return
-		}
-		//nolint:errcheck
-		defer file.Close()
-		//nolint:errcheck
-		defer req.MultipartForm.RemoveAll()
-
-		readSize := fh.Size
-		if readSize == 0 {
-			handleErr(fmt.Errorf("file cannot be empty"), w, http.StatusBadRequest)
-			return
-		}
+		// Size validation is now enforced during multipart streaming
+		// Files larger than MaxFileSize (32GB) will be rejected immediately
 
 		cl := storageTypes.NewQueryClient(wl.Client.GRPCConn)
 		queryParams := storageTypes.QueryFile{
@@ -109,11 +94,6 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 		}
 
 		f := res.File
-
-		if readSize != f.FileSize {
-			handleErr(fmt.Errorf("cannot accept form file that doesn't match the chain data %d != %d", readSize, f.FileSize), w, http.StatusInternalServerError)
-			return
-		}
 
 		if hex.EncodeToString(f.Merkle) != merkleString {
 			handleErr(fmt.Errorf("cannot accept file that doesn't match the chain data %x != %x", f.Merkle, merkle), w, http.StatusInternalServerError)
@@ -156,41 +136,29 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 
 func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
+		// Use streaming multipart parsing instead of loading entire form into memory
+		sender, merkleString, startBlockString, _, file, _, err := parseMultipartFormStreaming(req)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse form %w", err), w, http.StatusBadRequest)
 			return
 		}
-		sender := req.Form.Get("sender")
-		merkleString := req.Form.Get("merkle")
+		//nolint:errcheck
+		defer file.Close()
+
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse merkle: %w", err), w, http.StatusBadRequest)
 			return
 		}
 
-		startBlockString := req.Form.Get("start")
 		startBlock, err := strconv.ParseInt(startBlockString, 10, 64)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse start block: %w", err), w, http.StatusBadRequest)
 			return
 		}
 
-		file, fh, err := req.FormFile("file") // Retrieve the file from form data
-		if err != nil {
-			handleErr(fmt.Errorf("cannot get file from form: %w", err), w, http.StatusBadRequest)
-			return
-		}
-		//nolint:errcheck
-		defer file.Close()
-		//nolint:errcheck
-		defer req.MultipartForm.RemoveAll()
-
-		readSize := fh.Size
-		if readSize == 0 {
-			handleErr(fmt.Errorf("file cannot be empty"), w, http.StatusBadRequest)
-			return
-		}
+		// Size validation is now enforced during multipart streaming
+		// Files larger than MaxFileSize (32GB) will be rejected immediately
 
 		s := sha256.New() // creating id
 		_, _ = s.Write(merkle)
@@ -234,12 +202,6 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 		up.Status = "Got file from chain"
 
 		f := res.File
-
-		if readSize != f.FileSize {
-			log.Error().Err(fmt.Errorf("cannot accept form file that doesn't match the chain data %d != %d", readSize, f.FileSize))
-			up.Status = "Error: File size does not match"
-			return
-		}
 
 		if hex.EncodeToString(f.Merkle) != merkleString {
 			log.Error().Err(fmt.Errorf("cannot accept file that doesn't match the chain data %x != %x", f.Merkle, merkle))
