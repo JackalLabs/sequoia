@@ -137,12 +137,14 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 	return func(w http.ResponseWriter, req *http.Request) {
 		// Use streaming multipart parsing instead of loading entire form into memory
 		sender, merkleString, startBlockString, _, file, _, err := parseMultipartFormStreaming(req)
+		if file != nil {
+			//nolint:errcheck
+			defer file.Close()
+		}
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse form %w", err), w, http.StatusBadRequest)
 			return
 		}
-		//nolint:errcheck
-		defer file.Close()
 
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
