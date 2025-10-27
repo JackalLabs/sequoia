@@ -1,7 +1,6 @@
 package gateway_test
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -40,8 +39,7 @@ func TestFolderView(t *testing.T) {
 
 	// Method 1: Use a test server (preferred for unit tests)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rs := bytes.NewReader(htmlBytes)
-		http.ServeContent(w, r, "index.html", time.Time{}, rs)
+		http.ServeContent(w, r, "index.html", time.Time{}, htmlBytes)
 	}))
 	defer ts.Close() // This ensures the test server gets closed when the test is done
 
@@ -65,8 +63,7 @@ func TestFolderView(t *testing.T) {
 
 		s := http.NewServeMux()
 		s.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			rs := bytes.NewReader(htmlBytes)
-			http.ServeContent(w, r, "index.html", time.Time{}, rs)
+			http.ServeContent(w, r, "index.html", time.Time{}, htmlBytes)
 		})
 
 		// Use a goroutine so the test doesn't get stuck

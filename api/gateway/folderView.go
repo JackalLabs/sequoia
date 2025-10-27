@@ -1,11 +1,11 @@
 package gateway
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/hex"
 	"fmt"
 	"html/template"
+	"io"
 	"sync"
 
 	"github.com/JackalLabs/sequoia/types"
@@ -28,13 +28,14 @@ func compileTemplate() {
 	folderViewTmpl = template.Must(template.New("folderTemplate").Funcs(funcMap).Parse(tmplSrc))
 }
 
-func GenerateHTML(folder *types.FolderData, currentPath string) ([]byte, error) {
+func GenerateHTML(folder *types.FolderData, currentPath string) (io.ReadSeekCloser, error) {
 	tmplOnce.Do(compileTemplate)
-	var buf bytes.Buffer
+	var buf types.BytesSeeker
 	if err := folderViewTmpl.Execute(&buf, TemplateData{Folder: folder, CurrentPath: currentPath}); err != nil {
 		return nil, fmt.Errorf("error executing template: %w", err)
 	}
-	return buf.Bytes(), nil
+
+	return &buf, nil
 }
 
 // TemplateData is a struct to hold both the folder data and the current path
