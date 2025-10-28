@@ -1,7 +1,6 @@
 package network
 
 import (
-	"bytes"
 	"compress/gzip"
 	"compress/zlib"
 	"context"
@@ -17,7 +16,6 @@ import (
 
 	apiTypes "github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
-	sequoiaTypes "github.com/JackalLabs/sequoia/types"
 
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
@@ -243,9 +241,12 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		// No compression or unsupported; use raw body
 	}
 
-	// Create a buffered reader with timeout monitoring
-	// We need to buffer since WriteFile requires seeking capability
-	var buff bytes.Buffer
+	// Create a temp file for downloading
+	// We need temp file since WriteFile requires seeking capability
+	tempFile, err := os.CreateTemp("", "sequoia_download_*")
+	if err != nil {
+		return 0, fmt.Errorf("failed to create temp file: %w", err)
+	}
 
 	// Channel to signal completion
 	doneCh := make(chan struct{})
@@ -254,7 +255,7 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	// Stream data with timeout monitoring
 	go func() {
 		defer close(doneCh)
-		_, err := io.Copy(&buff, bodyReader)
+		_, err := io.Copy(tempFile, bodyReader)
 		if err != nil {
 			errCh <- err
 		}
@@ -263,15 +264,35 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	// Wait for either completion or timeout
 	select {
 	case <-ctx.Done():
+		// Clean up temp file on timeout
+		//nolint:errcheck
+		tempFile.Close()
+		//nolint:errcheck
+		os.Remove(tempFile.Name())
 		return 0, fmt.Errorf("download timed out after %v", timeout)
 	case err := <-errCh:
+		// Clean up temp file on error
+		//nolint:errcheck
+		tempFile.Close()
+		//nolint:errcheck
+		os.Remove(tempFile.Name())
 		return 0, fmt.Errorf("download error: %w", err)
 	case <-doneCh:
 		// Download completed successfully
 	}
 
-	// Create a seeker-compatible reader from the buffered data
-	reader := sequoiaTypes.NewBytesSeeker(buff.Bytes())
+	// Seek back to the beginning of the temporary file
+	_, err = tempFile.Seek(0, io.SeekStart)
+	if err != nil {
+		//nolint:errcheck
+		tempFile.Close()
+		//nolint:errcheck
+		os.Remove(tempFile.Name())
+		return 0, fmt.Errorf("failed to seek temp file to start: %w", err)
+	}
+
+	// Wrap the file with auto-deleting closer
+	reader := &tempFileReadSeekCloser{File: tempFile}
 	//nolint:errcheck
 	defer reader.Close()
 
@@ -281,4 +302,15 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	}
 
 	return size, nil
+}
+
+// tempFileReadSeekCloser wraps os.File and deletes it on Close
+type tempFileReadSeekCloser struct {
+	*os.File
+}
+
+func (tfrsc *tempFileReadSeekCloser) Close() error {
+	// nolint:errcheck
+	defer os.Remove(tfrsc.Name()) // Ensure deletion
+	return tfrsc.File.Close()
 }
