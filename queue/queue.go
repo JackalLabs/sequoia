@@ -175,7 +175,7 @@ func (q *Queue) Listen() {
 		var i int
 		for !complete && i < 10 {
 			i++
-			res, err = q.wallet.BroadcastTxCommit(data)
+			res, err = q.wallet.BroadcastTxAsync(data)
 			if err != nil {
 				if strings.Contains(err.Error(), "tx already exists in cache") {
 					if data.Sequence != nil {

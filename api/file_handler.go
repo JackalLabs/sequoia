@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -138,12 +137,14 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 	return func(w http.ResponseWriter, req *http.Request) {
 		// Use streaming multipart parsing instead of loading entire form into memory
 		sender, merkleString, startBlockString, _, file, _, err := parseMultipartFormStreaming(req)
+		if file != nil {
+			//nolint:errcheck
+			defer file.Close()
+		}
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse form %w", err), w, http.StatusBadRequest)
 			return
 		}
-		//nolint:errcheck
-		defer file.Close()
 
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
@@ -392,17 +393,18 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			_ = json.NewEncoder(w).Encode(v)
 			return
 		}
-		rs := bytes.NewReader(file)
+		defer func() { _ = file.Close() }()
 
-		http.ServeContent(w, req, fileName, time.Time{}, rs)
+		http.ServeContent(w, req, fileName, time.Time{}, file)
 	}
 }
 
 // getFolderData attempts to unmarshal the provided data into a FolderData structure.
 // It returns the FolderData and true on success, or nil and false if unmarshaling fails.
-func getFolderData(data []byte) (*sequoiaTypes.FolderData, bool) {
+func getFolderData(data io.Reader) (*sequoiaTypes.FolderData, bool) {
+	decode := json.NewDecoder(data)
 	var folder sequoiaTypes.FolderData
-	err := json.Unmarshal(data, &folder)
+	err := decode.Decode(&folder)
 	if err != nil {
 		return nil, false
 	}
@@ -411,7 +413,7 @@ func getFolderData(data []byte) (*sequoiaTypes.FolderData, bool) {
 
 // getMerkleData retrieves file data by merkle hash, first attempting local storage and then querying network providers if not found locally.
 // It returns the file data if successful, or an error if the file cannot be retrieved from any source.
-func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) ([]byte, error) {
+func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) (io.ReadSeekCloser, error) {
 	file, err := f.GetFileData(merkle)
 	if err == nil {
 		return file, nil
@@ -454,19 +456,12 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 		if err != nil {
 			continue // skipping bad url
 		}
-		// nolint:errcheck
-		defer r.Body.Close()
 
 		if r.StatusCode != http.StatusOK {
 			continue
 		}
 
-		fileData, err := io.ReadAll(io.LimitReader(r.Body, MaxFileSize))
-		if err != nil {
-			continue
-		}
-
-		return fileData, nil
+		return sequoiaTypes.ReadCloserToReadSeekCloser(r.Body)
 	}
 
 	return nil, errors.New("could not find file data on network")
@@ -475,7 +470,7 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 // GetMerklePathData recursively resolves a file or folder by traversing a path from a root merkle hash.
 // If the path leads to a file, returns its data; if it leads to a folder and raw is false, returns an HTML representation of the folder.
 // Returns the file or folder data, the resolved filename, and an error if the path is invalid or data retrieval fails.
-func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string, currentPath string, raw bool) ([]byte, string, error) {
+func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string, currentPath string, raw bool) (io.ReadSeekCloser, string, error) {
 	currentRoot := root
 
 	fileData, err := getMerkleData(currentRoot, fileName, f, wallet, myIp)
@@ -488,6 +483,8 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 		if !isFolder {
 			return nil, fileName, errors.New("this is not a folder")
 		}
+		// Seek back to the beginning since getFolderData reads from the reader
+		_, _ = fileData.Seek(0, io.SeekStart)
 		children := folder.Children
 
 		p := path[0] // next item in path list
@@ -507,6 +504,8 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 
 	folder, isFolder := getFolderData(fileData)
 	if !isFolder {
+		// Seek back to the beginning since getFolderData reads from the reader
+		_, _ = fileData.Seek(0, io.SeekStart)
 		return fileData, fileName, err
 	}
 
@@ -566,8 +565,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 					return
 				}
 
-				rs := bytes.NewReader(data)
-				http.ServeContent(w, req, name, time.Time{}, rs)
+				http.ServeContent(w, req, name, time.Time{}, data)
 				return // Add this return to prevent executing the code below
 			}
 		}
@@ -595,7 +593,6 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			}
 		}
 
-		rs := bytes.NewReader(fileData)
-		http.ServeContent(w, req, fileName, time.Time{}, rs)
+		http.ServeContent(w, req, fileName, time.Time{}, fileData)
 	}
 }

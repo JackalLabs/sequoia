@@ -3,6 +3,7 @@ package api_test
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"strings"
 	"testing"
 
@@ -93,19 +94,27 @@ func TestPathing(t *testing.T) {
 
 	pathData, _, err := api.GetMerklePathData(folderId, []string{"HappyBirthday.txt"}, folder.Name, f, nil, "", "/", false)
 	r.NoError(err)
-	r.Equal(file, pathData)
+	d, err := io.ReadAll(pathData)
+	r.NoError(err)
+	r.Equal(file, d)
 
 	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer", "HappyBirthday.txt"}, folder.Name, f, nil, "", "/", false)
 	r.NoError(err)
-	r.Equal(file, pathData)
+	d, err = io.ReadAll(pathData)
+	r.NoError(err)
+	r.Equal(file, d)
 
 	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer"}, folder.Name, f, nil, "", "/", false)
 	r.NoError(err)
-	htmlData := string(pathData)
+	d, err = io.ReadAll(pathData)
+	r.NoError(err)
+	htmlData := string(d)
 	r.True(strings.Contains(htmlData, "</html>"))
 
 	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer"}, folder.Name, f, nil, "", "/", true)
 	r.NoError(err)
-	htmlData = string(pathData)
+	d, err = io.ReadAll(pathData)
+	r.NoError(err)
+	htmlData = string(d)
 	r.False(strings.Contains(htmlData, "</html>"))
 }

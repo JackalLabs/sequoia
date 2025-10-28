@@ -5,10 +5,15 @@ import (
 	"io"
 )
 
-// bytesSeeker implements the FileReader interface directly with byte slices
-type bytesSeeker struct {
+// BytesSeeker implements the FileReader interface directly with byte slices
+type BytesSeeker struct {
 	data []byte
 	pos  int64
+}
+
+func (b *BytesSeeker) Write(p []byte) (n int, err error) {
+	b.data = append(b.data, p...)
+	return len(p), nil
 }
 
 // NewBytesSeeker creates a new seeker from a byte slice
@@ -16,14 +21,14 @@ func NewBytesSeeker(data []byte) FileReader {
 	// Make a copy to avoid external modifications
 	dataCopy := make([]byte, len(data))
 	copy(dataCopy, data)
-	return &bytesSeeker{
+	return &BytesSeeker{
 		data: dataCopy,
 		pos:  0,
 	}
 }
 
 // Read implements io.Reader
-func (b *bytesSeeker) Read(p []byte) (n int, err error) {
+func (b *BytesSeeker) Read(p []byte) (n int, err error) {
 	if b.pos >= int64(len(b.data)) {
 		return 0, io.EOF
 	}
@@ -33,7 +38,7 @@ func (b *bytesSeeker) Read(p []byte) (n int, err error) {
 }
 
 // Seek implements io.Seeker
-func (b *bytesSeeker) Seek(offset int64, whence int) (int64, error) {
+func (b *BytesSeeker) Seek(offset int64, whence int) (int64, error) {
 	var newPos int64
 	switch whence {
 	case io.SeekStart:
@@ -58,6 +63,6 @@ func (b *bytesSeeker) Seek(offset int64, whence int) (int64, error) {
 }
 
 // Close implements io.Closer (no-op for bytes)
-func (b *bytesSeeker) Close() error {
+func (b *BytesSeeker) Close() error {
 	return nil
 }

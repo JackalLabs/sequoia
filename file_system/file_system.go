@@ -572,7 +572,7 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 	return &newTree, chunkOut, nil
 }
 
-func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
+func (f *FileSystem) GetFileData(merkle []byte) (io.ReadSeekCloser, error) {
 	fcid := ""
 	err := f.db.View(func(txn *badger.Txn) error {
 		b, err := txn.Get(fmt.Appendf(nil, "cid/%x", merkle))
@@ -610,17 +610,11 @@ func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 			if err != nil {
 				return nil, fmt.Errorf("cannot marshal folder for cid '%s': %w", c.String(), err)
 			}
-			return b, nil
+			return sequoiaTypes.NewBytesSeeker(b), nil
 		}
 
 		return nil, fmt.Errorf("cannot get file for cid '%s': %w", c.String(), err)
 	}
-	//nolint:errcheck
-	defer rsc.Close()
-	fileData, err := io.ReadAll(rsc)
-	if err != nil {
-		return nil, err
-	}
 
-	return fileData, err
+	return rsc, err
 }

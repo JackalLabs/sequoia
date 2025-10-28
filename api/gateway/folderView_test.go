@@ -1,7 +1,6 @@
 package gateway_test
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -40,8 +39,7 @@ func TestFolderView(t *testing.T) {
 
 	// Method 1: Use a test server (preferred for unit tests)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rs := bytes.NewReader(htmlBytes)
-		http.ServeContent(w, r, "index.html", time.Time{}, rs)
+		http.ServeContent(w, r, "index.html", time.Time{}, htmlBytes)
 	}))
 	defer ts.Close() // This ensures the test server gets closed when the test is done
 
@@ -59,14 +57,17 @@ func TestFolderView(t *testing.T) {
 
 	t.Log(string(body))
 
+	// Reset the reader position for the next use
+	_, err = htmlBytes.Seek(0, io.SeekStart)
+	req.NoError(err)
+
 	// Method 2: If you really need a real server for manual testing (not ideal for automated tests)
 	if true { // Change to true when you want to manually test
 		fmt.Println("Starting server on port 4045, press Ctrl+C to stop...")
 
 		s := http.NewServeMux()
 		s.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			rs := bytes.NewReader(htmlBytes)
-			http.ServeContent(w, r, "index.html", time.Time{}, rs)
+			http.ServeContent(w, r, "index.html", time.Time{}, htmlBytes)
 		})
 
 		// Use a goroutine so the test doesn't get stuck
