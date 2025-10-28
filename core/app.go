@@ -28,19 +28,20 @@ import (
 
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/config"
-	"github.com/JackalLabs/sequoia/logger"
 	"github.com/JackalLabs/sequoia/proofs"
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/JackalLabs/sequoia/strays"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	badger "github.com/dgraph-io/badger/v4"
-	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 type App struct {
 	api          *api.API
+	pprofServer  *monitoring.PProf
 	q            *queue.Queue
 	prover       *proofs.Prover
 	strayManager *strays.StrayManager
@@ -70,19 +71,44 @@ func NewApp(home string) (*App, error) {
 
 	options := badger.DefaultOptions(dataDir)
 
-	options.Logger = &logger.SequoiaLogger{}
-	options.BlockCacheSize = 256 << 25
-	options.MaxLevels = 8
+	// l := logger.NewSequoiaLogger(&log.Logger)
+
+	options = options.WithBlockCacheSize(256 << 22).WithMaxLevels(8)
+
+	// options = options.WithLogger(l)
+
+	badgerLogLevel := badger.INFO
+	switch log.Logger.GetLevel() {
+	case zerolog.DebugLevel:
+		badgerLogLevel = badger.DEBUG
+	case zerolog.InfoLevel:
+		badgerLogLevel = badger.INFO
+	case zerolog.WarnLevel:
+		badgerLogLevel = badger.WARNING
+	case zerolog.ErrorLevel:
+		badgerLogLevel = badger.ERROR
+	}
+	log.Info().
+		Int("badger_log_level", int(badgerLogLevel)).
+		Str("global_log_level", log.Logger.GetLevel().String()).
+		Msg("badger logging configured")
+
+	options = options.WithLoggingLevel(badgerLogLevel)
+
+	log.Info().Msg("Creating sequoia app...")
 
 	db, err := badger.Open(options)
 	if err != nil {
+		log.Error().Err(err).Msg("Error opening database")
 		return nil, err
 	}
+	log.Info().Msg("Opened database")
 
 	ds, err := ipfs.NewBadgerDataStore(db)
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msg("Data store initialized")
 
 	bsDir := os.ExpandEnv(cfg.BlockStoreConfig.Directory)
 	var bs blockstore.Blockstore
@@ -95,8 +121,11 @@ func NewApp(home string) (*App, error) {
 			return nil, err
 		}
 	}
+	log.Info().Msg("Blockstore initialized")
 
 	apiServer := api.NewAPI(&cfg.APICfg)
+
+	pprofServer := monitoring.NewPProf("localhost:6060")
 
 	w, err := config.InitWallet(home)
 	if err != nil {
@@ -108,11 +137,14 @@ func NewApp(home string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msg("File system initialized")
+
 	return &App{
-		fileSystem: f,
-		api:        apiServer,
-		home:       home,
-		wallet:     w,
+		fileSystem:  f,
+		api:         apiServer,
+		pprofServer: pprofServer,
+		home:        home,
+		wallet:      w,
 	}, nil
 }
 
@@ -200,6 +232,8 @@ func (a *App) Start() error {
 	if err != nil {
 		return err
 	}
+	log.Info().Msg("Starting sequoia...")
+
 	log.Debug().Object("config", cfg).Msg("sequoia config")
 
 	myAddress := a.wallet.AccAddress()
@@ -252,7 +286,7 @@ func (a *App) Start() error {
 		return err
 	}
 
-	a.q = queue.NewQueue(a.wallet, cfg.QueueInterval)
+	a.q = queue.NewQueue(a.wallet, cfg.QueueInterval, cfg.MaxSizeBytes, cfg.Ip)
 	go a.q.Listen()
 
 	prover := proofs.NewProver(a.wallet, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))
@@ -274,6 +308,7 @@ func (a *App) Start() error {
 	go a.prover.Start()
 	go a.strayManager.Start(a.fileSystem, a.q, myUrl, params.ChunkSize)
 	go a.monitor.Start()
+	go a.pprofServer.Start()
 
 	done := make(chan os.Signal, 1)
 	defer signal.Stop(done) // undo signal.Notify effect
@@ -291,6 +326,7 @@ func (a *App) Start() error {
 
 	time.Sleep(time.Second * 30) // give the program some time to shut down
 	a.fileSystem.Close()
+	_ = a.pprofServer.Stop()
 
 	return nil
 }
@@ -332,16 +368,23 @@ func (a *App) ConnectPeers() {
 			log.Warn().Msgf("Could not get hosts from %s", ipfsHostAddress)
 			continue
 		}
-		//nolint:errcheck
-		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			log.Warn().Msgf("Unexpected status %d from %s", res.StatusCode, ipfsHostAddress)
+			_ = res.Body.Close()
+			continue
+		}
 
 		var hosts apiTypes.HostResponse
 
 		err = json.NewDecoder(res.Body).Decode(&hosts)
 		if err != nil {
 			log.Warn().Msgf("Could not parse hosts %s", ip)
+			_ = res.Body.Close()
 			continue
 		}
+
+		_ = res.Body.Close()
 
 		r, err := regexp.Compile(`/ip4/(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)[0-9.]+/`)
 		if err != nil {

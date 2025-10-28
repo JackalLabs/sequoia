@@ -1,9 +1,8 @@
 package network
 
 import (
-	"bytes"
-	"compress/flate"
 	"compress/gzip"
+	"compress/zlib"
 	"context"
 	"encoding/json"
 	"errors"
@@ -16,12 +15,11 @@ import (
 	"github.com/andybalholm/brotli"
 
 	apiTypes "github.com/JackalLabs/sequoia/api/types"
-
-	ipfslite "github.com/hsanjuan/ipfs-lite"
-
 	"github.com/JackalLabs/sequoia/file_system"
+
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	ipfslite "github.com/hsanjuan/ipfs-lite"
+	"github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
 
@@ -33,7 +31,9 @@ func init() {
 		path = "urlmap.json"
 	}
 	log.Info().Str("path", path).Msg("Importing url replacement map...")
-	data, err := os.ReadFile(path)
+
+	// Use a goroutine with timeout to prevent hanging in remote deployments
+	data, err := readFileWithTimeout(path, 5*time.Second)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not import URL map.")
 		urlMap = make(map[string]string)
@@ -45,6 +45,36 @@ func init() {
 		log.Warn().Err(err).Msg("Could not parse url map.")
 		urlMap = make(map[string]string)
 		return
+	}
+
+	log.Info().Str("path", path).Msg("Import of url replacement map was successful")
+}
+
+// readFileWithTimeout reads a file with a timeout to prevent hanging in remote deployments
+func readFileWithTimeout(filepath string, timeout time.Duration) ([]byte, error) {
+	type result struct {
+		data []byte
+		err  error
+	}
+
+	resultCh := make(chan result, 1)
+
+	go func() {
+		// Check if file exists first to provide better error messages
+		if _, err := os.Stat(filepath); err != nil {
+			resultCh <- result{data: nil, err: fmt.Errorf("file does not exist or cannot be accessed: %w", err)}
+			return
+		}
+
+		data, err := os.ReadFile(filepath)
+		resultCh <- result{data: data, err: err}
+	}()
+
+	select {
+	case res := <-resultCh:
+		return res.data, res.err
+	case <-time.After(timeout):
+		return nil, fmt.Errorf("readFile timeout after %v for file: %s (this may indicate file system issues in remote deployment)", timeout, filepath)
 	}
 }
 
@@ -138,7 +168,6 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	}
 
 	cli := &http.Client{
-		Timeout:   timeout,
 		Transport: transport,
 	}
 
@@ -169,6 +198,8 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		}
 		return 0, err
 	}
+	//nolint:errcheck
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		data, err := io.ReadAll(resp.Body)
@@ -183,8 +214,6 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 
 		return 0, fmt.Errorf("could not get file, code: %d | msg: %s", resp.StatusCode, e.Error)
 	}
-	//nolint:errcheck
-	defer resp.Body.Close()
 
 	var bodyReader io.Reader = resp.Body
 	contentEncoding := resp.Header.Get("Content-Encoding")
@@ -199,41 +228,73 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 		defer gz.Close()
 		bodyReader = gz
 	case "deflate":
-		deflateReader := flate.NewReader(resp.Body)
+		zr, err := zlib.NewReader(resp.Body)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create zlib (deflate) reader: %w", err)
+		}
 		//nolint:errcheck
-		defer deflateReader.Close()
-		bodyReader = deflateReader
+		defer zr.Close()
+		bodyReader = zr
 	case "br":
 		bodyReader = brotli.NewReader(resp.Body)
 	default:
 		// No compression or unsupported; use raw body
 	}
 
-	buff := bytes.NewBuffer([]byte{})
+	// Create a temp file for downloading
+	// We need temp file since WriteFile requires seeking capability
+	tempFile, err := os.CreateTemp("", "sequoia_download_*")
+	if err != nil {
+		return 0, fmt.Errorf("failed to create temp file: %w", err)
+	}
 
-	// Use TeeReader to monitor for context cancellation while copying
+	// Channel to signal completion
 	doneCh := make(chan struct{})
 	errCh := make(chan error, 1)
 
+	// Stream data with timeout monitoring
 	go func() {
-		_, err := io.Copy(buff, bodyReader)
+		defer close(doneCh)
+		_, err := io.Copy(tempFile, bodyReader)
 		if err != nil {
 			errCh <- err
 		}
-		close(doneCh)
 	}()
 
 	// Wait for either completion or timeout
 	select {
 	case <-ctx.Done():
+		// Clean up temp file on timeout
+		//nolint:errcheck
+		tempFile.Close()
+		//nolint:errcheck
+		os.Remove(tempFile.Name())
 		return 0, fmt.Errorf("download timed out after %v", timeout)
 	case err := <-errCh:
+		// Clean up temp file on error
+		//nolint:errcheck
+		tempFile.Close()
+		//nolint:errcheck
+		os.Remove(tempFile.Name())
 		return 0, fmt.Errorf("download error: %w", err)
 	case <-doneCh:
 		// Download completed successfully
 	}
 
-	reader := bytes.NewReader(buff.Bytes())
+	// Seek back to the beginning of the temporary file
+	_, err = tempFile.Seek(0, io.SeekStart)
+	if err != nil {
+		//nolint:errcheck
+		tempFile.Close()
+		//nolint:errcheck
+		os.Remove(tempFile.Name())
+		return 0, fmt.Errorf("failed to seek temp file to start: %w", err)
+	}
+
+	// Wrap the file with auto-deleting closer
+	reader := &tempFileReadSeekCloser{File: tempFile}
+	//nolint:errcheck
+	defer reader.Close()
 
 	size, _, err := f.WriteFile(reader, merkle, owner, start, chunkSize, proofType, ipfsParams)
 	if err != nil {
@@ -241,4 +302,15 @@ func DownloadFileFromURL(f *file_system.FileSystem, url string, merkle []byte, o
 	}
 
 	return size, nil
+}
+
+// tempFileReadSeekCloser wraps os.File and deletes it on Close
+type tempFileReadSeekCloser struct {
+	*os.File
+}
+
+func (tfrsc *tempFileReadSeekCloser) Close() error {
+	// nolint:errcheck
+	defer os.Remove(tfrsc.Name()) // Ensure deletion
+	return tfrsc.File.Close()
 }

@@ -18,11 +18,11 @@ import (
 	"google.golang.org/grpc/status"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	canine "github.com/jackalLabs/canine-chain/v4/app"
+	canine "github.com/jackalLabs/canine-chain/v5/app"
 
 	"github.com/JackalLabs/sequoia/queue"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	"github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	"github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 	merkletree "github.com/wealdtech/go-merkletree/v2"
 	"github.com/wealdtech/go-merkletree/v2/sha3"
@@ -267,7 +267,7 @@ func (p *Prover) PostProof(merkle []byte, owner string, start int64, blockHeight
 	}
 
 	if len(txMsgData.Data) == 0 {
-		log.Warn().
+		log.Debug().
 			Hex("merkle", merkle).
 			Str("owner", owner).
 			Int64("start", start).
@@ -318,7 +318,7 @@ func (p *Prover) Start() {
 			log.Error().Err(err)
 			continue
 		}
-		height := abciInfo.Response.LastBlockHeight + 10
+		height := abciInfo.Response.LastBlockHeight
 
 		t := time.Now()
 

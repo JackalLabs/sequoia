@@ -7,9 +7,23 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
+const (
+	// MaxSensibleQueueSizeBytes is the maximum reasonable queue size to catch configuration typos
+	// Set to 1GB (1024 * 1024 * 1024 bytes) as an upper bound
+	MaxSensibleQueueSizeBytes = 1024 * 1024 * 1024
+)
+
 func (c Config) Validate() error {
 	if c.DataDirectory == "" {
 		return errors.New("invalid data directory")
+	}
+
+	// Validate MaxSizeBytes bounds
+	if c.MaxSizeBytes <= 0 {
+		return errors.New("MaxSizeBytes must be greater than 0")
+	}
+	if c.MaxSizeBytes > MaxSensibleQueueSizeBytes {
+		return errors.New("MaxSizeBytes exceeds maximum sensible limit (1GB), check for configuration typos")
 	}
 
 	switch c.BlockStoreConfig.Type {

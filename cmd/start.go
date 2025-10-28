@@ -36,13 +36,14 @@ func StartCmd() *cobra.Command {
 				maxRestartAttempt = 0
 			}
 
+			// Set log level BEFORE creating the app to ensure debug logs are visible
 			switch logLevel {
 			case "info":
-				log.Logger = log.Level(zerolog.InfoLevel)
+				log.Logger = log.Logger.Level(zerolog.InfoLevel)
 			case "debug":
-				log.Logger = log.Level(zerolog.DebugLevel)
+				log.Logger = log.Logger.Level(zerolog.DebugLevel)
 			case "error":
-				log.Logger = log.Level(zerolog.ErrorLevel)
+				log.Logger = log.Logger.Level(zerolog.ErrorLevel)
 			}
 
 			app, err := core.NewApp(home)

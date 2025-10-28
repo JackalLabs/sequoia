@@ -1,7 +1,7 @@
 export GO111MODULE = on
 
-VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
-COMMIT := $(shell git log -1 --format='%H')
+VERSION ?= $(shell echo $(shell git describe --tags) | sed 's/^v//')
+COMMIT ?= $(shell git log -1 --format='%H')
 
 ###############################################################################
 ###                                   All                                   ###
@@ -12,10 +12,13 @@ ldflags = -X github.com/JackalLabs/sequoia/config.COMMIT=$(COMMIT) \
 
 all: lint test-unit
 
+build:
+	@go build -ldflags '$(ldflags)'
+
 install:
 	@go install -ldflags '$(ldflags)'
 
-.PHONY: install
+.PHONY: install build
 
 
 ###############################################################################
@@ -46,7 +49,7 @@ clean:
 golangci_lint_cmd=golangci-lint
 
 format-tools:
-	go install mvdan.cc/gofumpt@v0.6.0
+	go install mvdan.cc/gofumpt@latest
 	gofumpt -l -w .
 
 lint: format-tools

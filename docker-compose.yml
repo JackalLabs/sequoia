@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  sequoia:
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION}
+        COMMIT: ${COMMIT}
+    container_name: sequoia-provider
+    restart: unless-stopped
+    ports:
+      - "3333:3333"  # API port
+      - "4005:4005"  # IPFS port
+      - "4001:4001"  # IPFS port
+    volumes:
+      - ./data:/home/sequoia/.sequoia
+    networks:
+      - sequoia_network
+networks:
+  sequoia_network:
+    driver: bridge

@@ -1,11 +1,13 @@
 package api_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"strings"
 	"testing"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/JackalLabs/sequoia/api"
 	"github.com/JackalLabs/sequoia/file_system"
@@ -19,19 +21,21 @@ import (
 const owner = "jkl15w9zm873n0femu8egv7hyj9l7jfqtqvwyrqk73"
 
 func writeFile(f *file_system.FileSystem, file []byte) ([]byte, uint, error) {
-	root, _, _, _, err := file_system.BuildTree(bytes.NewReader(file), 10240, 0)
+	reader1 := types.NewBytesSeeker(file)
+	reader2 := types.NewBytesSeeker(file)
+	root, _, _, err := file_system.BuildTree(reader1, 10240, 0)
 	if err != nil {
 		return root, 0, err
 	}
 
-	size, _, err := f.WriteFile(bytes.NewReader(file), root, owner, 0, 1024, 0, nil)
+	size, _, err := f.WriteFile(reader2, root, owner, 0, 1024, 0, nil)
 	return root, uint(size), err
 }
 
 func TestPathing(t *testing.T) {
 	r := require.New(t)
 	options := badger.DefaultOptions("/tmp/badger/k")
-	options.Logger = &logger.SequoiaLogger{}
+	options.Logger = logger.NewSequoiaLogger(&log.Logger)
 
 	db, err := badger.Open(options)
 	r.NoError(err)
@@ -90,19 +94,27 @@ func TestPathing(t *testing.T) {
 
 	pathData, _, err := api.GetMerklePathData(folderId, []string{"HappyBirthday.txt"}, folder.Name, f, nil, "", "/", false)
 	r.NoError(err)
-	r.Equal(file, pathData)
+	d, err := io.ReadAll(pathData)
+	r.NoError(err)
+	r.Equal(file, d)
 
 	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer", "HappyBirthday.txt"}, folder.Name, f, nil, "", "/", false)
 	r.NoError(err)
-	r.Equal(file, pathData)
+	d, err = io.ReadAll(pathData)
+	r.NoError(err)
+	r.Equal(file, d)
 
 	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer"}, folder.Name, f, nil, "", "/", false)
 	r.NoError(err)
-	htmlData := string(pathData)
+	d, err = io.ReadAll(pathData)
+	r.NoError(err)
+	htmlData := string(d)
 	r.True(strings.Contains(htmlData, "</html>"))
 
 	pathData, _, err = api.GetMerklePathData(outerFolderId, []string{"HappyContainer"}, folder.Name, f, nil, "", "/", true)
 	r.NoError(err)
-	htmlData = string(pathData)
+	d, err = io.ReadAll(pathData)
+	r.NoError(err)
+	htmlData = string(d)
 	r.False(strings.Contains(htmlData, "</html>"))
 }

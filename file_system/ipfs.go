@@ -67,7 +67,7 @@ func (f *FileSystem) GetCIDFromMerkle(merkle []byte) (cid string, err error) {
 		return "", err
 	}
 
-	return
+	return cid, err
 }
 
 func (f *FileSystem) ListCids() ([]string, error) {

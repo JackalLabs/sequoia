@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -29,11 +28,9 @@ import (
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
 	"github.com/gorilla/mux"
-	storageTypes "github.com/jackalLabs/canine-chain/v4/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
-
-const MaxFileSize = 32 << 30 // 32 gib
 
 var JobMap sync.Map
 
@@ -50,27 +47,27 @@ func handleErr(err error, w http.ResponseWriter, code int) {
 
 func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
+		// Use streaming multipart parsing instead of loading entire form into memory
+		sender, merkleString, startBlockString, proofTypeString, file, _, err := parseMultipartFormStreaming(req)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse form %w", err), w, http.StatusBadRequest)
 			return
 		}
-		sender := req.Form.Get("sender")
-		merkleString := req.Form.Get("merkle")
+		//nolint:errcheck
+		defer file.Close()
+
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse merkle: %w", err), w, http.StatusBadRequest)
 			return
 		}
 
-		startBlockString := req.Form.Get("start")
 		startBlock, err := strconv.ParseInt(startBlockString, 10, 64)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse start block: %w", err), w, http.StatusBadRequest)
 			return
 		}
 
-		proofTypeString := req.Form.Get("type")
 		if len(proofTypeString) == 0 {
 			proofTypeString = "0"
 		}
@@ -80,21 +77,8 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 			return
 		}
 
-		file, fh, err := req.FormFile("file") // Retrieve the file from form data
-		if err != nil {
-			handleErr(fmt.Errorf("cannot get file from form: %w", err), w, http.StatusBadRequest)
-			return
-		}
-		//nolint:errcheck
-		defer file.Close()
-		//nolint:errcheck
-		defer req.MultipartForm.RemoveAll()
-
-		readSize := fh.Size
-		if readSize == 0 {
-			handleErr(fmt.Errorf("file cannot be empty"), w, http.StatusBadRequest)
-			return
-		}
+		// Size validation is now enforced during multipart streaming
+		// Files larger than MaxFileSize (32GB) will be rejected immediately
 
 		cl := storageTypes.NewQueryClient(wl.Client.GRPCConn)
 		queryParams := storageTypes.QueryFile{
@@ -109,11 +93,6 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 		}
 
 		f := res.File
-
-		if readSize != f.FileSize {
-			handleErr(fmt.Errorf("cannot accept form file that doesn't match the chain data %d != %d", readSize, f.FileSize), w, http.StatusInternalServerError)
-			return
-		}
 
 		if hex.EncodeToString(f.Merkle) != merkleString {
 			handleErr(fmt.Errorf("cannot accept file that doesn't match the chain data %x != %x", f.Merkle, merkle), w, http.StatusInternalServerError)
@@ -156,41 +135,31 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 
 func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		err := req.ParseMultipartForm(MaxFileSize) // MAX file size lives here
+		// Use streaming multipart parsing instead of loading entire form into memory
+		sender, merkleString, startBlockString, _, file, _, err := parseMultipartFormStreaming(req)
+		if file != nil {
+			//nolint:errcheck
+			defer file.Close()
+		}
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse form %w", err), w, http.StatusBadRequest)
 			return
 		}
-		sender := req.Form.Get("sender")
-		merkleString := req.Form.Get("merkle")
+
 		merkle, err := hex.DecodeString(merkleString)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse merkle: %w", err), w, http.StatusBadRequest)
 			return
 		}
 
-		startBlockString := req.Form.Get("start")
 		startBlock, err := strconv.ParseInt(startBlockString, 10, 64)
 		if err != nil {
 			handleErr(fmt.Errorf("cannot parse start block: %w", err), w, http.StatusBadRequest)
 			return
 		}
 
-		file, fh, err := req.FormFile("file") // Retrieve the file from form data
-		if err != nil {
-			handleErr(fmt.Errorf("cannot get file from form: %w", err), w, http.StatusBadRequest)
-			return
-		}
-		//nolint:errcheck
-		defer file.Close()
-		//nolint:errcheck
-		defer req.MultipartForm.RemoveAll()
-
-		readSize := fh.Size
-		if readSize == 0 {
-			handleErr(fmt.Errorf("file cannot be empty"), w, http.StatusBadRequest)
-			return
-		}
+		// Size validation is now enforced during multipart streaming
+		// Files larger than MaxFileSize (32GB) will be rejected immediately
 
 		s := sha256.New() // creating id
 		_, _ = s.Write(merkle)
@@ -235,12 +204,6 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 
 		f := res.File
 
-		if readSize != f.FileSize {
-			log.Error().Err(fmt.Errorf("cannot accept form file that doesn't match the chain data %d != %d", readSize, f.FileSize))
-			up.Status = "Error: File size does not match"
-			return
-		}
-
 		if hex.EncodeToString(f.Merkle) != merkleString {
 			log.Error().Err(fmt.Errorf("cannot accept file that doesn't match the chain data %x != %x", f.Merkle, merkle))
 			up.Status = "Error: Merkle does not match"
@@ -276,7 +239,7 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 
 		go func() {
 			time.Sleep(10 * time.Minute)
-			log.Info().Str("jobId", jobId).Msg("Deleting job after 10-minute retention period")
+			log.Debug().Str("jobId", jobId).Msg("Deleting job after 10-minute retention period")
 			JobMap.Delete(jobId)
 		}()
 	}
@@ -430,17 +393,18 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			_ = json.NewEncoder(w).Encode(v)
 			return
 		}
-		rs := bytes.NewReader(file)
+		defer func() { _ = file.Close() }()
 
-		http.ServeContent(w, req, fileName, time.Time{}, rs)
+		http.ServeContent(w, req, fileName, time.Time{}, file)
 	}
 }
 
 // getFolderData attempts to unmarshal the provided data into a FolderData structure.
 // It returns the FolderData and true on success, or nil and false if unmarshaling fails.
-func getFolderData(data []byte) (*sequoiaTypes.FolderData, bool) {
+func getFolderData(data io.Reader) (*sequoiaTypes.FolderData, bool) {
+	decode := json.NewDecoder(data)
 	var folder sequoiaTypes.FolderData
-	err := json.Unmarshal(data, &folder)
+	err := decode.Decode(&folder)
 	if err != nil {
 		return nil, false
 	}
@@ -449,7 +413,7 @@ func getFolderData(data []byte) (*sequoiaTypes.FolderData, bool) {
 
 // getMerkleData retrieves file data by merkle hash, first attempting local storage and then querying network providers if not found locally.
 // It returns the file data if successful, or an error if the file cannot be retrieved from any source.
-func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) ([]byte, error) {
+func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) (io.ReadSeekCloser, error) {
 	file, err := f.GetFileData(merkle)
 	if err == nil {
 		return file, nil
@@ -492,19 +456,12 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 		if err != nil {
 			continue // skipping bad url
 		}
-		// nolint:errcheck
-		defer r.Body.Close()
 
 		if r.StatusCode != http.StatusOK {
 			continue
 		}
 
-		fileData, err := io.ReadAll(io.LimitReader(r.Body, MaxFileSize))
-		if err != nil {
-			continue
-		}
-
-		return fileData, nil
+		return sequoiaTypes.ReadCloserToReadSeekCloser(r.Body)
 	}
 
 	return nil, errors.New("could not find file data on network")
@@ -513,7 +470,7 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 // GetMerklePathData recursively resolves a file or folder by traversing a path from a root merkle hash.
 // If the path leads to a file, returns its data; if it leads to a folder and raw is false, returns an HTML representation of the folder.
 // Returns the file or folder data, the resolved filename, and an error if the path is invalid or data retrieval fails.
-func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string, currentPath string, raw bool) ([]byte, string, error) {
+func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string, currentPath string, raw bool) (io.ReadSeekCloser, string, error) {
 	currentRoot := root
 
 	fileData, err := getMerkleData(currentRoot, fileName, f, wallet, myIp)
@@ -526,6 +483,8 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 		if !isFolder {
 			return nil, fileName, errors.New("this is not a folder")
 		}
+		// Seek back to the beginning since getFolderData reads from the reader
+		_, _ = fileData.Seek(0, io.SeekStart)
 		children := folder.Children
 
 		p := path[0] // next item in path list
@@ -545,6 +504,8 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 
 	folder, isFolder := getFolderData(fileData)
 	if !isFolder {
+		// Seek back to the beginning since getFolderData reads from the reader
+		_, _ = fileData.Seek(0, io.SeekStart)
 		return fileData, fileName, err
 	}
 
@@ -604,8 +565,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 					return
 				}
 
-				rs := bytes.NewReader(data)
-				http.ServeContent(w, req, name, time.Time{}, rs)
+				http.ServeContent(w, req, name, time.Time{}, data)
 				return // Add this return to prevent executing the code below
 			}
 		}
@@ -633,7 +593,6 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			}
 		}
 
-		rs := bytes.NewReader(fileData)
-		http.ServeContent(w, req, fileName, time.Time{}, rs)
+		http.ServeContent(w, req, fileName, time.Time{}, fileData)
 	}
 }

@@ -9,11 +9,13 @@ import (
 )
 
 type Queue struct {
-	wallet    *wallet.Wallet
-	messages  []*Message
-	processed time.Time
-	running   bool
-	interval  int64
+	wallet       *wallet.Wallet
+	messages     []*Message
+	processed    time.Time
+	running      bool
+	interval     int64
+	maxSizeBytes int64
+	domain       string
 }
 
 type Message struct {

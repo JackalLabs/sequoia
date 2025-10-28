@@ -1,9 +1,6 @@
 package config
 
 import (
-	"encoding/hex"
-
-	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
@@ -24,6 +21,7 @@ type ChainConfig struct {
 
 type Config struct {
 	QueueInterval    int64              `yaml:"queue_interval" mapstructure:"queue_interval"`
+	MaxSizeBytes     int64              `yaml:"max_size_bytes" mapstructure:"max_size_bytes"`
 	ProofInterval    int64              `yaml:"proof_interval" mapstructure:"proof_interval"`
 	StrayManagerCfg  StrayManagerConfig `yaml:"stray_manager" mapstructure:"stray_manager"`
 	ChainCfg         ChainConfig        `yaml:"chain_config" mapstructure:"chain_config"`
@@ -36,11 +34,15 @@ type Config struct {
 }
 
 func DefaultQueueInterval() int64 {
-	return 10
+	return 2
+}
+
+func DefaultMaxSizeBytes() int64 {
+	return 500000
 }
 
 func DefaultProofInterval() int64 {
-	return 120
+	return 700
 }
 
 func DefaultIP() string {
@@ -109,19 +111,10 @@ type BlockStoreConfig struct {
 }
 
 func DefaultBlockStoreConfig() BlockStoreConfig {
-	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
-	if err != nil {
-		panic(err)
-	}
-	k, err := priv.Raw()
-	if err != nil {
-		panic(err)
-	}
-
 	return BlockStoreConfig{
 		Directory: "$HOME/.sequoia/blockstore",
 		Type:      OptFlatFS,
-		Key:       hex.EncodeToString(k),
+		Key:       "",
 	}
 }
 
@@ -147,6 +140,7 @@ func DefaultChainConfig() ChainConfig {
 func DefaultConfig() *Config {
 	return &Config{
 		QueueInterval:    DefaultQueueInterval(),
+		MaxSizeBytes:     DefaultMaxSizeBytes(),
 		ProofInterval:    DefaultProofInterval(),
 		StrayManagerCfg:  DefaultStrayManagerConfig(),
 		ChainCfg:         DefaultChainConfig(),
@@ -161,6 +155,7 @@ func DefaultConfig() *Config {
 
 func (c Config) MarshalZerologObject(e *zerolog.Event) {
 	e.Int64("QueueInterval", c.QueueInterval).
+		Int64("MaxSizeBytes", c.MaxSizeBytes).
 		Int64("ProofInterval", c.ProofInterval).
 		Int64("StrayCheckInterval", c.StrayManagerCfg.CheckInterval).
 		Int64("StrayRefreshInterval", c.StrayManagerCfg.RefreshInterval).
@@ -181,6 +176,7 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 
 func init() {
 	viper.SetDefault("QueueInterval", DefaultQueueInterval())
+	viper.SetDefault("MaxSizeBytes", DefaultMaxSizeBytes())
 	viper.SetDefault("ProofInterval", DefaultProofInterval())
 	viper.SetDefault("StrayManagerCfg", DefaultStrayManagerConfig())
 	viper.SetDefault("ChainCfg", DefaultChainConfig())

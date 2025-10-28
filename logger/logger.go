@@ -1,41 +1,48 @@
 package logger
 
 import (
-	"fmt"
-
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
-type SequoiaLogger struct{}
+type SequoiaLogger struct {
+	logger *zerolog.Logger
+}
+
+func NewSequoiaLogger(logger *zerolog.Logger) *SequoiaLogger {
+	if logger == nil {
+		return nil
+	}
+	return &SequoiaLogger{logger: logger}
+}
 
 func (s *SequoiaLogger) Errorf(format string, i ...any) {
 	if len(i) == 0 {
-		log.Error().Msg(format)
+		s.logger.Error().Msg(format)
 		return
 	}
-	log.Error().Msg(fmt.Sprintf(format, i...))
+	s.logger.Error().Msgf(format, i...)
 }
 
 func (s *SequoiaLogger) Warningf(format string, i ...any) {
 	if len(i) == 0 {
-		log.Warn().Msg(format)
+		s.logger.Warn().Msg(format)
 		return
 	}
-	log.Warn().Msg(fmt.Sprintf(format, i...))
+	s.logger.Warn().Msgf(format, i...)
 }
 
 func (s *SequoiaLogger) Infof(format string, i ...any) {
 	if len(i) == 0 {
-		log.Info().Msg(format)
+		s.logger.Info().Msg(format)
 		return
 	}
-	log.Info().Msg(fmt.Sprintf(format, i...))
+	s.logger.Info().Msgf(format, i...)
 }
 
 func (s *SequoiaLogger) Debugf(format string, i ...any) {
 	if len(i) == 0 {
-		log.Debug().Msg(format)
+		s.logger.Debug().Msg(format)
 		return
 	}
-	log.Debug().Msg(fmt.Sprintf(format, i...))
+	s.logger.Debug().Msgf(format, i...)
 }

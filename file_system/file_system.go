@@ -1,7 +1,6 @@
 package file_system
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -36,11 +35,10 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte, [][]byte, int, error) {
+func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte, int, error) {
 	size := 0
 
 	data := make([][]byte, 0)
-	chunks := make([][]byte, 0)
 
 	index := 0
 
@@ -56,15 +54,11 @@ func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte,
 
 		size += read
 
-		chunks = append(chunks, b)
-
 		var h hash.Hash
 		switch proofType {
 		case sequoiaTypes.ProofTypeBlake3:
-			log.Info().Msg("Using blake3 for hash")
 			h = blake3.New()
 		default:
-			log.Info().Msg("Using sha256 for hash")
 			h = sha256.New()
 		}
 
@@ -83,10 +77,8 @@ func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte,
 	var h merkletree.HashType
 	switch proofType {
 	case sequoiaTypes.ProofTypeBlake3:
-		log.Info().Msg("Using blake3 for tree proof")
 		h = treeblake3.New256()
 	default:
-		log.Info().Msg("Using sha512 for tree proof")
 		h = sha3.New512()
 	}
 
@@ -96,22 +88,22 @@ func BuildTree(buf io.Reader, chunkSize int64, proofType int64) ([]byte, []byte,
 		merkletree.WithSalt(false),
 	)
 	if err != nil {
-		return nil, nil, nil, 0, err
+		return nil, nil, 0, err
 	}
 
 	r := tree.Root()
 
 	exportedTree, err := json.Marshal(tree)
 	if err != nil {
-		return nil, nil, nil, 0, err
+		return nil, nil, 0, err
 	}
 
-	return r, exportedTree, chunks, size, nil
+	return r, exportedTree, size, nil
 }
 
-func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) (size int, cid string, err error) {
+func (f *FileSystem) WriteFile(reader sequoiaTypes.FileReader, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams) (size int, cid string, err error) {
 	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
-	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize, proofType)
+	root, exportedTree, s, err := BuildTree(reader, chunkSize, proofType)
 	if err != nil {
 		log.Error().Err(fmt.Errorf("cannot build tree | %w", err))
 		return 0, "", err
@@ -121,16 +113,21 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 		return 0, "", fmt.Errorf("merkle does not match %x != %x", merkle, root)
 	}
 
-	b := make([]byte, 0)
-	for _, chunk := range chunks {
-		b = append(b, chunk...)
+	// Seek back to the beginning of the file so it can be read again
+	_, err = reader.Seek(0, io.SeekStart)
+	if err != nil {
+		return 0, "", fmt.Errorf("cannot seek to beginning of file | %w", err)
 	}
-	buf := bytes.NewBuffer(b)
 
 	var n ipldFormat.Node
 	if proofType == sequoiaTypes.ProofTypeIPFSFolder {
 		folderNode := unixfs.EmptyDirNode()
-		err := folderNode.UnmarshalJSON(buf.Bytes())
+		// Read entire reader into a single byte slice called data
+		data, err := io.ReadAll(reader)
+		if err != nil {
+			return 0, "", err
+		}
+		err = folderNode.UnmarshalJSON(data)
 		if err != nil {
 			return 0, "", err
 		}
@@ -141,7 +138,7 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 		}
 		n = folderNode
 	} else {
-		n, err = f.ipfs.AddFile(context.Background(), buf, ipfsParams)
+		n, err = f.ipfs.AddFile(context.Background(), reader, ipfsParams)
 		if err != nil {
 			return 0, "", err
 		}
@@ -172,9 +169,9 @@ func (f *FileSystem) WriteFile(reader io.Reader, merkle []byte, owner string, st
 	return size, n.Cid().String(), nil
 }
 
-func (f *FileSystem) WriteFileWithProgress(reader io.Reader, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams, tracker *types.UploadResponseV2) (size int, cid string, err error) {
+func (f *FileSystem) WriteFileWithProgress(reader sequoiaTypes.FileReader, merkle []byte, owner string, start int64, chunkSize int64, proofType int64, ipfsParams *ipfslite.AddParams, tracker *types.UploadResponseV2) (size int, cid string, err error) {
 	log.Info().Msg(fmt.Sprintf("Writing %x to disk", merkle))
-	root, exportedTree, chunks, s, err := BuildTree(reader, chunkSize, proofType)
+	root, exportedTree, s, err := BuildTree(reader, chunkSize, proofType)
 	if err != nil {
 		log.Error().Err(fmt.Errorf("cannot build tree | %w", err))
 		return 0, "", err
@@ -185,16 +182,22 @@ func (f *FileSystem) WriteFileWithProgress(reader io.Reader, merkle []byte, owne
 	}
 	tracker.Progress = 60
 
-	b := make([]byte, 0)
-	for _, chunk := range chunks {
-		b = append(b, chunk...)
+	// Seek back to the beginning of the file so it can be read again
+	_, err = reader.Seek(0, io.SeekStart)
+	if err != nil {
+		return 0, "", fmt.Errorf("cannot seek to beginning of file | %w", err)
 	}
-	buf := bytes.NewBuffer(b)
+
 	tracker.Progress = 70
 	var n ipldFormat.Node
 	if proofType == sequoiaTypes.ProofTypeIPFSFolder {
+		data, err := io.ReadAll(reader)
+		if err != nil {
+			return 0, "", err
+		}
+
 		folderNode := unixfs.EmptyDirNode()
-		err := folderNode.UnmarshalJSON(buf.Bytes())
+		err = folderNode.UnmarshalJSON(data)
 		if err != nil {
 			return 0, "", err
 		}
@@ -205,7 +208,7 @@ func (f *FileSystem) WriteFileWithProgress(reader io.Reader, merkle []byte, owne
 		}
 		n = folderNode
 	} else {
-		n, err = f.ipfs.AddFile(context.Background(), buf, ipfsParams)
+		n, err = f.ipfs.AddFile(context.Background(), reader, ipfsParams)
 		if err != nil {
 			return 0, "", err
 		}
@@ -569,7 +572,7 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 	return &newTree, chunkOut, nil
 }
 
-func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
+func (f *FileSystem) GetFileData(merkle []byte) (io.ReadSeekCloser, error) {
 	fcid := ""
 	err := f.db.View(func(txn *badger.Txn) error {
 		b, err := txn.Get(fmt.Appendf(nil, "cid/%x", merkle))
@@ -607,17 +610,11 @@ func (f *FileSystem) GetFileData(merkle []byte) ([]byte, error) {
 			if err != nil {
 				return nil, fmt.Errorf("cannot marshal folder for cid '%s': %w", c.String(), err)
 			}
-			return b, nil
+			return sequoiaTypes.NewBytesSeeker(b), nil
 		}
 
 		return nil, fmt.Errorf("cannot get file for cid '%s': %w", c.String(), err)
 	}
-	//nolint:errcheck
-	defer rsc.Close()
-	fileData, err := io.ReadAll(rsc)
-	if err != nil {
-		return nil, err
-	}
 
-	return fileData, err
+	return rsc, err
 }
