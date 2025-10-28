@@ -57,6 +57,10 @@ func TestFolderView(t *testing.T) {
 
 	t.Log(string(body))
 
+	// Reset the reader position for the next use
+	_, err = htmlBytes.Seek(0, io.SeekStart)
+	req.NoError(err)
+
 	// Method 2: If you really need a real server for manual testing (not ideal for automated tests)
 	if true { // Change to true when you want to manually test
 		fmt.Println("Starting server on port 4045, press Ctrl+C to stop...")

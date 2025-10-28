@@ -393,6 +393,7 @@ func DownloadFileHandler(f *file_system.FileSystem) func(http.ResponseWriter, *h
 			_ = json.NewEncoder(w).Encode(v)
 			return
 		}
+		defer func() { _ = file.Close() }()
 
 		http.ServeContent(w, req, fileName, time.Time{}, file)
 	}

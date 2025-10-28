@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 )
 
+// ReadCloserToReadSeekCloser streams rc to a temp file and returns a seekable reader.
+// IMPORTANT: The caller must call Close() to delete the temp file.
 func ReadCloserToReadSeekCloser(rc io.ReadCloser) (io.ReadSeekCloser, error) {
 	tmpFile, err := os.CreateTemp("", "temp-data-*.tmp")
 	if err != nil {
@@ -33,7 +36,10 @@ func ReadCloserToReadSeekCloser(rc io.ReadCloser) (io.ReadSeekCloser, error) {
 	}
 
 	// Wrap the file with a custom closer that deletes the file
-	return &tempFileReadSeekCloser{File: tmpFile}, nil
+	w := &tempFileReadSeekCloser{File: tmpFile}
+	// Best-effort safety net if callers forget Close (not guaranteed timing).
+	runtime.SetFinalizer(w, func(tf *tempFileReadSeekCloser) { _ = os.Remove(tf.Name()) })
+	return w, nil
 }
 
 // tempFileReadSeekCloser wraps os.File and deletes it on Close
