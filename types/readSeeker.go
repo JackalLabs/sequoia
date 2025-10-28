@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"sync"
 )
 
 // ReadCloserToReadSeekCloser streams rc to a temp file and returns a seekable reader.
@@ -38,17 +39,28 @@ func ReadCloserToReadSeekCloser(rc io.ReadCloser) (io.ReadSeekCloser, error) {
 	// Wrap the file with a custom closer that deletes the file
 	w := &tempFileReadSeekCloser{File: tmpFile}
 	// Best-effort safety net if callers forget Close (not guaranteed timing).
-	runtime.SetFinalizer(w, func(tf *tempFileReadSeekCloser) { _ = os.Remove(tf.Name()) })
+	runtime.SetFinalizer(w, func(tf *tempFileReadSeekCloser) {
+		if tf != nil {
+			_ = tf.Close() // Close will handle the removal
+		}
+	})
 	return w, nil
 }
 
 // tempFileReadSeekCloser wraps os.File and deletes it on Close
 type tempFileReadSeekCloser struct {
 	*os.File
+	closeOnce sync.Once
 }
 
 func (tfrsc *tempFileReadSeekCloser) Close() error {
-	// nolint:errcheck
-	defer os.Remove(tfrsc.Name()) // Ensure deletion
-	return tfrsc.File.Close()
+	var err error
+	tfrsc.closeOnce.Do(func() {
+		// Close the file first
+		err = tfrsc.File.Close()
+		// Then remove it (even if close had an error)
+		// nolint:errcheck
+		os.Remove(tfrsc.Name()) // Ensure deletion
+	})
+	return err
 }
