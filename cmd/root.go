@@ -3,9 +3,10 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"github.com/JackalLabs/sequoia/cmd/database"
 	"os"
 	"strings"
+
+	"github.com/JackalLabs/sequoia/cmd/database"
 
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 
