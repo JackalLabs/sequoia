@@ -1,14 +1,19 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
 
 	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/config"
+	"github.com/JackalLabs/sequoia/file_system"
+	"github.com/JackalLabs/sequoia/ipfs"
 	"github.com/JackalLabs/sequoia/utils"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/ipfs/boxo/blockstore"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +23,7 @@ func DataCmd() *cobra.Command {
 		Short: "Data subcommands",
 	}
 
-	c.AddCommand(keysCmd(), getObjectCmd(), garbageCmd())
+	c.AddCommand(keysCmd(), getObjectCmd(), garbageCmd(), unusedCidsCmd())
 
 	return c
 }
@@ -155,6 +160,79 @@ func garbageCmd() *cobra.Command {
 			}
 
 			return db.Flatten(runtime.NumCPU())
+		},
+	}
+}
+
+func unusedCidsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "unused-cids",
+		Short: "List unused cids",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			home, err := cmd.Flags().GetString(types.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			cfg, err := config.Init(home)
+			if err != nil {
+				return err
+			}
+
+			ctx := context.Background()
+
+			dataDir := os.ExpandEnv(cfg.DataDirectory)
+
+			err = os.MkdirAll(dataDir, os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			db, err := utils.OpenBadger(dataDir)
+			if err != nil {
+				return err
+			}
+
+			ds, err := ipfs.NewBadgerDataStore(db)
+			if err != nil {
+				return err
+			}
+			log.Info().Msg("Data store initialized")
+
+			bsDir := os.ExpandEnv(cfg.BlockStoreConfig.Directory)
+			var bs blockstore.Blockstore
+			bs = nil
+			switch cfg.BlockStoreConfig.Type {
+			case config.OptBadgerDS:
+			case config.OptFlatFS:
+				bs, err = ipfs.NewFlatfsBlockStore(bsDir)
+				if err != nil {
+					return err
+				}
+			}
+			log.Info().Msg("Blockstore initialized")
+
+			w, err := config.InitWallet(home)
+			if err != nil {
+				return err
+			}
+			log.Info().Str("provider_address", w.AccAddress()).Send()
+
+			f, err := file_system.NewFileSystem(ctx, db, cfg.BlockStoreConfig.Key, ds, bs, cfg.APICfg.IPFSPort, cfg.APICfg.IPFSDomain)
+			if err != nil {
+				return err
+			}
+
+			unusedCids, err := f.ListUnusedCids(context.Background())
+			if err != nil {
+				return err
+			}
+
+			for _, cid := range unusedCids {
+				fmt.Println(cid)
+			}
+
+			return nil
 		},
 	}
 }
