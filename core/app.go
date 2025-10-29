@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/JackalLabs/sequoia/utils"
 	"net/http"
 	"net/url"
 	"os"
@@ -33,9 +34,7 @@ import (
 	"github.com/JackalLabs/sequoia/strays"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
-	badger "github.com/dgraph-io/badger/v4"
 	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -69,40 +68,10 @@ func NewApp(home string) (*App, error) {
 		return nil, err
 	}
 
-	options := badger.DefaultOptions(dataDir)
-
-	// l := logger.NewSequoiaLogger(&log.Logger)
-
-	options = options.WithBlockCacheSize(256 << 22).WithMaxLevels(8)
-
-	// options = options.WithLogger(l)
-
-	badgerLogLevel := badger.INFO
-	switch log.Logger.GetLevel() {
-	case zerolog.DebugLevel:
-		badgerLogLevel = badger.DEBUG
-	case zerolog.InfoLevel:
-		badgerLogLevel = badger.INFO
-	case zerolog.WarnLevel:
-		badgerLogLevel = badger.WARNING
-	case zerolog.ErrorLevel:
-		badgerLogLevel = badger.ERROR
-	}
-	log.Info().
-		Int("badger_log_level", int(badgerLogLevel)).
-		Str("global_log_level", log.Logger.GetLevel().String()).
-		Msg("badger logging configured")
-
-	options = options.WithLoggingLevel(badgerLogLevel)
-
-	log.Info().Msg("Creating sequoia app...")
-
-	db, err := badger.Open(options)
+	db, err := utils.OpenBadger(dataDir)
 	if err != nil {
-		log.Error().Err(err).Msg("Error opening database")
 		return nil, err
 	}
-	log.Info().Msg("Opened database")
 
 	ds, err := ipfs.NewBadgerDataStore(db)
 	if err != nil {

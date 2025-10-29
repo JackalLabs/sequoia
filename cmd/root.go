@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"github.com/JackalLabs/sequoia/cmd/database"
 	"os"
 	"strings"
 
@@ -173,7 +174,7 @@ func RootCmd() *cobra.Command {
 		panic(err)
 	}
 
-	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), ShutdownCmd())
+	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), ShutdownCmd(), database.DataCmd())
 
 	return r
 }
