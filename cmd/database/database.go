@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/config"
@@ -17,7 +18,7 @@ func DataCmd() *cobra.Command {
 		Short: "Data subcommands",
 	}
 
-	c.AddCommand(keysCmd(), getObjectCmd())
+	c.AddCommand(keysCmd(), getObjectCmd(), garbageCmd())
 
 	return c
 }
@@ -122,6 +123,38 @@ func getObjectCmd() *cobra.Command {
 					return nil
 				})
 			})
+		},
+	}
+}
+
+func garbageCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "flatten",
+		Short: "Flatten database",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			home, err := cmd.Flags().GetString(types.FlagHome)
+			if err != nil {
+				return err
+			}
+
+			cfg, err := config.Init(home)
+			if err != nil {
+				return err
+			}
+
+			dataDir := os.ExpandEnv(cfg.DataDirectory)
+
+			err = os.MkdirAll(dataDir, os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			db, err := utils.OpenBadger(dataDir)
+			if err != nil {
+				return err
+			}
+
+			return db.Flatten(runtime.NumCPU())
 		},
 	}
 }
