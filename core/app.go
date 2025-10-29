@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/JackalLabs/sequoia/utils"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/JackalLabs/sequoia/utils"
 
 	apiTypes "github.com/JackalLabs/sequoia/api/types"
 	"github.com/libp2p/go-libp2p/core/peer"

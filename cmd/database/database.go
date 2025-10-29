@@ -2,12 +2,13 @@ package database
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/JackalLabs/sequoia/cmd/types"
 	"github.com/JackalLabs/sequoia/config"
 	"github.com/JackalLabs/sequoia/utils"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 func DataCmd() *cobra.Command {
@@ -71,7 +72,7 @@ func dumpKeysCmd() *cobra.Command {
 				for it.Rewind(); it.Valid(); it.Next() {
 					item := it.Item()
 					key := item.Key() // This is zero-copy
-					fmt.Println(key)
+					fmt.Println(string(key))
 					count++
 				}
 				return nil
@@ -86,7 +87,6 @@ func getObjectCmd() *cobra.Command {
 		Short: "Print object from key",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			key := args[0]
 
 			home, err := cmd.Flags().GetString(types.FlagHome)
