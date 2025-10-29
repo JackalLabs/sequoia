@@ -137,6 +137,7 @@ func (f *FileSystem) ListUnusedCids(ctx context.Context) ([]string, error) {
 	// Step 2: For each root CID, recursively collect all referenced CIDs (including children)
 	referencedCids := make(map[cid.Cid]struct{})
 	for _, cidStr := range rootCidStrings {
+		log.Info().Msgf("Collecting %s...", cidStr)
 		c, err := cid.Decode(cidStr)
 		if err != nil {
 			log.Warn().Err(err).Str("cid", cidStr).Msg("failed to decode CID, skipping")
@@ -154,6 +155,7 @@ func (f *FileSystem) ListUnusedCids(ctx context.Context) ([]string, error) {
 		for nodeCid := range nodes {
 			referencedCids[nodeCid] = struct{}{}
 		}
+
 	}
 
 	log.Info().Msgf("Found %d total referenced CIDs (including children)", len(referencedCids))
