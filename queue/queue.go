@@ -51,7 +51,7 @@ func (m *Message) Done() {
 	m.wg.Done()
 }
 
-func NewQueue(w *wallet.Wallet, interval int64, maxSizeBytes int64, domain string) *Queue {
+func NewQueue(w *wallet.Wallet, interval uint64, maxSizeBytes int64, domain string) *Queue {
 	if maxSizeBytes == 0 {
 		maxSizeBytes = config.DefaultMaxSizeBytes()
 	}
@@ -116,8 +116,8 @@ func (q *Queue) Listen() {
 
 	log.Info().Msg("Queue module started")
 	for q.running {
-		time.Sleep(time.Millisecond * 100)                                                // pauses for one third of a second
-		if !q.processed.Add(time.Second * time.Duration(q.interval)).Before(time.Now()) { // check every ten seconds
+		time.Sleep(time.Millisecond * 100)                                                  // pauses for one third of a second
+		if !q.processed.Add(time.Second * time.Duration(q.interval+2)).Before(time.Now()) { // minimum wait for 2 seconds
 			continue
 		}
 

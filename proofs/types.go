@@ -14,7 +14,7 @@ type Prover struct {
 	wallet         *wallet.Wallet
 	q              *queue.Queue
 	processed      time.Time
-	interval       int64
+	interval       uint64
 	io             FileSystem
 	threads        int16
 	currentThreads int16

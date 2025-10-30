@@ -306,8 +306,8 @@ func (p *Prover) Start() {
 			return
 		}
 
-		time.Sleep(time.Millisecond * 1000) // pauses for one second
-		if !p.processed.Add(time.Second * time.Duration(p.interval)).Before(time.Now()) {
+		time.Sleep(time.Millisecond * 1000)                                                  // pauses for one second
+		if !p.processed.Add(time.Second * time.Duration(p.interval+10)).Before(time.Now()) { // 10 seconds plus the interval
 			continue
 		}
 
@@ -403,7 +403,7 @@ func (p *Prover) Stop() {
 	p.running = false
 }
 
-func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval int64, threads int16, chunkSize int) *Prover {
+func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval uint64, threads int16, chunkSize int) *Prover {
 	p := Prover{
 		running:   false,
 		wallet:    wallet,
