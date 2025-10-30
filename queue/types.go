@@ -13,7 +13,7 @@ type Queue struct {
 	messages     []*Message
 	processed    time.Time
 	running      bool
-	interval     int64
+	interval     uint64
 	maxSizeBytes int64
 	domain       string
 }

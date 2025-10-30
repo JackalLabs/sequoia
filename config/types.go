@@ -20,9 +20,9 @@ type ChainConfig struct {
 }
 
 type Config struct {
-	QueueInterval    int64              `yaml:"queue_interval" mapstructure:"queue_interval"`
+	QueueInterval    uint64             `yaml:"queue_interval" mapstructure:"queue_interval"`
 	MaxSizeBytes     int64              `yaml:"max_size_bytes" mapstructure:"max_size_bytes"`
-	ProofInterval    int64              `yaml:"proof_interval" mapstructure:"proof_interval"`
+	ProofInterval    uint64             `yaml:"proof_interval" mapstructure:"proof_interval"`
 	StrayManagerCfg  StrayManagerConfig `yaml:"stray_manager" mapstructure:"stray_manager"`
 	ChainCfg         ChainConfig        `yaml:"chain_config" mapstructure:"chain_config"`
 	Ip               string             `yaml:"domain" mapstructure:"domain"`
@@ -33,7 +33,7 @@ type Config struct {
 	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config" mapstructure:"block_store_config"`
 }
 
-func DefaultQueueInterval() int64 {
+func DefaultQueueInterval() uint64 {
 	return 2
 }
 
@@ -41,7 +41,7 @@ func DefaultMaxSizeBytes() int64 {
 	return 500000
 }
 
-func DefaultProofInterval() int64 {
+func DefaultProofInterval() uint64 {
 	return 700
 }
 
@@ -154,9 +154,9 @@ func DefaultConfig() *Config {
 }
 
 func (c Config) MarshalZerologObject(e *zerolog.Event) {
-	e.Int64("QueueInterval", c.QueueInterval).
+	e.Uint64("QueueInterval", c.QueueInterval).
 		Int64("MaxSizeBytes", c.MaxSizeBytes).
-		Int64("ProofInterval", c.ProofInterval).
+		Uint64("ProofInterval", c.ProofInterval).
 		Int64("StrayCheckInterval", c.StrayManagerCfg.CheckInterval).
 		Int64("StrayRefreshInterval", c.StrayManagerCfg.RefreshInterval).
 		Int("StrayHandCount", c.StrayManagerCfg.HandCount).
