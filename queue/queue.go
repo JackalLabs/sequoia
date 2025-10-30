@@ -183,6 +183,11 @@ func (q *Queue) Listen() {
 						continue
 					}
 				}
+				if strings.Contains(err.Error(), "mempool is full") {
+					log.Info().Msg("Mempool is full, waiting for 5 minutes before trying again")
+					time.Sleep(time.Minute * 5)
+					continue
+				}
 				log.Warn().Err(err).Msg("tx broadcast failed from queue")
 				continue
 			}
