@@ -32,6 +32,7 @@ require (
 	github.com/tendermint/tendermint v0.34.27
 	github.com/wealdtech/go-merkletree/v2 v2.6.0
 	github.com/zeebo/blake3 v0.2.4
+	golang.org/x/time v0.5.0
 	google.golang.org/grpc v1.61.1
 	gopkg.in/yaml.v3 v3.0.1
 )

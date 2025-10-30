@@ -15,6 +15,14 @@ import (
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/time/rate"
+)
+
+const (
+	// RateLimitPerToken defines the minimum time between allowed BroadcastPending calls
+	RateLimitPerToken = 300 * time.Millisecond
+	// RateLimitBurst defines how many calls are allowed to accumulate at once
+	RateLimitBurst = 20
 )
 
 func calculateTransactionSize(messages []types.Msg) (int64, error) {
@@ -63,6 +71,7 @@ func NewQueue(w *wallet.Wallet, interval uint64, maxSizeBytes int64, domain stri
 		interval:     interval,
 		maxSizeBytes: maxSizeBytes,
 		domain:       domain,
+		limiter:      rate.NewLimiter(rate.Every(RateLimitPerToken), RateLimitBurst),
 	}
 	return q
 }
@@ -121,6 +130,7 @@ func (q *Queue) Listen() {
 			continue
 		}
 
+		// Update gauge and attempt a broadcast cycle
 		total := len(q.messages)
 		queueSize.Set(float64(total))
 
@@ -128,97 +138,110 @@ func (q *Queue) Listen() {
 			continue
 		}
 
-		log.Info().Msg(fmt.Sprintf("Queue: %d messages waiting to be put on-chain...", total))
+		// Token-bucket rate limit: allow calling BroadcastPending at most 20 times per 6 seconds
+		if !q.limiter.Allow() {
+			continue
+		}
 
-		msgs := make([]types.Msg, 0)
-		cutoff := 0
-		for i := 0; i < total; i++ {
+		now := time.Now()
+		_, _ = q.BroadcastPending()
+		q.processed = now
+	}
+}
 
-			msgs = append(msgs, q.messages[i].msg)
+// BroadcastPending selects a batch that fits within max size, broadcasts it,
+// updates per-message results, and returns the number of messages processed
+// along with a terminal error if the broadcast attempts all failed.
+func (q *Queue) BroadcastPending() (int, error) {
+	total := len(q.messages)
+	log.Info().Msg(fmt.Sprintf("Queue: %d messages waiting to be put on-chain...", total))
 
-			size, err := calculateTransactionSize(msgs)
-			if err != nil {
-				log.Warn().Err(err).Msg("Failed to calculate transaction size")
-				break
+	msgs := make([]types.Msg, 0)
+	cutoff := 0
+	for i := 0; i < total; i++ {
+		msgs = append(msgs, q.messages[i].msg)
+
+		size, err := calculateTransactionSize(msgs)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to calculate transaction size")
+			break
+		}
+
+		if size > q.maxSizeBytes {
+			break
+		}
+
+		cutoff = i + 1 // cutoff is now the count of messages that fit
+	}
+
+	// If nothing fits, process at least the first message
+	if cutoff == 0 {
+		cutoff = 1
+	}
+
+	log.Info().Msg(fmt.Sprintf("Queue: Posting %d messages to chain...", cutoff))
+
+	toProcess := q.messages[:cutoff]
+	q.messages = q.messages[cutoff:]
+
+	allMsgs := make([]types.Msg, len(toProcess))
+	for i, process := range toProcess {
+		allMsgs[i] = process.msg
+	}
+
+	data := walletTypes.NewTransactionData(
+		allMsgs...,
+	).WithGasAuto().WithFeeAuto().WithMemo(fmt.Sprintf("Proven by %s", q.domain))
+
+	complete := false
+	var res *types.TxResponse
+	var err error
+	var i int
+	for !complete && i < 10 {
+		i++
+		res, err = q.wallet.BroadcastTxAsync(data)
+		if err != nil {
+			if strings.Contains(err.Error(), "tx already exists in cache") {
+				if data.Sequence != nil {
+					data = data.WithSequence(*data.Sequence + 1)
+					continue
+				}
 			}
-
-			if size > q.maxSizeBytes {
-				break
+			if strings.Contains(err.Error(), "mempool is full") {
+				log.Info().Msg("Mempool is full, waiting for 5 minutes before trying again")
+				time.Sleep(time.Minute * 5)
+				continue
 			}
-
-			cutoff = i + 1 // cutoff is now the count of messages that fit
+			log.Warn().Err(err).Msg("tx broadcast failed from queue")
+			continue
 		}
 
-		// If nothing fits, process at least the first message
-		if cutoff == 0 {
-			cutoff = 1
-		}
-
-		log.Info().Msg(fmt.Sprintf("Queue: Posting %d messages to chain...", cutoff))
-
-		toProcess := q.messages[:cutoff]
-		q.messages = q.messages[cutoff:]
-
-		allMsgs := make([]types.Msg, len(toProcess))
-
-		for i, process := range toProcess {
-			allMsgs[i] = process.msg
-		}
-
-		data := walletTypes.NewTransactionData(
-			allMsgs...,
-		).WithGasAuto().WithFeeAuto().WithMemo(fmt.Sprintf("Proven by %s", q.domain))
-
-		complete := false
-		var res *types.TxResponse
-		var err error
-		var i int
-		for !complete && i < 10 {
-			i++
-			res, err = q.wallet.BroadcastTxAsync(data)
-			if err != nil {
-				if strings.Contains(err.Error(), "tx already exists in cache") {
+		if res != nil {
+			if res.Code != 0 {
+				if strings.Contains(res.RawLog, "account sequence mismatch") {
 					if data.Sequence != nil {
 						data = data.WithSequence(*data.Sequence + 1)
 						continue
 					}
 				}
-				if strings.Contains(err.Error(), "mempool is full") {
-					log.Info().Msg("Mempool is full, waiting for 5 minutes before trying again")
-					time.Sleep(time.Minute * 5)
-					continue
-				}
-				log.Warn().Err(err).Msg("tx broadcast failed from queue")
-				continue
 			}
-
-			if res != nil {
-				if res.Code != 0 {
-					if strings.Contains(res.RawLog, "account sequence mismatch") {
-						if data.Sequence != nil {
-							data = data.WithSequence(*data.Sequence + 1)
-							continue
-						}
-					}
-				}
-				complete = true
-			} else {
-				log.Warn().Msg("response is nil")
-				continue
-			}
+			complete = true
+		} else {
+			log.Warn().Msg("response is nil")
+			continue
 		}
-
-		if !complete {
-			err = errors.New("could not complete broadcast in 10 loops")
-		}
-
-		for i, process := range toProcess {
-			process.err = err
-			process.res = res
-			process.msgIndex = i
-			process.Done()
-		}
-
-		q.processed = time.Now()
 	}
+
+	if !complete {
+		err = errors.New("could not complete broadcast in 10 loops")
+	}
+
+	for i, process := range toProcess {
+		process.err = err
+		process.res = res
+		process.msgIndex = i
+		process.Done()
+	}
+
+	return cutoff, err
 }
