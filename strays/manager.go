@@ -27,7 +27,7 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 		hands:           make([]*Hand, 0),
 		processed:       time.Time{},
 		refreshed:       time.Time{},
-		refreshInterval: time.Duration(refreshInterval),
+		refreshInterval: time.Duration(refreshInterval + 15),
 	}
 
 	for i := 0; i < handCount; i++ {
