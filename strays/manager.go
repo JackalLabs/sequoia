@@ -17,6 +17,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// refreshIntervalBufferSeconds adds a small buffer (in seconds) to the configured
+// refresh interval to account for scheduling jitter, network latency, and block
+// timing variance so we don't hammer the endpoint exactly on the boundary.
+const refreshIntervalBufferSeconds int64 = 15
+
 // NewStrayManager creates and initializes a new StrayManager with the specified number of hands, authorizing each hand to transact on behalf of the provided wallet if not already authorized.
 func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
 	s := &StrayManager{
@@ -27,7 +32,7 @@ func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshIn
 		hands:           make([]*Hand, 0),
 		processed:       time.Time{},
 		refreshed:       time.Time{},
-		refreshInterval: time.Duration(refreshInterval),
+		refreshInterval: time.Duration(refreshInterval + refreshIntervalBufferSeconds),
 	}
 
 	for i := 0; i < handCount; i++ {

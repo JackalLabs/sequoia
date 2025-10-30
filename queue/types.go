@@ -6,6 +6,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+	"golang.org/x/time/rate"
 )
 
 type Queue struct {
@@ -16,6 +17,8 @@ type Queue struct {
 	interval     uint64
 	maxSizeBytes int64
 	domain       string
+	// rate limiting via token bucket
+	limiter *rate.Limiter
 }
 
 type Message struct {
