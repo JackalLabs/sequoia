@@ -572,19 +572,27 @@ func (f *FileSystem) GetFileTreeByChunk(merkle []byte, owner string, start int64
 	return &newTree, chunkOut, nil
 }
 
-func (f *FileSystem) CheckTree(merkle []byte, owner string, start int64) bool {
+func (f *FileSystem) CheckTree(merkle []byte, owner string, start int64) (bool, error) {
 	tree := treeKey(merkle, owner, start)
 
-	found := true
-	_ = f.db.View(func(txn *badger.Txn) error {
+	var found bool
+	err := f.db.View(func(txn *badger.Txn) error {
 		_, err := txn.Get(tree)
-		if err != nil {
-			found = false
+		if err == nil {
+			found = true
+			return nil
 		}
-		return nil
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			found = false
+			return nil
+		}
+		return err
 	})
+	if err != nil {
+		return false, err
+	}
 
-	return found
+	return found, nil
 }
 
 func (f *FileSystem) GetFileData(merkle []byte) (io.ReadSeekCloser, error) {

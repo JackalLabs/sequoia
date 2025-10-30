@@ -13,8 +13,9 @@ import (
 	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
+
+	jsoniter "github.com/json-iterator/go"
 )
-import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -40,7 +41,12 @@ func (h *Hand) Start(f *file_system.FileSystem, wallet *wallet.Wallet, q *queue.
 		start := h.stray.Start
 		proofType := h.stray.ProofType
 
-		hasTree := f.CheckTree(merkle, signee, start)
+		hasTree, err := f.CheckTree(merkle, signee, start)
+		if err != nil {
+			log.Error().Err(err)
+			h.stray = nil
+			continue
+		}
 		if !hasTree { // only download if we don't have it
 			err := network.DownloadFile(f, merkle, signee, start, wallet, h.stray.FileSize, myUrl, chunkSize, proofType, utils.GetIPFSParams(h.stray))
 			if err != nil {
