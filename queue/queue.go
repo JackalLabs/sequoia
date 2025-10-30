@@ -18,12 +18,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const (
-	// RateLimitPerToken defines the minimum time between allowed BroadcastPending calls
-	RateLimitPerToken = 300 * time.Millisecond
-	// RateLimitBurst defines how many calls are allowed to accumulate at once
-	RateLimitBurst = 20
-)
+// Rate limiter defaults are provided by config.DefaultRateLimitPerTokenMs and config.DefaultRateLimitBurst
 
 func calculateTransactionSize(messages []types.Msg) (int64, error) {
 	if len(messages) == 0 {
@@ -59,9 +54,15 @@ func (m *Message) Done() {
 	m.wg.Done()
 }
 
-func NewQueue(w *wallet.Wallet, interval uint64, maxSizeBytes int64, domain string) *Queue {
+func NewQueue(w *wallet.Wallet, interval uint64, maxSizeBytes int64, domain string, rlCfg config.RateLimitConfig) *Queue {
 	if maxSizeBytes == 0 {
 		maxSizeBytes = config.DefaultMaxSizeBytes()
+	}
+	if rlCfg.PerTokenMs == 0 {
+		rlCfg.PerTokenMs = config.DefaultRateLimitConfig().PerTokenMs
+	}
+	if rlCfg.Burst == 0 {
+		rlCfg.Burst = config.DefaultRateLimitConfig().Burst
 	}
 	q := &Queue{
 		wallet:       w,
@@ -71,7 +72,7 @@ func NewQueue(w *wallet.Wallet, interval uint64, maxSizeBytes int64, domain stri
 		interval:     interval,
 		maxSizeBytes: maxSizeBytes,
 		domain:       domain,
-		limiter:      rate.NewLimiter(rate.Every(RateLimitPerToken), RateLimitBurst),
+		limiter:      rate.NewLimiter(rate.Every(time.Duration(rlCfg.PerTokenMs)*time.Millisecond), rlCfg.Burst),
 	}
 	return q
 }

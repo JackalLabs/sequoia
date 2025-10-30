@@ -256,7 +256,7 @@ func (a *App) Start() error {
 		return err
 	}
 
-	a.q = queue.NewQueue(a.wallet, cfg.QueueInterval, cfg.MaxSizeBytes, cfg.Ip)
+	a.q = queue.NewQueue(a.wallet, cfg.QueueInterval, cfg.MaxSizeBytes, cfg.Ip, cfg.QueueRateLimit)
 	go a.q.Listen()
 
 	prover := proofs.NewProver(a.wallet, a.q, a.fileSystem, cfg.ProofInterval, cfg.ProofThreads, int(params.ChunkSize))

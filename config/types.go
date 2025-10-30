@@ -31,6 +31,7 @@ type Config struct {
 	APICfg           APIConfig          `yaml:"api_config" mapstructure:"api_config"`
 	ProofThreads     int16              `yaml:"proof_threads" mapstructure:"proof_threads"`
 	BlockStoreConfig BlockStoreConfig   `yaml:"block_store_config" mapstructure:"block_store_config"`
+	QueueRateLimit   RateLimitConfig    `yaml:"queue_rate_limit" mapstructure:"queue_rate_limit"`
 }
 
 func DefaultQueueInterval() uint64 {
@@ -59,6 +60,15 @@ func DefaultDataDirectory() string {
 
 func DefaultProofThreads() int16 {
 	return 1000
+}
+
+type RateLimitConfig struct {
+	PerTokenMs int64 `yaml:"per_token_ms" mapstructure:"per_token_ms"`
+	Burst      int   `yaml:"burst" mapstructure:"burst"`
+}
+
+func DefaultRateLimitConfig() RateLimitConfig {
+	return RateLimitConfig{PerTokenMs: 300, Burst: 20}
 }
 
 type StrayManagerConfig struct {
@@ -150,6 +160,7 @@ func DefaultConfig() *Config {
 		APICfg:           DefaultAPIConfig(),
 		ProofThreads:     DefaultProofThreads(),
 		BlockStoreConfig: DefaultBlockStoreConfig(),
+		QueueRateLimit:   DefaultRateLimitConfig(),
 	}
 }
 
@@ -171,7 +182,9 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 		Int("APIIPFSPort", c.APICfg.IPFSPort).
 		Str("APIIPFSDomain", c.APICfg.IPFSDomain).
 		Int16("ProofThreads", c.ProofThreads).
-		Str("BlockstoreBackend", c.BlockStoreConfig.Type)
+		Str("BlockstoreBackend", c.BlockStoreConfig.Type).
+		Int64("RateLimitPerTokenMs", c.QueueRateLimit.PerTokenMs).
+		Int("RateLimitBurst", c.QueueRateLimit.Burst)
 }
 
 func init() {
@@ -186,4 +199,5 @@ func init() {
 	viper.SetDefault("APICfg", DefaultAPIConfig())
 	viper.SetDefault("ProofThreads", DefaultProofThreads())
 	viper.SetDefault("BlockStoreConfig", DefaultBlockStoreConfig())
+	viper.SetDefault("QueueRateLimit", DefaultRateLimitConfig())
 }
