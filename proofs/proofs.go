@@ -311,6 +311,12 @@ func (p *Prover) Start() {
 			continue
 		}
 
+		if p.q.Count() > p.lastCount { // don't run if the queue has more than the amount of files on disk
+			log.Warn().
+				Msg("Queue is full, skipping proof cycle")
+			continue
+		}
+
 		log.Debug().Msg("Starting proof cycle...")
 
 		abciInfo, err := p.wallet.Client.RPCClient.ABCIInfo(context.Background())
@@ -319,7 +325,7 @@ func (p *Prover) Start() {
 			continue
 		}
 		height := abciInfo.Response.LastBlockHeight
-
+		var count int // reset last count here
 		t := time.Now()
 
 		err = p.io.ProcessFiles(func(merkle []byte, owner string, start int64) {
@@ -331,11 +337,14 @@ func (p *Prover) Start() {
 			log.Debug().Msg(fmt.Sprintf("proving: %x", merkle))
 			filesProving.Inc()
 			p.Inc()
+			count++
 			go p.wrapPostProof(merkle, owner, start, height, t)
 		})
 		if err != nil {
 			log.Error().Err(err)
 		}
+
+		p.lastCount = count
 
 		p.processed = time.Now()
 	}

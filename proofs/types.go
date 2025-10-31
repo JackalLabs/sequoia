@@ -19,6 +19,7 @@ type Prover struct {
 	threads        int16
 	currentThreads int16
 	chunkSize      int
+	lastCount      int
 }
 
 type FileSystem interface {

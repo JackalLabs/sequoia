@@ -175,9 +175,13 @@ func (q *Queue) BroadcastPending() (int, error) {
 		cutoff = i + 1 // cutoff is now the count of messages that fit
 	}
 
-	// If nothing fits, process at least the first message
+	// If nothing fits, process at least the first 45 messages or the total number of messages if less than 45
 	if cutoff == 0 {
-		cutoff = 1
+		cutoff = 45
+	}
+
+	if cutoff > total {
+		cutoff = total
 	}
 
 	log.Info().Msg(fmt.Sprintf("Queue: Posting %d messages to chain...", cutoff))
@@ -200,7 +204,7 @@ func (q *Queue) BroadcastPending() (int, error) {
 	var i int
 	for !complete && i < 10 {
 		i++
-		res, err = q.wallet.BroadcastTxAsync(data)
+		res, err = q.wallet.BroadcastTxSync(data)
 		if err != nil {
 			if strings.Contains(err.Error(), "tx already exists in cache") {
 				if data.Sequence != nil {
@@ -245,4 +249,8 @@ func (q *Queue) BroadcastPending() (int, error) {
 	}
 
 	return cutoff, err
+}
+
+func (q *Queue) Count() int {
+	return len(q.messages)
 }
