@@ -144,6 +144,13 @@ func (q *Queue) Listen() {
 			continue
 		}
 
+		// bunch into 25 message chunks if possible
+		if total < 25 { // if total is less than 25 messages, and it's been less than 10 minutes passed, skip
+			if q.processed.Add(time.Minute * 10).After(time.Now()) {
+				continue
+			}
+		}
+
 		_, _ = q.BroadcastPending()
 		q.processed = time.Now()
 	}
