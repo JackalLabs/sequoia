@@ -250,3 +250,7 @@ func (q *Queue) BroadcastPending() (int, error) {
 
 	return cutoff, err
 }
+
+func (q *Queue) Count() int {
+	return len(q.messages)
+}
