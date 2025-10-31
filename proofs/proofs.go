@@ -311,12 +311,15 @@ func (p *Prover) Start() {
 			continue
 		}
 
-		if p.lastCount > 0 {
-			if p.q.Count() > p.lastCount { // don't run if the queue has more than the amount of files on disk
-				log.Warn().
-					Msg("Queue is full, skipping proof cycle")
-				continue
-			}
+		if !p.processed.Add(time.Minute*30).Before(time.Now()) &&
+			p.lastCount > 0 &&
+			p.q.Count() > p.lastCount { // 30 mins have not yet passed, so we check the queue size
+
+			// don't run if the queue has more than the amount of files on disk
+			log.Warn().
+				Msg("Queue is full, skipping proof cycle")
+			continue
+
 		}
 
 		log.Debug().Msg("Starting proof cycle...")
