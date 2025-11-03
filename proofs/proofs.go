@@ -336,11 +336,11 @@ func (p *Prover) Start() {
 		unconfirmedTxs, err := p.wallet.Client.RPCClient.UnconfirmedTxs(c, &limit)
 		if err != nil {
 			log.Error().Err(err).Msg("could not get mempool status")
-			return
+			continue
 		}
 		if unconfirmedTxs.Total > 2000 {
 			log.Error().Msg("Cannot make proofs when mempool is too large.")
-			return
+			continue
 		}
 
 		var count int // reset last count here
