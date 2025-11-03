@@ -324,12 +324,25 @@ func (p *Prover) Start() {
 
 		log.Debug().Msg("Starting proof cycle...")
 
-		abciInfo, err := p.wallet.Client.RPCClient.ABCIInfo(context.Background())
+		c := context.Background()
+		abciInfo, err := p.wallet.Client.RPCClient.ABCIInfo(c)
 		if err != nil {
 			log.Error().Err(err)
 			continue
 		}
 		height := abciInfo.Response.LastBlockHeight
+
+		limit := 5000
+		unconfirmedTxs, err := p.wallet.Client.RPCClient.UnconfirmedTxs(c, &limit)
+		if err != nil {
+			log.Error().Err(err).Msg("could not get mempool status")
+			continue
+		}
+		if unconfirmedTxs.Total > 2000 {
+			log.Error().Msg("Cannot make proofs when mempool is too large.")
+			continue
+		}
+
 		var count int // reset last count here
 		t := time.Now()
 

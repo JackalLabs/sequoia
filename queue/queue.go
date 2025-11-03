@@ -2,6 +2,7 @@ package queue
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -163,6 +164,18 @@ func (q *Queue) BroadcastPending() (int, error) {
 	total := len(q.messages)
 	log.Info().Msg(fmt.Sprintf("Queue: %d messages waiting to be put on-chain...", total))
 
+	limit := 5000
+	unconfirmedTxs, err := q.wallet.Client.RPCClient.UnconfirmedTxs(context.Background(), &limit)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get mempool status")
+		return 0, err
+	}
+	if unconfirmedTxs.Total > 2000 {
+		log.Error().Msg("Cannot post messages when mempool is too large, waiting 30 minutes")
+		time.Sleep(time.Minute * 30)
+		return 0, nil
+	}
+
 	msgs := make([]types.Msg, 0)
 	cutoff := 0
 	for i := 0; i < total; i++ {
@@ -206,17 +219,14 @@ func (q *Queue) BroadcastPending() (int, error) {
 
 	complete := false
 	var res *types.TxResponse
-	var err error
 	var i int
 	for !complete && i < 10 {
 		i++
 		res, err = q.wallet.BroadcastTxCommit(data)
 		if err != nil {
 			if strings.Contains(err.Error(), "tx already exists in cache") {
-				if data.Sequence != nil {
-					data = data.WithSequence(*data.Sequence + 1)
-					continue
-				}
+				log.Info().Msg("TX already exists in mempool, we're going to skip it.")
+				continue
 			}
 			if strings.Contains(err.Error(), "mempool is full") {
 				log.Info().Msg("Mempool is full, waiting for 30 minutes before trying again and resetting queue")
