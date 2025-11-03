@@ -173,7 +173,7 @@ func (q *Queue) BroadcastPending() (int, error) {
 	if unconfirmedTxs.Total > 2000 {
 		log.Error().Msg("Cannot post messages when mempool is too large, waiting 30 minutes")
 		time.Sleep(time.Minute * 30)
-		return 0, err
+		return 0, nil
 	}
 
 	msgs := make([]types.Msg, 0)
