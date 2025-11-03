@@ -219,9 +219,10 @@ func (q *Queue) BroadcastPending() (int, error) {
 				}
 			}
 			if strings.Contains(err.Error(), "mempool is full") {
-				log.Info().Msg("Mempool is full, waiting for 5 minutes before trying again")
-				time.Sleep(time.Minute * 5)
-				continue
+				log.Info().Msg("Mempool is full, waiting for 30 minutes before trying again and resetting queue")
+				time.Sleep(time.Minute * 30)
+				q.messages = make([]*Message, 0)
+				return 0, nil
 			}
 			log.Warn().Err(err).Msg("tx broadcast failed from queue")
 			continue
