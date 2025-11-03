@@ -126,8 +126,8 @@ func (q *Queue) Listen() {
 
 	log.Info().Msg("Queue module started")
 	for q.running {
-		time.Sleep(time.Millisecond * 100)                                                  // pauses for one third of a second
-		if !q.processed.Add(time.Second * time.Duration(q.interval+2)).Before(time.Now()) { // minimum wait for 2 seconds
+		time.Sleep(time.Millisecond * 100)                                                // pauses for one third of a second
+		if !q.processed.Add(time.Second * time.Duration(q.interval)).Before(time.Now()) { // minimum wait for 2 seconds
 			continue
 		}
 
@@ -210,7 +210,7 @@ func (q *Queue) BroadcastPending() (int, error) {
 	var i int
 	for !complete && i < 10 {
 		i++
-		res, err = q.wallet.BroadcastTxSync(data)
+		res, err = q.wallet.BroadcastTxCommit(data)
 		if err != nil {
 			if strings.Contains(err.Error(), "tx already exists in cache") {
 				if data.Sequence != nil {
