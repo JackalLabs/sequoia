@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +22,20 @@ import (
 )
 
 // Rate limiter defaults are provided by config.DefaultRateLimitPerTokenMs and config.DefaultRateLimitBurst
+
+// extractExpectedSequence extracts the expected sequence number from an account sequence mismatch error message.
+// It looks for the pattern "expected <number>" in the error message, allowing for optional whitespace.
+// Returns the expected sequence number and true if found, or 0 and false if not found.
+func extractExpectedSequence(errorMsg string) (uint64, bool) {
+	re := regexp.MustCompile(`expected\s+(\d+)`)
+	matches := re.FindStringSubmatch(errorMsg)
+	if len(matches) > 1 {
+		if expectedSeq, parseErr := strconv.ParseUint(matches[1], 10, 64); parseErr == nil {
+			return expectedSeq, true
+		}
+	}
+	return 0, false
+}
 
 func calculateTransactionSize(messages []types.Msg) (int64, error) {
 	if len(messages) == 0 {
@@ -228,6 +244,11 @@ func (q *Queue) BroadcastPending() (int, error) {
 				return 0, nil
 			}
 			if strings.Contains(err.Error(), "account sequence mismatch") {
+				if expectedSeq, found := extractExpectedSequence(err.Error()); found {
+					data = data.WithSequence(expectedSeq)
+					continue
+				}
+				// Fallback to incrementing if extraction fails
 				if data.Sequence != nil {
 					data = data.WithSequence(*data.Sequence + 1)
 					continue
@@ -240,6 +261,11 @@ func (q *Queue) BroadcastPending() (int, error) {
 		if res != nil {
 			if res.Code != 0 {
 				if strings.Contains(res.RawLog, "account sequence mismatch") {
+					if expectedSeq, found := extractExpectedSequence(res.RawLog); found {
+						data = data.WithSequence(expectedSeq)
+						continue
+					}
+					// Fallback to incrementing if extraction fails
 					if data.Sequence != nil {
 						data = data.WithSequence(*data.Sequence + 1)
 						continue
