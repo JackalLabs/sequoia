@@ -20,7 +20,10 @@ import (
 // refreshIntervalBufferSeconds adds a small buffer (in seconds) to the configured
 // refresh interval to account for scheduling jitter, network latency, and block
 // timing variance so we don't hammer the endpoint exactly on the boundary.
-const refreshIntervalBufferSeconds int64 = 15
+const (
+	refreshIntervalBufferSeconds int64  = 15
+	maxReturn                    uint64 = 500
+)
 
 // NewStrayManager creates and initializes a new StrayManager with the specified number of hands, authorizing each hand to transact on behalf of the provided wallet if not already authorized.
 func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
@@ -157,18 +160,16 @@ func (s *StrayManager) Stop() {
 func (s *StrayManager) RefreshList() error {
 	log.Debug().Msg("Refreshing stray list...")
 
-	s.strays = make([]*types.UnifiedFile, 0)
-
 	var val uint64
 	reverse := false
-	if s.lastSize > 300 {
-		val = uint64(s.rand.Int63n(s.lastSize))
+	if s.lastSize > maxReturn {
+		val = uint64(s.rand.Int63n(int64(s.lastSize)))
 		reverse = s.rand.Intn(2) == 0
 	}
 
 	page := &query.PageRequest{ // more randomly pick from the stray pile
 		Offset:     val,
-		Limit:      300,
+		Limit:      maxReturn,
 		Reverse:    reverse,
 		CountTotal: true,
 	}
@@ -186,14 +187,15 @@ func (s *StrayManager) RefreshList() error {
 	}
 
 	strayCount := len(res.Files)
-	s.lastSize = int64(res.Pagination.Total)
+	s.lastSize = res.Pagination.Total
 	if strayCount > 0 {
 		log.Info().Msgf("Got updated list of strays of size %d", strayCount)
-
-		for _, stray := range res.Files {
-			newStray := stray
-			s.strays = append(s.strays, &newStray)
+		newStrays := make([]*types.UnifiedFile, strayCount)
+		for i := 0; i < strayCount; i++ {
+			stray := res.Files[i]
+			newStrays[i] = &stray
 		}
+		s.strays = newStrays
 	}
 
 	return nil

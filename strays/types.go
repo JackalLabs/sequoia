@@ -18,7 +18,7 @@ type Hand struct {
 type StrayManager struct {
 	strays          []*types.UnifiedFile
 	wallet          *wallet.Wallet
-	lastSize        int64
+	lastSize        uint64
 	rand            *rand.Rand
 	interval        time.Duration
 	refreshInterval time.Duration
