@@ -227,7 +227,7 @@ func (q *Queue) BroadcastPending() (int, error) {
 				q.messages = make([]*Message, 0)
 				return 0, nil
 			}
-			if strings.Contains(res.RawLog, "account sequence mismatch") {
+			if strings.Contains(err.Error(), "account sequence mismatch") {
 				if data.Sequence != nil {
 					data = data.WithSequence(*data.Sequence + 1)
 					continue
