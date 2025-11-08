@@ -68,7 +68,7 @@ type RateLimitConfig struct {
 }
 
 func DefaultRateLimitConfig() RateLimitConfig {
-	return RateLimitConfig{PerTokenMs: 400, Burst: 10}
+	return RateLimitConfig{PerTokenMs: 100, Burst: 30}
 }
 
 type StrayManagerConfig struct {

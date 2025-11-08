@@ -127,8 +127,8 @@ func (q *Queue) Listen() {
 
 	log.Info().Msg("Queue module started")
 	for q.running {
-		time.Sleep(time.Millisecond * 100)                                                // pauses for one third of a second
-		if !q.processed.Add(time.Second * time.Duration(q.interval)).Before(time.Now()) { // minimum wait for 2 seconds
+		time.Sleep(time.Millisecond * 100)
+		if !q.processed.Add(time.Second * time.Duration(q.interval)).Before(time.Now()) {
 			continue
 		}
 
@@ -143,13 +143,6 @@ func (q *Queue) Listen() {
 		// Token-bucket rate limit: allow calling BroadcastPending at most 20 times per 6 seconds
 		if !q.limiter.Allow() {
 			continue
-		}
-
-		// bunch into 25 message chunks if possible
-		if total < 25 { // if total is less than 25 messages, and it's been less than 10 minutes passed, skip
-			if q.processed.Add(time.Minute * 10).After(time.Now()) {
-				continue
-			}
 		}
 
 		_, _ = q.BroadcastPending()
@@ -222,7 +215,7 @@ func (q *Queue) BroadcastPending() (int, error) {
 	var i int
 	for !complete && i < 10 {
 		i++
-		res, err = q.wallet.BroadcastTxCommit(data)
+		res, err = q.wallet.BroadcastTxSync(data)
 		if err != nil {
 			if strings.Contains(err.Error(), "tx already exists in cache") {
 				log.Info().Msg("TX already exists in mempool, we're going to skip it.")
@@ -233,6 +226,12 @@ func (q *Queue) BroadcastPending() (int, error) {
 				time.Sleep(time.Minute * 30)
 				q.messages = make([]*Message, 0)
 				return 0, nil
+			}
+			if strings.Contains(res.RawLog, "account sequence mismatch") {
+				if data.Sequence != nil {
+					data = data.WithSequence(*data.Sequence + 1)
+					continue
+				}
 			}
 			log.Warn().Err(err).Msg("tx broadcast failed from queue")
 			continue
