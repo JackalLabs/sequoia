@@ -2,6 +2,7 @@ package file_system
 
 import (
 	"context"
+	"time"
 
 	"github.com/ipfs/boxo/blockstore"
 	"github.com/ipfs/go-datastore"
@@ -46,4 +47,30 @@ func (f *FileSystem) Connect(info *peer.AddrInfo) {
 	if err != nil {
 		log.Warn().Msgf("Could not connect to %s | %v", info.String(), err)
 	}
+}
+
+// StartGC starts a background goroutine that periodically runs Badger DB garbage collection.
+// This is essential to reclaim space from deleted/updated entries in the value log.
+// The GC runs every 10 minutes or when the value log size exceeds 1GB.
+func (f *FileSystem) StartGC() {
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			// Run GC with a discard ratio of 0.5 (reclaim space if 50% or more can be discarded)
+			err := f.db.RunValueLogGC(0.5)
+			if err != nil {
+				if err == badger.ErrNoRewrite {
+					// No rewrite needed, which is fine
+					log.Debug().Msg("Badger GC: no rewrite needed")
+				} else {
+					log.Warn().Err(err).Msg("Badger GC failed")
+				}
+			} else {
+				log.Info().Msg("Badger GC completed successfully")
+			}
+		}
+	}()
+	log.Info().Msg("Badger DB garbage collection started (runs every 10 minutes)")
 }

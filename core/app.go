@@ -279,6 +279,7 @@ func (a *App) Start() error {
 	go a.strayManager.Start(a.fileSystem, a.q, myUrl, params.ChunkSize)
 	go a.monitor.Start()
 	go a.pprofServer.Start()
+	a.fileSystem.StartGC() // Start Badger DB garbage collection to prevent storage growth
 
 	done := make(chan os.Signal, 1)
 	defer signal.Stop(done) // undo signal.Notify effect
