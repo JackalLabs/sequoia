@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +22,20 @@ import (
 )
 
 // Rate limiter defaults are provided by config.DefaultRateLimitPerTokenMs and config.DefaultRateLimitBurst
+
+// extractExpectedSequence extracts the expected sequence number from an account sequence mismatch error message.
+// It looks for the pattern "expected <number>" in the error message, allowing for optional whitespace.
+// Returns the expected sequence number and true if found, or 0 and false if not found.
+func extractExpectedSequence(errorMsg string) (uint64, bool) {
+	re := regexp.MustCompile(`expected\s+(\d+)`)
+	matches := re.FindStringSubmatch(errorMsg)
+	if len(matches) > 1 {
+		if expectedSeq, parseErr := strconv.ParseUint(matches[1], 10, 64); parseErr == nil {
+			return expectedSeq, true
+		}
+	}
+	return 0, false
+}
 
 func calculateTransactionSize(messages []types.Msg) (int64, error) {
 	if len(messages) == 0 {
@@ -127,8 +143,8 @@ func (q *Queue) Listen() {
 
 	log.Info().Msg("Queue module started")
 	for q.running {
-		time.Sleep(time.Millisecond * 100)                                                // pauses for one third of a second
-		if !q.processed.Add(time.Second * time.Duration(q.interval)).Before(time.Now()) { // minimum wait for 2 seconds
+		time.Sleep(time.Millisecond * 100)
+		if !q.processed.Add(time.Second * time.Duration(q.interval)).Before(time.Now()) {
 			continue
 		}
 
@@ -143,13 +159,6 @@ func (q *Queue) Listen() {
 		// Token-bucket rate limit: allow calling BroadcastPending at most 20 times per 6 seconds
 		if !q.limiter.Allow() {
 			continue
-		}
-
-		// bunch into 25 message chunks if possible
-		if total < 25 { // if total is less than 25 messages, and it's been less than 10 minutes passed, skip
-			if q.processed.Add(time.Minute * 10).After(time.Now()) {
-				continue
-			}
 		}
 
 		_, _ = q.BroadcastPending()
@@ -222,7 +231,7 @@ func (q *Queue) BroadcastPending() (int, error) {
 	var i int
 	for !complete && i < 10 {
 		i++
-		res, err = q.wallet.BroadcastTxCommit(data)
+		res, err = q.wallet.BroadcastTxSync(data)
 		if err != nil {
 			if strings.Contains(err.Error(), "tx already exists in cache") {
 				log.Info().Msg("TX already exists in mempool, we're going to skip it.")
@@ -234,6 +243,17 @@ func (q *Queue) BroadcastPending() (int, error) {
 				q.messages = make([]*Message, 0)
 				return 0, nil
 			}
+			if strings.Contains(err.Error(), "account sequence mismatch") {
+				if expectedSeq, found := extractExpectedSequence(err.Error()); found {
+					data = data.WithSequence(expectedSeq)
+					continue
+				}
+				// Fallback to incrementing if extraction fails
+				if data.Sequence != nil {
+					data = data.WithSequence(*data.Sequence + 1)
+					continue
+				}
+			}
 			log.Warn().Err(err).Msg("tx broadcast failed from queue")
 			continue
 		}
@@ -241,6 +261,11 @@ func (q *Queue) BroadcastPending() (int, error) {
 		if res != nil {
 			if res.Code != 0 {
 				if strings.Contains(res.RawLog, "account sequence mismatch") {
+					if expectedSeq, found := extractExpectedSequence(res.RawLog); found {
+						data = data.WithSequence(expectedSeq)
+						continue
+					}
+					// Fallback to incrementing if extraction fails
 					if data.Sequence != nil {
 						data = data.WithSequence(*data.Sequence + 1)
 						continue
