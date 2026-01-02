@@ -10,13 +10,44 @@ type Seed struct {
 	DerivationPath string `json:"derivation_path"`
 }
 
-// required for the mapstructure tag
+// ChainConfig holds the configuration for connecting to a blockchain node.
+// It supports both single-node (RPCAddr/GRPCAddr) and multi-node failover
+// (RPCAddrs/GRPCAddrs) configurations. If the array fields are set, they
+// take precedence over the single address fields.
 type ChainConfig struct {
-	Bech32Prefix  string  `yaml:"bech32_prefix" mapstructure:"bech32_prefix"`
-	RPCAddr       string  `yaml:"rpc_addr" mapstructure:"rpc_addr"`
-	GRPCAddr      string  `yaml:"grpc_addr" mapstructure:"grpc_addr"`
-	GasPrice      string  `yaml:"gas_price" mapstructure:"gas_price"`
-	GasAdjustment float64 `yaml:"gas_adjustment" mapstructure:"gas_adjustment"`
+	Bech32Prefix  string   `yaml:"bech32_prefix" mapstructure:"bech32_prefix"`
+	RPCAddr       string   `yaml:"rpc_addr" mapstructure:"rpc_addr"`
+	GRPCAddr      string   `yaml:"grpc_addr" mapstructure:"grpc_addr"`
+	RPCAddrs      []string `yaml:"rpc_addrs" mapstructure:"rpc_addrs"`
+	GRPCAddrs     []string `yaml:"grpc_addrs" mapstructure:"grpc_addrs"`
+	GasPrice      string   `yaml:"gas_price" mapstructure:"gas_price"`
+	GasAdjustment float64  `yaml:"gas_adjustment" mapstructure:"gas_adjustment"`
+}
+
+// GetRPCAddrs returns the list of RPC addresses to use.
+// If RPCAddrs is set, it returns that. Otherwise, it returns a single-element
+// slice containing RPCAddr for backward compatibility.
+func (c ChainConfig) GetRPCAddrs() []string {
+	if len(c.RPCAddrs) > 0 {
+		return c.RPCAddrs
+	}
+	if c.RPCAddr != "" {
+		return []string{c.RPCAddr}
+	}
+	return []string{"http://localhost:26657"}
+}
+
+// GetGRPCAddrs returns the list of GRPC addresses to use.
+// If GRPCAddrs is set, it returns that. Otherwise, it returns a single-element
+// slice containing GRPCAddr for backward compatibility.
+func (c ChainConfig) GetGRPCAddrs() []string {
+	if len(c.GRPCAddrs) > 0 {
+		return c.GRPCAddrs
+	}
+	if c.GRPCAddr != "" {
+		return []string{c.GRPCAddr}
+	}
+	return []string{"localhost:9090"}
 }
 
 type Config struct {
@@ -171,8 +202,8 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 		Int64("StrayCheckInterval", c.StrayManagerCfg.CheckInterval).
 		Int64("StrayRefreshInterval", c.StrayManagerCfg.RefreshInterval).
 		Int("StrayHandCount", c.StrayManagerCfg.HandCount).
-		Str("ChainRPCAddr", c.ChainCfg.RPCAddr).
-		Str("ChainGRPCAddr", c.ChainCfg.GRPCAddr).
+		Strs("ChainRPCAddrs", c.ChainCfg.GetRPCAddrs()).
+		Strs("ChainGRPCAddrs", c.ChainCfg.GetGRPCAddrs()).
 		Str("ChainGasPrice", c.ChainCfg.GasPrice).
 		Float64("ChainGasAdjustment", c.ChainCfg.GasAdjustment).
 		Str("IP", c.Ip).

@@ -32,9 +32,9 @@ import (
 	"github.com/JackalLabs/sequoia/config"
 	"github.com/JackalLabs/sequoia/proofs"
 	"github.com/JackalLabs/sequoia/queue"
+	"github.com/JackalLabs/sequoia/rpc"
 	"github.com/JackalLabs/sequoia/strays"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
@@ -48,7 +48,7 @@ type App struct {
 	home         string
 	monitor      *monitoring.Monitor
 	fileSystem   *file_system.FileSystem
-	wallet       *wallet.Wallet
+	wallet       *rpc.FailoverClient
 }
 
 // NewApp initializes and returns a new App instance using the provided home directory.
@@ -118,20 +118,26 @@ func NewApp(home string) (*App, error) {
 	}, nil
 }
 
-func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) error {
-	init := storageTypes.NewMsgInitProvider(wallet.AccAddress(), ip, totalSpace, "")
+func initProviderOnChain(fc *rpc.FailoverClient, ip string, totalSpace int64) error {
+	w := fc.Wallet()
+	init := storageTypes.NewMsgInitProvider(w.AccAddress(), ip, totalSpace, "")
 
 	data := walletTypes.NewTransactionData(
 		init,
 	).WithGasAuto().WithFeeAuto()
 
-	builder, err := wallet.BuildTx(data)
+	builder, err := w.BuildTx(data)
 	if err != nil {
 		return err
 	}
 
-	res, err := wallet.Client.BroadcastTxCommit(builder.GetTx())
+	res, err := w.Client.BroadcastTxCommit(builder.GetTx())
 	if err != nil {
+		if rpc.IsConnectionError(err) {
+			if fc.Failover() {
+				return initProviderOnChain(fc, ip, totalSpace)
+			}
+		}
 		return err
 	}
 
@@ -140,20 +146,26 @@ func initProviderOnChain(wallet *wallet.Wallet, ip string, totalSpace int64) err
 	return nil
 }
 
-func updateSpace(wallet *wallet.Wallet, totalSpace int64) error {
-	init := storageTypes.NewMsgSetProviderTotalSpace(wallet.AccAddress(), totalSpace)
+func updateSpace(fc *rpc.FailoverClient, totalSpace int64) error {
+	w := fc.Wallet()
+	init := storageTypes.NewMsgSetProviderTotalSpace(w.AccAddress(), totalSpace)
 
 	data := walletTypes.NewTransactionData(
 		init,
 	).WithGasAuto().WithFeeAuto()
 
-	builder, err := wallet.BuildTx(data)
+	builder, err := w.BuildTx(data)
 	if err != nil {
 		return err
 	}
 
-	res, err := wallet.Client.BroadcastTxCommit(builder.GetTx())
+	res, err := w.Client.BroadcastTxCommit(builder.GetTx())
 	if err != nil {
+		if rpc.IsConnectionError(err) {
+			if fc.Failover() {
+				return updateSpace(fc, totalSpace)
+			}
+		}
 		return err
 	}
 
@@ -162,20 +174,26 @@ func updateSpace(wallet *wallet.Wallet, totalSpace int64) error {
 	return nil
 }
 
-func updateIp(wallet *wallet.Wallet, ip string) error {
-	init := storageTypes.NewMsgSetProviderIP(wallet.AccAddress(), ip)
+func updateIp(fc *rpc.FailoverClient, ip string) error {
+	w := fc.Wallet()
+	init := storageTypes.NewMsgSetProviderIP(w.AccAddress(), ip)
 
 	data := walletTypes.NewTransactionData(
 		init,
 	).WithGasAuto().WithFeeAuto()
 
-	builder, err := wallet.BuildTx(data)
+	builder, err := w.BuildTx(data)
 	if err != nil {
 		return err
 	}
 
-	res, err := wallet.Client.BroadcastTxCommit(builder.GetTx())
+	res, err := w.Client.BroadcastTxCommit(builder.GetTx())
 	if err != nil {
+		if rpc.IsConnectionError(err) {
+			if fc.Failover() {
+				return updateIp(fc, ip)
+			}
+		}
 		return err
 	}
 
@@ -212,12 +230,17 @@ func (a *App) Start() error {
 		Address: myAddress,
 	}
 
-	cl := storageTypes.NewQueryClient(a.wallet.Client.GRPCConn)
+	cl := storageTypes.NewQueryClient(a.wallet.GRPCConn())
 
 	claimers := make([]string, 0)
 
 	res, err := cl.Provider(context.Background(), queryParams)
 	if err != nil {
+		if rpc.IsConnectionError(err) {
+			if a.wallet.Failover() {
+				return a.Start() // Retry with new connection
+			}
+		}
 		log.Info().Err(err).Msg("Provider does not exist on network or is not connected...")
 		err := initProviderOnChain(a.wallet, cfg.Ip, cfg.TotalSpace)
 		if err != nil {
@@ -251,7 +274,7 @@ func (a *App) Start() error {
 		}
 	}
 
-	params, err := a.GetStorageParams(a.wallet.Client.GRPCConn)
+	params, err := a.GetStorageParams(a.wallet.GRPCConn())
 	if err != nil {
 		return err
 	}
@@ -304,7 +327,7 @@ func (a *App) Start() error {
 func (a *App) ConnectPeers() {
 	log.Info().Msg("Starting IPFS Peering cycle...")
 	ctx := context.Background()
-	queryClient := storageTypes.NewQueryClient(a.wallet.Client.GRPCConn)
+	queryClient := storageTypes.NewQueryClient(a.wallet.GRPCConn())
 
 	activeProviders, err := queryClient.ActiveProviders(ctx, &storageTypes.QueryActiveProviders{})
 	if err != nil {

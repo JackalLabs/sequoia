@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/JackalLabs/sequoia/config"
+	"github.com/JackalLabs/sequoia/rpc"
 
 	"github.com/JackalLabs/sequoia/api/types"
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/rs/zerolog/log"
 )
 
@@ -26,9 +26,9 @@ func IndexHandler(address string) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func VersionHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Request) {
+func VersionHandler(fc *rpc.FailoverClient) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		chainId, err := wallet.Client.GetChainID()
+		chainId, err := fc.Wallet().Client.GetChainID()
 		if err != nil {
 			w.WriteHeader(500)
 			return
@@ -48,15 +48,15 @@ func VersionHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Reque
 	}
 }
 
-func NetworkHandler(wallet *wallet.Wallet) func(http.ResponseWriter, *http.Request) {
+func NetworkHandler(fc *rpc.FailoverClient) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		status, err := wallet.Client.RPCClient.Status(context.Background())
+		status, err := fc.RPCClient().Status(context.Background())
 		if err != nil {
 			w.WriteHeader(500)
 			return
 		}
 
-		grpcStatus := wallet.Client.GRPCConn.GetState()
+		grpcStatus := fc.GRPCConn().GetState()
 
 		v := types.NetworkResponse{
 			GRPCStatus: grpcStatus.String(),

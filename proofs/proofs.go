@@ -21,7 +21,7 @@ import (
 	canine "github.com/jackalLabs/canine-chain/v5/app"
 
 	"github.com/JackalLabs/sequoia/queue"
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+	"github.com/JackalLabs/sequoia/rpc"
 	"github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 	merkletree "github.com/wealdtech/go-merkletree/v2"
@@ -108,7 +108,7 @@ func (p *Prover) GenerateProof(merkle []byte, owner string, start int64, blockHe
 		Start:  start,
 	}
 
-	cl := types.NewQueryClient(p.wallet.Client.GRPCConn)
+	cl := types.NewQueryClient(p.wallet.GRPCConn())
 
 	res, err := cl.File(context.Background(), queryParams)
 	if err != nil {
@@ -325,16 +325,24 @@ func (p *Prover) Start() {
 		log.Debug().Msg("Starting proof cycle...")
 
 		c := context.Background()
-		abciInfo, err := p.wallet.Client.RPCClient.ABCIInfo(c)
+		abciInfo, err := p.wallet.RPCClient().ABCIInfo(c)
 		if err != nil {
+			if rpc.IsConnectionError(err) {
+				log.Warn().Err(err).Msg("Connection error getting ABCI info, attempting failover")
+				p.wallet.Failover()
+			}
 			log.Error().Err(err)
 			continue
 		}
 		height := abciInfo.Response.LastBlockHeight
 
 		limit := 5000
-		unconfirmedTxs, err := p.wallet.Client.RPCClient.UnconfirmedTxs(c, &limit)
+		unconfirmedTxs, err := p.wallet.RPCClient().UnconfirmedTxs(c, &limit)
 		if err != nil {
+			if rpc.IsConnectionError(err) {
+				log.Warn().Err(err).Msg("Connection error getting mempool status, attempting failover")
+				p.wallet.Failover()
+			}
 			log.Error().Err(err).Msg("could not get mempool status")
 			continue
 		}
@@ -430,7 +438,7 @@ func (p *Prover) Stop() {
 	p.running = false
 }
 
-func NewProver(wallet *wallet.Wallet, q *queue.Queue, io FileSystem, interval uint64, threads int16, chunkSize int) *Prover {
+func NewProver(wallet *rpc.FailoverClient, q *queue.Queue, io FileSystem, interval uint64, threads int16, chunkSize int) *Prover {
 	p := Prover{
 		running:   false,
 		wallet:    wallet,

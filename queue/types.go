@@ -4,13 +4,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JackalLabs/sequoia/rpc"
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"golang.org/x/time/rate"
 )
 
 type Queue struct {
-	wallet       *wallet.Wallet
+	wallet       *rpc.FailoverClient
 	messages     []*Message
 	processed    time.Time
 	running      bool

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/JackalLabs/sequoia/api/gateway"
+	"github.com/JackalLabs/sequoia/rpc"
 	sequoiaTypes "github.com/JackalLabs/sequoia/types"
 
 	"github.com/JackalLabs/sequoia/utils"
@@ -22,8 +23,6 @@ import (
 	cid "github.com/ipfs/go-cid"
 
 	"github.com/JackalLabs/sequoia/proofs"
-
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
 	"github.com/JackalLabs/sequoia/api/types"
 	"github.com/JackalLabs/sequoia/file_system"
@@ -45,7 +44,7 @@ func handleErr(err error, w http.ResponseWriter, code int) {
 	}
 }
 
-func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
+func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, fc *rpc.FailoverClient, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		// Use streaming multipart parsing instead of loading entire form into memory
 		sender, merkleString, startBlockString, proofTypeString, file, _, err := parseMultipartFormStreaming(req)
@@ -80,7 +79,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 		// Size validation is now enforced during multipart streaming
 		// Files larger than MaxFileSize (32GB) will be rejected immediately
 
-		cl := storageTypes.NewQueryClient(wl.Client.GRPCConn)
+		cl := storageTypes.NewQueryClient(fc.GRPCConn())
 		queryParams := storageTypes.QueryFile{
 			Merkle: merkle,
 			Owner:  sender,
@@ -100,7 +99,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 		}
 
 		if len(f.Proofs) == int(f.MaxProofs) {
-			if !f.ContainsProver(wl.AccAddress()) {
+			if !f.ContainsProver(fc.AccAddress()) {
 				handleErr(fmt.Errorf("cannot accept file that I cannot claim"), w, http.StatusInternalServerError)
 				return
 			}
@@ -133,7 +132,7 @@ func PostFileHandler(fio *file_system.FileSystem, prover *proofs.Prover, wl *wal
 	}
 }
 
-func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *wallet.Wallet, chunkSize int64) func(http.ResponseWriter, *http.Request) {
+func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, fc *rpc.FailoverClient, chunkSize int64) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		// Use streaming multipart parsing instead of loading entire form into memory
 		sender, merkleString, startBlockString, _, file, _, err := parseMultipartFormStreaming(req)
@@ -187,7 +186,7 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 			log.Error().Err(fmt.Errorf("can't encode json : %w", err))
 		}
 
-		cl := storageTypes.NewQueryClient(wl.Client.GRPCConn)
+		cl := storageTypes.NewQueryClient(fc.GRPCConn())
 		queryParams := storageTypes.QueryFile{
 			Merkle: merkle,
 			Owner:  sender,
@@ -211,7 +210,7 @@ func PostFileHandlerV2(fio *file_system.FileSystem, prover *proofs.Prover, wl *w
 		}
 
 		if len(f.Proofs) == int(f.MaxProofs) {
-			if !f.ContainsProver(wl.AccAddress()) {
+			if !f.ContainsProver(fc.AccAddress()) {
 				log.Error().Err(fmt.Errorf("cannot accept file that I cannot claim"))
 				up.Status = "Error: Can't claim"
 				return
@@ -413,7 +412,7 @@ func getFolderData(data io.Reader) (*sequoiaTypes.FolderData, bool) {
 
 // getMerkleData retrieves file data by merkle hash, first attempting local storage and then querying network providers if not found locally.
 // It returns the file data if successful, or an error if the file cannot be retrieved from any source.
-func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) (io.ReadSeekCloser, error) {
+func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, fc *rpc.FailoverClient, myIp string) (io.ReadSeekCloser, error) {
 	file, err := f.GetFileData(merkle)
 	if err == nil {
 		return file, nil
@@ -425,7 +424,7 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 		Merkle: merkle,
 	}
 
-	cl := storageTypes.NewQueryClient(wallet.Client.GRPCConn)
+	cl := storageTypes.NewQueryClient(fc.GRPCConn())
 
 	res, err := cl.FindFile(context.Background(), queryParams)
 	if err != nil {
@@ -470,10 +469,10 @@ func getMerkleData(merkle []byte, fileName string, f *file_system.FileSystem, wa
 // GetMerklePathData recursively resolves a file or folder by traversing a path from a root merkle hash.
 // If the path leads to a file, returns its data; if it leads to a folder and raw is false, returns an HTML representation of the folder.
 // Returns the file or folder data, the resolved filename, and an error if the path is invalid or data retrieval fails.
-func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, wallet *wallet.Wallet, myIp string, currentPath string, raw bool) (io.ReadSeekCloser, string, error) {
+func GetMerklePathData(root []byte, path []string, fileName string, f *file_system.FileSystem, fc *rpc.FailoverClient, myIp string, currentPath string, raw bool) (io.ReadSeekCloser, string, error) {
 	currentRoot := root
 
-	fileData, err := getMerkleData(currentRoot, fileName, f, wallet, myIp)
+	fileData, err := getMerkleData(currentRoot, fileName, f, fc, myIp)
 	if err != nil {
 		return nil, fileName, err
 	}
@@ -491,7 +490,7 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 
 		for _, child := range children {
 			if child.Name == p {
-				return GetMerklePathData(child.Merkle, path[1:], child.Name, f, wallet, myIp, currentPath, raw) // check the next item in the list
+				return GetMerklePathData(child.Merkle, path[1:], child.Name, f, fc, myIp, currentPath, raw) // check the next item in the list
 			}
 		}
 		// did not find child
@@ -522,7 +521,7 @@ func GetMerklePathData(root []byte, path []string, fileName string, f *file_syst
 // FindFileHandler returns an HTTP handler that serves files or folders by merkle hash and optional path, supporting raw or HTML folder views.
 //
 // The handler extracts the merkle hash and optional path from the request, resolves the requested file or folder (recursively if a path is provided), and serves the content. If the target is a folder and the `raw` query parameter is not set, an HTML representation is generated. If a filename is not specified, the merkle string is used as the default name. Errors are returned as JSON responses.
-func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp string) func(http.ResponseWriter, *http.Request) {
+func FindFileHandler(f *file_system.FileSystem, fc *rpc.FailoverClient, myIp string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		fileName := req.URL.Query().Get("filename")
@@ -555,7 +554,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 			}
 
 			if len(filteredPaths) > 0 {
-				data, name, err := GetMerklePathData(merkle, filteredPaths, fileName, f, wallet, myIp, req.URL.Path, raw)
+				data, name, err := GetMerklePathData(merkle, filteredPaths, fileName, f, fc, myIp, req.URL.Path, raw)
 				if err != nil {
 					v := types.ErrorResponse{
 						Error: err.Error(),
@@ -572,7 +571,7 @@ func FindFileHandler(f *file_system.FileSystem, wallet *wallet.Wallet, myIp stri
 
 		// This code will only run if there's no path or the path is empty
 
-		fileData, err := getMerkleData(merkle, fileName, f, wallet, myIp)
+		fileData, err := getMerkleData(merkle, fileName, f, fc, myIp)
 		if err != nil {
 			v := types.ErrorResponse{
 				Error: err.Error(),

@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/JackalLabs/sequoia/config"
+	"github.com/JackalLabs/sequoia/rpc"
 	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 )
@@ -71,7 +71,7 @@ func (m *Message) Done() {
 	m.wg.Done()
 }
 
-func NewQueue(w *wallet.Wallet, interval uint64, maxSizeBytes int64, domain string, rlCfg config.RateLimitConfig) *Queue {
+func NewQueue(w *rpc.FailoverClient, interval uint64, maxSizeBytes int64, domain string, rlCfg config.RateLimitConfig) *Queue {
 	if maxSizeBytes == 0 {
 		maxSizeBytes = config.DefaultMaxSizeBytes()
 	}
@@ -174,8 +174,12 @@ func (q *Queue) BroadcastPending() (int, error) {
 	log.Info().Msg(fmt.Sprintf("Queue: %d messages waiting to be put on-chain...", total))
 
 	limit := 5000
-	unconfirmedTxs, err := q.wallet.Client.RPCClient.UnconfirmedTxs(context.Background(), &limit)
+	unconfirmedTxs, err := q.wallet.RPCClient().UnconfirmedTxs(context.Background(), &limit)
 	if err != nil {
+		if rpc.IsConnectionError(err) {
+			log.Warn().Err(err).Msg("Connection error getting mempool status, attempting failover")
+			q.wallet.Failover()
+		}
 		log.Error().Err(err).Msg("could not get mempool status")
 		return 0, err
 	}
@@ -231,8 +235,15 @@ func (q *Queue) BroadcastPending() (int, error) {
 	var i int
 	for !complete && i < 10 {
 		i++
-		res, err = q.wallet.BroadcastTxSync(data)
+		w := q.wallet.Wallet()
+		res, err = w.BroadcastTxSync(data)
 		if err != nil {
+			if rpc.IsConnectionError(err) {
+				log.Warn().Err(err).Msg("Connection error during broadcast, attempting failover")
+				if q.wallet.Failover() {
+					continue // Retry with new connection
+				}
+			}
 			if strings.Contains(err.Error(), "tx already exists in cache") {
 				log.Info().Msg("TX already exists in mempool, we're going to skip it.")
 				continue

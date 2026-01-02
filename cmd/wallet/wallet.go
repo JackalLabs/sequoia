@@ -65,16 +65,16 @@ func balanceCMD() *cobra.Command {
 				return err
 			}
 
-			wallet, err := config.InitWallet(home)
+			fc, err := config.InitWallet(home)
 			if err != nil {
 				return err
 			}
 
-			queryClient := bankTypes.NewQueryClient(wallet.Client.GRPCConn)
+			queryClient := bankTypes.NewQueryClient(fc.GRPCConn())
 
 			params := &bankTypes.QueryBalanceRequest{
 				Denom:   "ujkl",
-				Address: wallet.AccAddress(),
+				Address: fc.AccAddress(),
 			}
 
 			res, err := queryClient.Balance(context.Background(), params)
@@ -125,7 +125,7 @@ func withdrawCMD() *cobra.Command {
 				&m,
 			).WithGasAuto().WithFeeAuto()
 
-			res, err := wallet.BroadcastTxCommit(data)
+			res, err := wallet.Wallet().BroadcastTxCommit(data)
 			if err != nil {
 				return err
 			}

@@ -5,15 +5,16 @@ import (
 	"net/http"
 
 	"github.com/JackalLabs/sequoia/api/types"
+	"github.com/JackalLabs/sequoia/rpc"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/desmos-labs/cosmos-go-wallet/client"
 	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
 
-func SpaceHandler(c *client.Client, address string) func(http.ResponseWriter, *http.Request) {
+func SpaceHandler(fc *rpc.FailoverClient) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		queryClient := storageTypes.NewQueryClient(c.GRPCConn)
+		queryClient := storageTypes.NewQueryClient(fc.GRPCConn())
+		address := fc.AccAddress()
 
 		params := &storageTypes.QueryProvider{
 			Address: address,
