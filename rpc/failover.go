@@ -17,6 +17,12 @@ import (
 // ErrNoNodes is returned when no RPC/GRPC nodes are configured.
 var ErrNoNodes = errors.New("no RPC/GRPC nodes configured")
 
+// ErrInvalidNodeIndex is returned when an invalid node index is provided.
+var ErrInvalidNodeIndex = errors.New("invalid node index")
+
+// ErrNilWallet is returned when the wallet is nil.
+var ErrNilWallet = errors.New("wallet is nil")
+
 // NodeConfig contains the configuration needed to connect to blockchain nodes.
 // This is separate from config.ChainConfig to avoid import cycles.
 type NodeConfig struct {
@@ -114,8 +120,8 @@ func (fc *FailoverClient) connectToFirstAvailable() error {
 
 // createWalletAtIndex creates a new wallet connection using the node at the given index.
 func (fc *FailoverClient) createWalletAtIndex(index int) (*wallet.Wallet, error) {
-	if index >= len(fc.nodeCfg.RPCAddrs) || index >= len(fc.nodeCfg.GRPCAddrs) {
-		index = 0
+	if index < 0 || index >= len(fc.nodeCfg.RPCAddrs) || index >= len(fc.nodeCfg.GRPCAddrs) {
+		return nil, ErrInvalidNodeIndex
 	}
 
 	// Create a modified chain config with the specific node addresses
@@ -187,23 +193,35 @@ func (fc *FailoverClient) Wallet() *wallet.Wallet {
 }
 
 // GRPCConn returns the current GRPC connection.
+// Panics if the wallet is nil (should not happen in normal operation).
 func (fc *FailoverClient) GRPCConn() grpc.ClientConn {
 	fc.mu.RLock()
 	defer fc.mu.RUnlock()
+	if fc.wallet == nil || fc.wallet.Client == nil {
+		panic(ErrNilWallet)
+	}
 	return fc.wallet.Client.GRPCConn
 }
 
 // RPCClient returns the current RPC client.
+// Panics if the wallet is nil (should not happen in normal operation).
 func (fc *FailoverClient) RPCClient() client.Client {
 	fc.mu.RLock()
 	defer fc.mu.RUnlock()
+	if fc.wallet == nil || fc.wallet.Client == nil {
+		panic(ErrNilWallet)
+	}
 	return fc.wallet.Client.RPCClient
 }
 
 // AccAddress returns the account address.
+// Panics if the wallet is nil (should not happen in normal operation).
 func (fc *FailoverClient) AccAddress() string {
 	fc.mu.RLock()
 	defer fc.mu.RUnlock()
+	if fc.wallet == nil {
+		panic(ErrNilWallet)
+	}
 	return fc.wallet.AccAddress()
 }
 
@@ -237,6 +255,8 @@ func (fc *FailoverClient) FailoverCount() int {
 
 // NodeCount returns the total number of configured nodes.
 func (fc *FailoverClient) NodeCount() int {
+	fc.mu.RLock()
+	defer fc.mu.RUnlock()
 	return len(fc.nodeCfg.RPCAddrs)
 }
 
@@ -315,12 +335,18 @@ func (fc *FailoverClient) HealthCheck(ctx context.Context) error {
 }
 
 // EnsureHealthy checks if the current node is healthy, and if not,
-// attempts to failover to a healthy node.
+// attempts to failover to a healthy node. After failover, it verifies
+// that the new node is also healthy.
 func (fc *FailoverClient) EnsureHealthy(ctx context.Context) error {
 	err := fc.HealthCheck(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("Current node unhealthy, attempting failover")
 		if !fc.Failover() {
+			return err
+		}
+		// Verify the new node is healthy
+		if err := fc.HealthCheck(ctx); err != nil {
+			log.Warn().Err(err).Msg("New node also unhealthy after failover")
 			return err
 		}
 	}

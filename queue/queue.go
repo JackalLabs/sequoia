@@ -178,10 +178,15 @@ func (q *Queue) BroadcastPending() (int, error) {
 	if err != nil {
 		if rpc.IsConnectionError(err) {
 			log.Warn().Err(err).Msg("Connection error getting mempool status, attempting failover")
-			q.wallet.Failover()
+			if q.wallet.Failover() {
+				// Retry after successful failover
+				unconfirmedTxs, err = q.wallet.RPCClient().UnconfirmedTxs(context.Background(), &limit)
+			}
 		}
-		log.Error().Err(err).Msg("could not get mempool status")
-		return 0, err
+		if err != nil {
+			log.Error().Err(err).Msg("could not get mempool status")
+			return 0, err
+		}
 	}
 	if unconfirmedTxs.Total > 2000 {
 		log.Error().Msg("Cannot post messages when mempool is too large, waiting 30 minutes")

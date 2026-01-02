@@ -329,10 +329,15 @@ func (p *Prover) Start() {
 		if err != nil {
 			if rpc.IsConnectionError(err) {
 				log.Warn().Err(err).Msg("Connection error getting ABCI info, attempting failover")
-				p.wallet.Failover()
+				if p.wallet.Failover() {
+					// Retry after successful failover
+					abciInfo, err = p.wallet.RPCClient().ABCIInfo(c)
+				}
 			}
-			log.Error().Err(err)
-			continue
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to get ABCI info")
+				continue
+			}
 		}
 		height := abciInfo.Response.LastBlockHeight
 
@@ -341,10 +346,15 @@ func (p *Prover) Start() {
 		if err != nil {
 			if rpc.IsConnectionError(err) {
 				log.Warn().Err(err).Msg("Connection error getting mempool status, attempting failover")
-				p.wallet.Failover()
+				if p.wallet.Failover() {
+					// Retry after successful failover
+					unconfirmedTxs, err = p.wallet.RPCClient().UnconfirmedTxs(c, &limit)
+				}
 			}
-			log.Error().Err(err).Msg("could not get mempool status")
-			continue
+			if err != nil {
+				log.Error().Err(err).Msg("could not get mempool status")
+				continue
+			}
 		}
 		if unconfirmedTxs.Total > 2000 {
 			log.Error().Msg("Cannot make proofs when mempool is too large.")
