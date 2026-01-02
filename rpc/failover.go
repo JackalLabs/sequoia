@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -278,41 +279,14 @@ func IsConnectionError(err error) bool {
 		"failed to connect",
 	}
 
+	errStrLower := strings.ToLower(errStr)
 	for _, pattern := range connectionErrors {
-		if contains(errStr, pattern) {
+		if strings.Contains(errStrLower, pattern) {
 			return true
 		}
 	}
 
 	return false
-}
-
-// contains checks if s contains substr (case-insensitive).
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsIgnoreCase(s, substr))
-}
-
-func containsIgnoreCase(s, substr string) bool {
-	s = toLowerCase(s)
-	substr = toLowerCase(substr)
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
-func toLowerCase(s string) string {
-	b := make([]byte, len(s))
-	for i := range s {
-		c := s[i]
-		if c >= 'A' && c <= 'Z' {
-			c += 'a' - 'A'
-		}
-		b[i] = c
-	}
-	return string(b)
 }
 
 // ExecuteWithFailover executes a function and automatically fails over
