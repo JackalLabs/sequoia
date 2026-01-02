@@ -17,6 +17,9 @@ import (
 // ErrNoNodes is returned when no RPC/GRPC nodes are configured.
 var ErrNoNodes = errors.New("no RPC/GRPC nodes configured")
 
+// ErrMismatchedNodeCounts is returned when RPCAddrs and GRPCAddrs have different lengths.
+var ErrMismatchedNodeCounts = errors.New("RPCAddrs and GRPCAddrs must have the same length")
+
 // ErrInvalidNodeIndex is returned when an invalid node index is provided.
 var ErrInvalidNodeIndex = errors.New("invalid node index")
 
@@ -59,6 +62,9 @@ func NewFailoverClient(nodeCfg NodeConfig, seed, derivation string) (*FailoverCl
 	if len(nodeCfg.RPCAddrs) == 0 || len(nodeCfg.GRPCAddrs) == 0 {
 		return nil, ErrNoNodes
 	}
+	if len(nodeCfg.RPCAddrs) != len(nodeCfg.GRPCAddrs) {
+		return nil, ErrMismatchedNodeCounts
+	}
 
 	fc := &FailoverClient{
 		nodeCfg:      nodeCfg,
@@ -79,6 +85,9 @@ func NewFailoverClient(nodeCfg NodeConfig, seed, derivation string) (*FailoverCl
 func NewFailoverClientWithPrivKey(nodeCfg NodeConfig, privKey string) (*FailoverClient, error) {
 	if len(nodeCfg.RPCAddrs) == 0 || len(nodeCfg.GRPCAddrs) == 0 {
 		return nil, ErrNoNodes
+	}
+	if len(nodeCfg.RPCAddrs) != len(nodeCfg.GRPCAddrs) {
+		return nil, ErrMismatchedNodeCounts
 	}
 
 	fc := &FailoverClient{

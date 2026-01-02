@@ -21,15 +21,24 @@ func SpaceHandler(fc *rpc.FailoverClient) func(http.ResponseWriter, *http.Reques
 		}
 		res, err := queryClient.Provider(context.Background(), params)
 		if err != nil {
-			v := types.ErrorResponse{
-				Error: err.Error(),
+			if rpc.IsConnectionError(err) {
+				log.Warn().Err(err).Msg("Connection error querying provider, attempting failover")
+				if fc.Failover() {
+					// Retry with new connection
+					queryClient = storageTypes.NewQueryClient(fc.GRPCConn())
+					res, err = queryClient.Provider(context.Background(), params)
+				}
 			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				log.Error().Err(err)
+				v := types.ErrorResponse{
+					Error: err.Error(),
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+				if encErr := json.NewEncoder(w).Encode(v); encErr != nil {
+					log.Error().Err(encErr).Msg("Failed to encode error response")
+				}
+				return
 			}
-			return
 		}
 
 		totalSpace := res.Provider.Totalspace
@@ -39,15 +48,24 @@ func SpaceHandler(fc *rpc.FailoverClient) func(http.ResponseWriter, *http.Reques
 		}
 		fsres, err := queryClient.FreeSpace(context.Background(), fsparams)
 		if err != nil {
-			v := types.ErrorResponse{
-				Error: err.Error(),
+			if rpc.IsConnectionError(err) {
+				log.Warn().Err(err).Msg("Connection error querying free space, attempting failover")
+				if fc.Failover() {
+					// Retry with new connection
+					queryClient = storageTypes.NewQueryClient(fc.GRPCConn())
+					fsres, err = queryClient.FreeSpace(context.Background(), fsparams)
+				}
 			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				log.Error().Err(err)
+				v := types.ErrorResponse{
+					Error: err.Error(),
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+				if encErr := json.NewEncoder(w).Encode(v); encErr != nil {
+					log.Error().Err(encErr).Msg("Failed to encode error response")
+				}
+				return
 			}
-			return
 		}
 
 		freeSpace := fsres.Space
