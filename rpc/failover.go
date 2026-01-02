@@ -2,9 +2,9 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
-	"time"
 
 	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
 	"github.com/cosmos/gogoproto/grpc"
@@ -13,6 +13,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/tendermint/tendermint/rpc/client"
 )
+
+// ErrNoNodes is returned when no RPC/GRPC nodes are configured.
+var ErrNoNodes = errors.New("no RPC/GRPC nodes configured")
 
 // NodeConfig contains the configuration needed to connect to blockchain nodes.
 // This is separate from config.ChainConfig to avoid import cycles.
@@ -40,102 +43,86 @@ type FailoverClient struct {
 	legacyKey    string
 
 	// Node tracking
-	rpcAddrs      []string
-	grpcAddrs     []string
 	currentIndex  int
-	lastFailover  time.Time
 	failoverCount int
 }
 
 // NewFailoverClient creates a new FailoverClient with the given configuration.
 // It initializes the first connection using the provided seed phrase.
 func NewFailoverClient(nodeCfg NodeConfig, seed, derivation string) (*FailoverClient, error) {
+	if len(nodeCfg.RPCAddrs) == 0 || len(nodeCfg.GRPCAddrs) == 0 {
+		return nil, ErrNoNodes
+	}
+
 	fc := &FailoverClient{
 		nodeCfg:      nodeCfg,
 		seed:         seed,
 		derivation:   derivation,
 		useLegacyKey: false,
-		rpcAddrs:     nodeCfg.RPCAddrs,
-		grpcAddrs:    nodeCfg.GRPCAddrs,
 		currentIndex: 0,
 	}
 
-	// Create initial wallet connection
-	w, err := fc.createWalletAtIndex(0)
-	if err != nil {
-		// Try other nodes if the first one fails
-		for i := 1; i < len(fc.rpcAddrs); i++ {
-			w, err = fc.createWalletAtIndex(i)
-			if err == nil {
-				fc.currentIndex = i
-				break
-			}
-			log.Warn().Err(err).Int("index", i).Msg("Failed to connect to node, trying next")
-		}
-		if err != nil {
-			return nil, err
-		}
+	if err := fc.connectToFirstAvailable(); err != nil {
+		return nil, err
 	}
-
-	fc.wallet = w
-	log.Info().
-		Int("node_index", fc.currentIndex).
-		Str("rpc", fc.rpcAddrs[fc.currentIndex]).
-		Str("grpc", fc.grpcAddrs[fc.currentIndex]).
-		Msg("Connected to blockchain node")
 
 	return fc, nil
 }
 
 // NewFailoverClientWithPrivKey creates a new FailoverClient using a legacy private key.
 func NewFailoverClientWithPrivKey(nodeCfg NodeConfig, privKey string) (*FailoverClient, error) {
+	if len(nodeCfg.RPCAddrs) == 0 || len(nodeCfg.GRPCAddrs) == 0 {
+		return nil, ErrNoNodes
+	}
+
 	fc := &FailoverClient{
 		nodeCfg:      nodeCfg,
 		useLegacyKey: true,
 		legacyKey:    privKey,
-		rpcAddrs:     nodeCfg.RPCAddrs,
-		grpcAddrs:    nodeCfg.GRPCAddrs,
 		currentIndex: 0,
 	}
 
-	// Create initial wallet connection
-	w, err := fc.createWalletAtIndex(0)
-	if err != nil {
-		// Try other nodes if the first one fails
-		for i := 1; i < len(fc.rpcAddrs); i++ {
-			w, err = fc.createWalletAtIndex(i)
-			if err == nil {
-				fc.currentIndex = i
-				break
-			}
-			log.Warn().Err(err).Int("index", i).Msg("Failed to connect to node, trying next")
-		}
-		if err != nil {
-			return nil, err
-		}
+	if err := fc.connectToFirstAvailable(); err != nil {
+		return nil, err
 	}
-
-	fc.wallet = w
-	log.Info().
-		Int("node_index", fc.currentIndex).
-		Str("rpc", fc.rpcAddrs[fc.currentIndex]).
-		Str("grpc", fc.grpcAddrs[fc.currentIndex]).
-		Msg("Connected to blockchain node")
 
 	return fc, nil
 }
 
+// connectToFirstAvailable attempts to connect to the first available node.
+func (fc *FailoverClient) connectToFirstAvailable() error {
+	var lastErr error
+	for i := 0; i < len(fc.nodeCfg.RPCAddrs); i++ {
+		w, err := fc.createWalletAtIndex(i)
+		if err == nil {
+			fc.wallet = w
+			fc.currentIndex = i
+			log.Info().
+				Int("node_index", fc.currentIndex).
+				Str("rpc", fc.nodeCfg.RPCAddrs[fc.currentIndex]).
+				Str("grpc", fc.nodeCfg.GRPCAddrs[fc.currentIndex]).
+				Msg("Connected to blockchain node")
+			return nil
+		}
+		lastErr = err
+		if i > 0 {
+			log.Warn().Err(err).Int("index", i).Msg("Failed to connect to node, trying next")
+		}
+	}
+	return lastErr
+}
+
 // createWalletAtIndex creates a new wallet connection using the node at the given index.
 func (fc *FailoverClient) createWalletAtIndex(index int) (*wallet.Wallet, error) {
-	if index >= len(fc.rpcAddrs) || index >= len(fc.grpcAddrs) {
+	if index >= len(fc.nodeCfg.RPCAddrs) || index >= len(fc.nodeCfg.GRPCAddrs) {
 		index = 0
 	}
 
 	// Create a modified chain config with the specific node addresses
 	chainCfg := walletTypes.ChainConfig{
 		Bech32Prefix:  fc.nodeCfg.Bech32Prefix,
-		RPCAddr:       fc.rpcAddrs[index],
-		GRPCAddr:      fc.grpcAddrs[index],
+		RPCAddr:       fc.nodeCfg.RPCAddrs[index],
+		GRPCAddr:      fc.nodeCfg.GRPCAddrs[index],
 		GasPrice:      fc.nodeCfg.GasPrice,
 		GasAdjustment: fc.nodeCfg.GasAdjustment,
 	}
@@ -153,35 +140,34 @@ func (fc *FailoverClient) Failover() bool {
 	defer fc.mu.Unlock()
 
 	startIndex := fc.currentIndex
-	totalNodes := len(fc.rpcAddrs)
+	totalNodes := len(fc.nodeCfg.RPCAddrs)
 
 	for i := 1; i <= totalNodes; i++ {
 		nextIndex := (startIndex + i) % totalNodes
 		log.Info().
 			Int("from_index", fc.currentIndex).
 			Int("to_index", nextIndex).
-			Str("rpc", fc.rpcAddrs[nextIndex]).
-			Str("grpc", fc.grpcAddrs[nextIndex]).
+			Str("rpc", fc.nodeCfg.RPCAddrs[nextIndex]).
+			Str("grpc", fc.nodeCfg.GRPCAddrs[nextIndex]).
 			Msg("Attempting failover to next node")
 
 		w, err := fc.createWalletAtIndex(nextIndex)
 		if err != nil {
 			log.Warn().Err(err).
 				Int("index", nextIndex).
-				Str("rpc", fc.rpcAddrs[nextIndex]).
+				Str("rpc", fc.nodeCfg.RPCAddrs[nextIndex]).
 				Msg("Failed to connect during failover, trying next")
 			continue
 		}
 
 		fc.wallet = w
 		fc.currentIndex = nextIndex
-		fc.lastFailover = time.Now()
 		fc.failoverCount++
 
 		log.Info().
 			Int("node_index", fc.currentIndex).
-			Str("rpc", fc.rpcAddrs[fc.currentIndex]).
-			Str("grpc", fc.grpcAddrs[fc.currentIndex]).
+			Str("rpc", fc.nodeCfg.RPCAddrs[fc.currentIndex]).
+			Str("grpc", fc.nodeCfg.GRPCAddrs[fc.currentIndex]).
 			Int("total_failovers", fc.failoverCount).
 			Msg("Successfully failed over to new node")
 
@@ -232,14 +218,14 @@ func (fc *FailoverClient) CurrentNodeIndex() int {
 func (fc *FailoverClient) CurrentRPCAddr() string {
 	fc.mu.RLock()
 	defer fc.mu.RUnlock()
-	return fc.rpcAddrs[fc.currentIndex]
+	return fc.nodeCfg.RPCAddrs[fc.currentIndex]
 }
 
 // CurrentGRPCAddr returns the GRPC address of the currently connected node.
 func (fc *FailoverClient) CurrentGRPCAddr() string {
 	fc.mu.RLock()
 	defer fc.mu.RUnlock()
-	return fc.grpcAddrs[fc.currentIndex]
+	return fc.nodeCfg.GRPCAddrs[fc.currentIndex]
 }
 
 // FailoverCount returns the total number of failovers that have occurred.
@@ -251,7 +237,7 @@ func (fc *FailoverClient) FailoverCount() int {
 
 // NodeCount returns the total number of configured nodes.
 func (fc *FailoverClient) NodeCount() int {
-	return len(fc.rpcAddrs)
+	return len(fc.nodeCfg.RPCAddrs)
 }
 
 // IsConnectionError checks if an error indicates a connection problem that
@@ -271,7 +257,7 @@ func IsConnectionError(err error) bool {
 		"network is unreachable",
 		"i/o timeout",
 		"context deadline exceeded",
-		"EOF",
+		"eof",
 		"connection closed",
 		"transport is closing",
 		"server misbehaving",
