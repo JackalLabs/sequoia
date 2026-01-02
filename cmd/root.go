@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	configcmd "github.com/JackalLabs/sequoia/cmd/config"
 	"github.com/JackalLabs/sequoia/cmd/database"
 
 	walletTypes "github.com/desmos-labs/cosmos-go-wallet/types"
@@ -175,7 +176,7 @@ func RootCmd() *cobra.Command {
 		panic(err)
 	}
 
-	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), ShutdownCmd(), database.DataCmd())
+	r.AddCommand(StartCmd(), wallet.WalletCmd(), InitCmd(), VersionCmd(), IPFSCmd(), ShutdownCmd(), database.DataCmd(), configcmd.ConfigCmd())
 
 	return r
 }
