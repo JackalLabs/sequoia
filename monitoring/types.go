@@ -1,7 +1,7 @@
 package monitoring
 
 import (
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
+	"github.com/JackalLabs/sequoia/rpc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -30,10 +30,10 @@ var _ = catchingUp
 
 type Monitor struct {
 	running bool
-	wallet  *wallet.Wallet
+	wallet  *rpc.FailoverClient
 }
 
-func NewMonitor(wallet *wallet.Wallet) *Monitor {
+func NewMonitor(wallet *rpc.FailoverClient) *Monitor {
 	return &Monitor{
 		running: false,
 		wallet:  wallet,

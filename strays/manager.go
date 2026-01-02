@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/JackalLabs/sequoia/file_system"
+	"github.com/JackalLabs/sequoia/rpc"
 
 	"github.com/JackalLabs/sequoia/queue"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
@@ -26,7 +26,7 @@ const (
 )
 
 // NewStrayManager creates and initializes a new StrayManager with the specified number of hands, authorizing each hand to transact on behalf of the provided wallet if not already authorized.
-func NewStrayManager(w *wallet.Wallet, q *queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
+func NewStrayManager(w *rpc.FailoverClient, q *queue.Queue, interval int64, refreshInterval int64, handCount int, authList []string) *StrayManager {
 	s := &StrayManager{
 		rand:            rand.New(rand.NewSource(time.Now().Unix())),
 		wallet:          w,
@@ -102,7 +102,7 @@ func (s *StrayManager) Start(f *file_system.FileSystem, q *queue.Queue, myUrl st
 	defer log.Info().Msg("StrayManager stopped")
 
 	for _, hand := range s.hands {
-		go hand.Start(f, s.wallet, q, myUrl, chunkSize)
+		go hand.Start(f, s.wallet.Wallet(), q, myUrl, chunkSize)
 	}
 
 	for s.running {
@@ -179,10 +179,14 @@ func (s *StrayManager) RefreshList() error {
 		Pagination:      page,
 	}
 
-	cl := types.NewQueryClient(s.wallet.Client.GRPCConn)
+	cl := types.NewQueryClient(s.wallet.GRPCConn())
 
 	res, err := cl.OpenFiles(context.Background(), queryParams)
 	if err != nil {
+		if rpc.IsConnectionError(err) {
+			log.Warn().Err(err).Msg("Connection error during stray refresh, attempting failover")
+			s.wallet.Failover()
+		}
 		return err
 	}
 

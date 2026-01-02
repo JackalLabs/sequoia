@@ -13,12 +13,12 @@ import (
 	"github.com/rs/cors"
 
 	"github.com/JackalLabs/sequoia/file_system"
+	"github.com/JackalLabs/sequoia/rpc"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/JackalLabs/sequoia/proofs"
 	"github.com/rs/zerolog/log"
 
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 	"github.com/gorilla/mux"
 
 	jsoniter "github.com/json-iterator/go"
@@ -47,29 +47,29 @@ func (a *API) Close() error {
 	return a.srv.Close()
 }
 
-func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.Wallet, chunkSize int64, myIp string) {
+func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, fc *rpc.FailoverClient, chunkSize int64, myIp string) {
 	defer log.Info().Msg("API module stopped")
 	r := mux.NewRouter()
 
 	outline := types.NewOutline()
 
-	outline.RegisterGetRoute(r, "/", IndexHandler(wallet.AccAddress()))
+	outline.RegisterGetRoute(r, "/", IndexHandler(fc.AccAddress()))
 
-	outline.RegisterPostRoute(r, "/upload", PostFileHandler(f, p, wallet, chunkSize))
-	outline.RegisterPostRoute(r, "/v2/upload", PostFileHandlerV2(f, p, wallet, chunkSize))
+	outline.RegisterPostRoute(r, "/upload", PostFileHandler(f, p, fc, chunkSize))
+	outline.RegisterPostRoute(r, "/v2/upload", PostFileHandlerV2(f, p, fc, chunkSize))
 	outline.RegisterPostRoute(r, "/v2/status/{id}", CheckUploadStatus())
 	outline.RegisterPostRoute(r, "/api/jobs", ListJobsHandler())
 	outline.RegisterGetRoute(r, "/download/{merkle}", DownloadFileHandler(f))
 
 	if a.cfg.OpenGateway {
-		outline.RegisterGetRoute(r, "/get/{merkle}/{path:.*}", FindFileHandler(f, wallet, myIp))
-		outline.RegisterGetRoute(r, "/get/{merkle}", FindFileHandler(f, wallet, myIp))
+		outline.RegisterGetRoute(r, "/get/{merkle}/{path:.*}", FindFileHandler(f, fc, myIp))
+		outline.RegisterGetRoute(r, "/get/{merkle}", FindFileHandler(f, fc, myIp))
 	}
 
 	outline.RegisterGetRoute(r, "/list", ListFilesHandler(f))
 	outline.RegisterGetRoute(r, "/api/client/list", ListFilesHandler(f))
 	outline.RegisterGetRoute(r, "/api/data/fids", LegacyListFilesHandler(f))
-	outline.RegisterGetRoute(r, "/api/client/space", SpaceHandler(wallet.Client, wallet.AccAddress()))
+	outline.RegisterGetRoute(r, "/api/client/space", SpaceHandler(fc))
 
 	outline.RegisterGetRoute(r, "/ipfs/peers", IPFSListPeers(f))
 	outline.RegisterGetRoute(r, "/ipfs/hosts", IPFSListHosts(f))
@@ -79,8 +79,8 @@ func (a *API) Serve(f *file_system.FileSystem, p *proofs.Prover, wallet *wallet.
 
 	// outline.RegisterGetRoute(r, "/dump", DumpDBHandler(f))
 
-	outline.RegisterGetRoute(r, "/version", VersionHandler(wallet))
-	outline.RegisterGetRoute(r, "/network", NetworkHandler(wallet))
+	outline.RegisterGetRoute(r, "/version", VersionHandler(fc))
+	outline.RegisterGetRoute(r, "/network", NetworkHandler(fc))
 
 	outline.RegisterGetRoute(r, "/api", outline.OutlineHandler())
 

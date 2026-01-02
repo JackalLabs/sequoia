@@ -11,7 +11,7 @@ import (
 )
 
 func (m *Monitor) updateBurns() {
-	cl := types.NewQueryClient(m.wallet.Client.GRPCConn)
+	cl := types.NewQueryClient(m.wallet.GRPCConn())
 	provRes, err := cl.Provider(context.Background(), &types.QueryProvider{Address: m.wallet.AccAddress()})
 	if err != nil {
 		return
@@ -27,7 +27,7 @@ func (m *Monitor) updateBurns() {
 }
 
 func (m *Monitor) updateHeight() {
-	abciInfo, err := m.wallet.Client.RPCClient.ABCIInfo(context.Background())
+	abciInfo, err := m.wallet.RPCClient().ABCIInfo(context.Background())
 	if err != nil {
 		return
 	}
@@ -37,7 +37,7 @@ func (m *Monitor) updateHeight() {
 }
 
 func (m *Monitor) updateBalance() {
-	cl := bankTypes.NewQueryClient(m.wallet.Client.GRPCConn)
+	cl := bankTypes.NewQueryClient(m.wallet.GRPCConn())
 	provRes, err := cl.Balance(context.Background(), &bankTypes.QueryBalanceRequest{Address: m.wallet.AccAddress(), Denom: "ujkl"})
 	if err != nil {
 		return

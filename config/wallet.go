@@ -5,10 +5,8 @@ import (
 	"os"
 	"path"
 
-	sequoiaWallet "github.com/JackalLabs/sequoia/wallet"
+	"github.com/JackalLabs/sequoia/rpc"
 	bip39 "github.com/cosmos/go-bip39"
-	"github.com/desmos-labs/cosmos-go-wallet/types"
-	"github.com/desmos-labs/cosmos-go-wallet/wallet"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -79,7 +77,7 @@ func createWallet(directory string) error {
 	return nil
 }
 
-func InitWallet(home string) (*wallet.Wallet, error) {
+func InitWallet(home string) (*rpc.FailoverClient, error) {
 	directory := os.ExpandEnv(home)
 
 	err := os.MkdirAll(directory, os.ModePerm)
@@ -92,10 +90,18 @@ func InitWallet(home string) (*wallet.Wallet, error) {
 		return nil, err
 	}
 
+	nodeCfg := rpc.NodeConfig{
+		Bech32Prefix:  config.ChainCfg.Bech32Prefix,
+		RPCAddrs:      config.ChainCfg.GetRPCAddrs(),
+		GRPCAddrs:     config.ChainCfg.GetGRPCAddrs(),
+		GasPrice:      config.ChainCfg.GasPrice,
+		GasAdjustment: config.ChainCfg.GasAdjustment,
+	}
+
 	legacyWallet, err := detectLegacyWallet(home)
 	if err == nil {
 		log.Info().Msg("legacy wallet detected")
-		return sequoiaWallet.CreateWalletPrivKey(legacyWallet.Key, types.ChainConfig(config.ChainCfg))
+		return rpc.NewFailoverClientWithPrivKey(nodeCfg, legacyWallet.Key)
 	}
 
 	err = createWallet(directory)
@@ -113,7 +119,7 @@ func InitWallet(home string) (*wallet.Wallet, error) {
 		return nil, err
 	}
 
-	return sequoiaWallet.CreateWallet(seed.SeedPhrase, seed.DerivationPath, types.ChainConfig(config.ChainCfg))
+	return rpc.NewFailoverClient(nodeCfg, seed.SeedPhrase, seed.DerivationPath)
 }
 
 // returns LegacyWallet if "priv_storkey.json" is found at sequoia home directory,

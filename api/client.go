@@ -5,30 +5,40 @@ import (
 	"net/http"
 
 	"github.com/JackalLabs/sequoia/api/types"
+	"github.com/JackalLabs/sequoia/rpc"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/desmos-labs/cosmos-go-wallet/client"
 	storageTypes "github.com/jackalLabs/canine-chain/v5/x/storage/types"
 	"github.com/rs/zerolog/log"
 )
 
-func SpaceHandler(c *client.Client, address string) func(http.ResponseWriter, *http.Request) {
+func SpaceHandler(fc *rpc.FailoverClient) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		queryClient := storageTypes.NewQueryClient(c.GRPCConn)
+		queryClient := storageTypes.NewQueryClient(fc.GRPCConn())
+		address := fc.AccAddress()
 
 		params := &storageTypes.QueryProvider{
 			Address: address,
 		}
 		res, err := queryClient.Provider(context.Background(), params)
 		if err != nil {
-			v := types.ErrorResponse{
-				Error: err.Error(),
+			if rpc.IsConnectionError(err) {
+				log.Warn().Err(err).Msg("Connection error querying provider, attempting failover")
+				if fc.Failover() {
+					// Retry with new connection
+					queryClient = storageTypes.NewQueryClient(fc.GRPCConn())
+					res, err = queryClient.Provider(context.Background(), params)
+				}
 			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				log.Error().Err(err)
+				v := types.ErrorResponse{
+					Error: err.Error(),
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+				if encErr := json.NewEncoder(w).Encode(v); encErr != nil {
+					log.Error().Err(encErr).Msg("Failed to encode error response")
+				}
+				return
 			}
-			return
 		}
 
 		totalSpace := res.Provider.Totalspace
@@ -38,15 +48,24 @@ func SpaceHandler(c *client.Client, address string) func(http.ResponseWriter, *h
 		}
 		fsres, err := queryClient.FreeSpace(context.Background(), fsparams)
 		if err != nil {
-			v := types.ErrorResponse{
-				Error: err.Error(),
+			if rpc.IsConnectionError(err) {
+				log.Warn().Err(err).Msg("Connection error querying free space, attempting failover")
+				if fc.Failover() {
+					// Retry with new connection
+					queryClient = storageTypes.NewQueryClient(fc.GRPCConn())
+					fsres, err = queryClient.FreeSpace(context.Background(), fsparams)
+				}
 			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err = json.NewEncoder(w).Encode(v)
 			if err != nil {
-				log.Error().Err(err)
+				v := types.ErrorResponse{
+					Error: err.Error(),
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+				if encErr := json.NewEncoder(w).Encode(v); encErr != nil {
+					log.Error().Err(encErr).Msg("Failed to encode error response")
+				}
+				return
 			}
-			return
 		}
 
 		freeSpace := fsres.Space
